@@ -1,4 +1,5 @@
 import { getTotalCoins } from './save.js';
+import { getAbilityDisplayName, MAX_ABILITY_LEVEL } from './abilities.js';
 
 const $ = (id) => document.getElementById(id);
 const screens = ['menu-screen', 'pause-screen', 'upgrade-screen', 'end-screen'];
@@ -33,8 +34,7 @@ export function updateHUD(state) {
   $('hud-health').textContent = `${Math.ceil(state.health)}/${state.maxHealth}`;
   $('hud-level').textContent = state.level;
   $('hud-coins').textContent = state.coins;
-  const abilityNames = { sawblade: 'Sawblade', orbitals: 'Scrap' };
-  $('hud-abilities').textContent = state.abilities?.chosen?.map((id) => `${abilityNames[id] ?? id} ${state.abilities.levels?.[id] ?? 1}/10`).join(' | ') || 'None';
+  $('hud-abilities').textContent = state.abilities?.chosen?.map((id) => `${getAbilityDisplayName(id)} ${state.abilities.levels?.[id] ?? 1}/${MAX_ABILITY_LEVEL}`).join(' | ') || 'None';
   $('hud-xp-bar').style.width = `${Math.min(100, (state.xp / state.nextXp) * 100)}%`;
 }
 

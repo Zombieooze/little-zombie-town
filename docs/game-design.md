@@ -23,22 +23,68 @@
 
 ## Special ability system
 
-Special abilities live in `src/abilities.js` and are designed as a clean foundation for future additions.
+Special abilities live in `src/abilities.js` and are designed as the active build-defining power set for each run. They are separate from passive run upgrades.
+
+System rules:
 
 - The long-term plan is **8 total special abilities**.
 - A single run can unlock only **4 special abilities**.
-- Each special ability has **Level 1-10** scaling with a max level of 10.
+- Each special ability has an `id`, display name, `maxLevel: 10`, and an `implemented` flag.
+- Only abilities marked `implemented: true` can appear in the level-up card pool. Planned abilities must stay `implemented: false` until their behavior is built.
 - Unlocking a special ability makes it **Level 1**.
-- If the player already has 4 chosen special abilities, level-up cards should stop offering unlock cards for unchosen abilities.
-- Once an ability is unlocked, only chosen abilities appear for further ability upgrade cards.
-- Ability upgrade cards raise that ability by one level, show the next level such as `Lv. 2/10`, and stop appearing once the ability reaches Level 10.
-- Ability definitions own their unlock text, level-up text, default tuning, cooldowns/timers, update behavior, zombie damage, and simple low-poly visual effects.
-- Ability kills still use the same reward path as bat kills, so every defeated zombie continues to drop XP.
+- Each special ability upgrades from **Level 1 to Level 10**.
+- Once a special ability reaches **Level 10**, it stops offering upgrade cards.
+- If the player already has 4 chosen special abilities, level-up cards stop offering unlock cards for unchosen abilities.
+- Already chosen special abilities can still offer upgrade cards until they reach Level 10.
+- Ability upgrade cards raise that ability by one level, show the next level such as `Lv. 2/10`, and use the same zombie kill reward path as the bat so defeated zombies still drop XP.
 
-### First implemented test abilities
+### Implemented special abilities available now
 
-- **Spinning Sawblade:** A bright low-poly spinning scrap disc that auto-launches on cooldown, targets roughly the nearest zombie, damages enemies it touches, and scales from Level 1-10 through modest damage, cooldown, hit-radius, speed/lifetime, and volley-count upgrades.
-- **Scrap Orbitals:** One or more visible low-poly scrap chunks orbit the player, spin automatically, and use contact/tick damage when orbiting chunks touch zombies. Scrap Orbitals scale from Level 1-10 through modest damage, orbital-count, orbital-speed, and hit-radius upgrades.
+Only these abilities should currently appear in the level-up card pool:
+
+1. **Spinning Sawblade:** A bright low-poly spinning scrap disc that auto-launches on cooldown, targets roughly the nearest zombie, damages enemies it touches, and scales from Level 1-10 through modest damage, cooldown, hit-radius, speed/lifetime, and volley-count upgrades.
+2. **Scrap Orbitals:** One or more visible low-poly scrap chunks orbit the player, spin automatically, and use contact/tick damage when orbiting chunks touch zombies. Scrap Orbitals scale from Level 1-10 through modest damage, orbital-count, orbital-speed, and hit-radius upgrades.
+
+### Planned special abilities not available yet
+
+These are roadmap entries only. They must not appear in gameplay or level-up cards until implemented later.
+
+3. **Electric Zapper:** Automatic electric chain attack. Zaps one nearby zombie, later chains to more zombies. Good for crowd control.
+4. **Fire Bottle:** Throws a bottle that creates a small fire area on the ground. Area damage over time. Good for controlling space.
+5. **Nail Blaster:** Shoots small nail/bolt projectiles at nearby zombies. Fast ranged damage. Can later gain extra projectiles and piercing.
+6. **Shockwave Stomp:** Releases a timed shockwave around the player. Damages and pushes zombies back. Good panic/crowd-control ability.
+7. **Bear Trap Toss:** Drops traps on the ground. Zombies that step on traps take damage and later can be slowed. Good for area control.
+8. **Junkyard Turret:** Deploys a small scrap turret that shoots nearby zombies. Good for holding an area.
+
+## Passive run upgrades
+
+Passive run upgrades are normal level-up cards that improve the current run but do **not** count against the 4 special ability limit. They can keep appearing after the player has chosen 4 special abilities.
+
+Current passive examples include:
+
+- **Heavier Bat:** More bat damage.
+- **Faster Swing / Quick Hands direction:** Bat and future special abilities recharge faster.
+- **Quick Feet:** More movement speed.
+- **Healthy Snack:** More max health and a small heal.
+
+Future passive candidates, if added carefully later, include XP Magnet for larger pickup radius, Tough Jacket for damage reduction, and Lucky Loot for better drops or coin rewards.
+
+## Future permanent coin upgrades
+
+A later **Upgrade Lab** can appear before starting a run or after death/victory. It should use coins and save purchases in localStorage, but this shop is not part of the current pass. Planned permanent upgrade directions:
+
+- **Power:** More starting damage.
+- **Vitality:** More max health.
+- **Swiftness:** More movement speed.
+- **Recovery:** Slow health regeneration.
+- **Endurance:** Stamina, jump, or sprint support later.
+- **Greed:** More coins earned.
+- **Magnetism:** Larger pickup radius.
+- **Wisdom:** More XP gained.
+
+## Bat design rule
+
+The bat is the close-range emergency weapon. Its range/radius should stay fixed, and level-up pools should not add Bat Range or Bigger Swing upgrades. Ranged power and larger area control should come from special abilities instead of the bat.
 
 ## Current prototype target
 
