@@ -26,14 +26,23 @@ The main attack identity is a baseball bat swing. The current game can keep usin
 
 ## Walker Zombie
 
-A greenish, cute-spooky blocky zombie wearing a purple shirt. Walkers are slow, persistent, and non-graphic. Their job is to crowd the player and create arcade pressure without becoming frightening or realistic.
+A medium green, cute-spooky blocky zombie wearing a dull blue shirt. Walkers are normal-sized, slow-to-medium chasers with baseline health, contact damage, XP, and coin rewards. Their job is to crowd the player from the start without becoming frightening or realistic.
 
-## Future zombie ideas
+## Little / Runner Zombie
 
-- **Runner**: Smaller and faster, but low health.
-- **Brute**: Big, slow, and chunky with more health.
-- **Spitter**: Keeps distance and lobs harmless-looking slime blobs.
-- **Boss**: A giant parade-float-style zombie with silly animations and multiple phases.
+A smaller, faster zombie with green skin and a purple shirt or purple accent. Runners have lower health than walkers, but they close distance quickly and drop slightly more XP. They appear after the early warm-up, around level 3 or 1:30 into the run.
+
+## Brute Zombie
+
+A large, chunky zombie with a brown or dark torso and heavier arms. Brutes move slower than walkers, have much more health, deal stronger contact damage, and drop a larger XP and coin reward. They begin appearing around level 5 or 3:00 into the run.
+
+## Spitter Zombie
+
+A medium zombie with toxic green accents and a slightly different silhouette, such as a bigger head or rounded throat/belly shape. In the current foundation pass, Spitters do not shoot projectiles; they chase like other zombies while staying visually distinct and rewarding more XP. They begin appearing around level 6 or 4:00 into the run.
+
+## Boss / Mini Boss Zombie
+
+A much larger zombie with a dark torso, oversized arms, and simple cone spikes or a crown-like silhouette. The Mini Boss has high health, slow movement, stronger contact damage, and a much higher XP and coin reward. It should appear rarely, generally once around 7:00 to 8:00 during the 10-minute test run or after the player reaches a high enough level.
 
 ## Town prop style
 
