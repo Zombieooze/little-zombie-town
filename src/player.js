@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
-import { getMoveVector, isDown } from './input.js';
+import { consumePress, getMoveVector, isDown } from './input.js';
 
 const makeMat = (color) => new THREE.MeshStandardMaterial({ color, roughness: 0.82 });
 // Character art faces local -Z; movement rotation math points local +Z, so keep visuals flipped once here.
@@ -86,6 +86,10 @@ export function createPlayerModel() {
   group.userData.parts = { armL, armR, sleeveL, sleeveR, legL, legR, bat };
   group.userData.baseY = 0;
   group.userData.walkTime = 0;
+  group.userData.jumpY = 0;
+  group.userData.jumpVelocity = 0;
+  group.userData.grounded = true;
+  group.userData.landingTimer = 0;
   return group;
 }
 
@@ -97,6 +101,11 @@ export function createPlayer(scene) {
 }
 
 export function updatePlayer(player, delta, attackTimer = 0, cameraYaw = 0) {
+  if (consumePress(' ') && player.userData.grounded) {
+    player.userData.jumpVelocity = CONFIG.player.jumpVelocity;
+    player.userData.grounded = false;
+  }
+
   const input = getMoveVector();
   const cos = Math.cos(cameraYaw);
   const sin = Math.sin(cameraYaw);
@@ -113,13 +122,33 @@ export function updatePlayer(player, delta, attackTimer = 0, cameraYaw = 0) {
   const moving = Math.abs(input.x) + Math.abs(input.z) > 0;
   if (moving) player.rotation.y = Math.atan2(moveX, moveZ) + PLAYER_VISUAL_FACING_OFFSET;
   const parts = player.userData.parts;
-  player.userData.walkTime += delta * (moving ? 9.5 : 3.5);
+  const wasGrounded = player.userData.grounded;
+  if (!player.userData.grounded) {
+    player.userData.jumpVelocity -= CONFIG.player.gravity * delta;
+    player.userData.jumpY = Math.max(0, player.userData.jumpY + player.userData.jumpVelocity * delta);
+    if (player.userData.jumpY <= 0 && player.userData.jumpVelocity <= 0) {
+      player.userData.jumpY = 0;
+      player.userData.jumpVelocity = 0;
+      player.userData.grounded = true;
+      if (!wasGrounded) player.userData.landingTimer = 0.12;
+    }
+  }
+  player.userData.landingTimer = Math.max(0, player.userData.landingTimer - delta);
+
+  const grounded = player.userData.grounded;
+  player.userData.walkTime += delta * (moving ? 10.45 : 3.5);
   const stride = moving ? Math.sin(player.userData.walkTime) : 0;
-  player.position.y = Math.abs(stride) * (moving ? 0.08 : 0.015);
-  parts.armL.rotation.x = stride * 0.38;
-  parts.armR.rotation.x = -stride * 0.28;
-  parts.legL.rotation.x = -stride * 0.38;
-  parts.legR.rotation.x = stride * 0.38;
+  const groundBob = grounded ? Math.abs(stride) * (moving ? 0.08 : 0.015) : 0;
+  const landingDip = player.userData.landingTimer > 0
+    ? Math.sin((player.userData.landingTimer / 0.12) * Math.PI) * CONFIG.player.landingDip
+    : 0;
+  player.position.y = player.userData.jumpY + groundBob - landingDip;
+  parts.armL.rotation.x = grounded ? stride * 0.38 : -0.18;
+  parts.armR.rotation.x = grounded ? -stride * 0.28 : -0.12;
+  parts.legL.rotation.x = grounded ? -stride * 0.38 : 0.48;
+  parts.legR.rotation.x = grounded ? stride * 0.38 : 0.48;
+  parts.legL.rotation.z = grounded ? 0 : -0.08;
+  parts.legR.rotation.z = grounded ? 0 : 0.08;
 
   const swing = Math.max(0, attackTimer / CONFIG.pulse.visualDuration);
   if (swing > 0) {

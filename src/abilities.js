@@ -14,7 +14,7 @@ export const ABILITY_DEFINITIONS = {
     unlockDescription: 'Auto-launch a spinning scrap sawblade at nearby zombies.',
     maxLevel: MAX_ABILITY_LEVEL,
     implemented: true,
-    defaults: { damage: 28, cooldown: 3.2, bladeCount: 1, speed: 11, lifetime: 2.1, hitRadius: .72 },
+    defaults: { damage: 28, cooldown: 3.2, bladeCount: 1, speed: 12.1, lifetime: 2.1, hitRadius: .72 },
     upgrades: {
       2: 'Sawblade damage increases.',
       3: 'Launch sawblades more often.',
@@ -78,7 +78,7 @@ export const ABILITY_DEFINITIONS = {
     unlockDescription: 'Throw bottles that burst into fire patches under nearby zombies.',
     maxLevel: MAX_ABILITY_LEVEL,
     implemented: true,
-    defaults: { damage: 9, cooldown: 5.2, range: 9, duration: 3, radius: 2, tickInterval: .42, bottleCount: 1, travelTime: .62, maxPatches: 7 },
+    defaults: { damage: 9, cooldown: 5.2, range: 9, duration: 3, radius: 2, tickInterval: .42, bottleCount: 1, travelTime: .56, maxPatches: 7 },
     upgrades: {
       2: 'Fire damage increases.',
       3: 'Fire patches last longer.',
@@ -206,7 +206,7 @@ function applyAbilityLevelTuning(state, abilityId, level) {
     if (level === 5) abilities.sawblade.bladeCount = Math.min(2, abilities.sawblade.bladeCount + 1);
     if (level === 6) abilities.sawblade.damage += 8;
     if (level === 7) abilities.sawblade.cooldown = Math.max(1.15, abilities.sawblade.cooldown * .88);
-    if (level === 8) { abilities.sawblade.speed += 1.2; abilities.sawblade.lifetime += .2; }
+    if (level === 8) { abilities.sawblade.speed += 1.32; abilities.sawblade.lifetime += .2; }
     if (level === 9) abilities.sawblade.damage += 10;
     if (level === 10) abilities.sawblade.damage += 14;
   }
