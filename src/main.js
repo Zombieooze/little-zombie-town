@@ -8,6 +8,7 @@ import { createPlayer, updatePlayer } from './player.js';
 import { spawnZombie, updateZombies, damageZombies, resetZombies, getSpawnDelay } from './zombies.js';
 import { dropXp, dropMedkit, updatePickups, resetPickups, countWorldMedkits } from './pickups.js';
 import { getUpgradeChoices, applyUpgrade } from './upgrades.js';
+import { resetAbilities, updateAbilities, unlockAbility, applyAbilityUpgrade, isAbilityCard } from './abilities.js';
 
 const canvas = document.getElementById('game-canvas');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -49,7 +50,7 @@ const cameraLimits = {
 const state = {
   elapsed: 0, health: 100, maxHealth: 100, level: 1, xp: 0, nextXp: CONFIG.level.baseXp,
   coins: 0, kills: 0, pulseCooldown: CONFIG.pulse.cooldown, pulseRange: CONFIG.pulse.range,
-  pulseDamage: CONFIG.pulse.damage, speedMultiplier: 1, bossSpawnCount: 0,
+  pulseDamage: CONFIG.pulse.damage, speedMultiplier: 1, bossSpawnCount: 0, batKnockback: 0,
 };
 
 initInput();
@@ -61,7 +62,8 @@ showScreen('menu-screen');
 function resetState() {
   Object.assign(state, { elapsed: 0, health: CONFIG.player.maxHealth, maxHealth: CONFIG.player.maxHealth, level: 1, xp: 0,
     nextXp: CONFIG.level.baseXp, coins: 0, kills: 0, pulseCooldown: CONFIG.pulse.cooldown, pulseRange: CONFIG.pulse.range,
-    pulseDamage: CONFIG.pulse.damage, speedMultiplier: 1, bossSpawnCount: 0 });
+    pulseDamage: CONFIG.pulse.damage, speedMultiplier: 1, bossSpawnCount: 0, batKnockback: 0 });
+  resetAbilities(scene, state);
   spawnTimer = 0; worldMedkitTimer = CONFIG.medkit.worldFirstSpawn; pulseTimer = 0; pendingChoices = [];
 }
 
@@ -69,6 +71,7 @@ function startGame() {
   resetState();
   if (player) scene.remove(player);
   resetZombies(scene); resetPickups(scene);
+  resetAbilities(scene, state);
   pulseVisuals.forEach((v) => scene.remove(v)); pulseVisuals = [];
   hitParticles.forEach((p) => scene.remove(p)); hitParticles = [];
   healFloaters.forEach((p) => scene.remove(p)); healFloaters = [];
@@ -82,7 +85,9 @@ function startGame() {
 function returnToMenu() { mode = 'menu'; showScreen('menu-screen'); updateMenuCoins(); }
 
 function chooseUpgrade(id) {
-  applyUpgrade(state, id);
+  if (id.startsWith('unlock_')) unlockAbility(scene, state, id.replace('unlock_', ''), player);
+  else if (isAbilityCard(id)) applyAbilityUpgrade(scene, state, id, player);
+  else applyUpgrade(state, id);
   hideOverlays(); document.getElementById('hud').classList.remove('hidden');
   mode = 'playing';
 }
@@ -106,7 +111,7 @@ function gainXp(amount) {
   state.xp += amount;
   while (state.xp >= state.nextXp) {
     state.xp -= state.nextXp; state.level += 1; state.nextXp = getNextLevelXp();
-    pendingChoices = getUpgradeChoices(); mode = 'upgrade'; showUpgrades(pendingChoices); break;
+    pendingChoices = getUpgradeChoices(state); mode = 'upgrade'; showUpgrades(pendingChoices); break;
   }
 }
 
@@ -188,7 +193,7 @@ function doPulse() {
   damageZombies(scene, player.position, state.pulseRange, state.pulseDamage, (position, type, typeKey) => {
     state.kills += 1; state.coins += type.coins; dropXp(scene, position, getXpReward(type.xp));
     maybeDropMedkit(position, type, typeKey);
-  }, createHitParticles);
+  }, createHitParticles, state.batKnockback);
 }
 
 function endRun(won) {
@@ -296,6 +301,10 @@ function tick() {
     updateZombies(player, delta, (damage) => { state.health = Math.max(0, state.health - damage); });
     updatePickups(scene, player, delta, collectPickup);
     if (pulseTimer <= 0) { doPulse(); pulseTimer = state.pulseCooldown; }
+    updateAbilities(scene, state, player, delta, (position, type, typeKey) => {
+      state.kills += 1; state.coins += type.coins; dropXp(scene, position, getXpReward(type.xp));
+      maybeDropMedkit(position, type, typeKey);
+    }, createHitParticles);
     if (state.health <= 0) endRun(false);
     if (state.elapsed >= CONFIG.runDuration) endRun(true);
     updateHUD(state); updateCamera(delta);

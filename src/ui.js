@@ -33,6 +33,8 @@ export function updateHUD(state) {
   $('hud-health').textContent = `${Math.ceil(state.health)}/${state.maxHealth}`;
   $('hud-level').textContent = state.level;
   $('hud-coins').textContent = state.coins;
+  const abilityNames = { sawblade: 'Sawblade', orbitals: 'Scrap' };
+  $('hud-abilities').textContent = state.abilities?.chosen?.map((id) => abilityNames[id] ?? id).join(', ') || 'None';
   $('hud-xp-bar').style.width = `${Math.min(100, (state.xp / state.nextXp) * 100)}%`;
 }
 

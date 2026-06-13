@@ -22,7 +22,7 @@ The main attack identity is a baseball bat swing. The current game can keep usin
 - The bat moves during each attack.
 - A short yellow/gold swing arc appears around the survivor.
 - Small square spark particles can pop from hit zombies.
-- Upgrades can improve swing cooldown, range, and damage.
+- Upgrades can improve swing cooldown, damage, and knockback, but the bat stays fixed-range.
 
 ## Walker Zombie
 
@@ -61,3 +61,9 @@ Future zombies and town props should follow the same simple low-poly geometry st
 ## Visual tone
 
 Cartoon post-apocalyptic and non-graphic. The mood is dark green and purple night-time, but objects should remain bright, readable, and toy-like.
+
+## Special ability visual notes
+
+- Spinning Sawblade should read as a bright low-poly scrap disc: flat metal body, chunky teeth, fast spin, and no gore.
+- Scrap Orbitals should read as toy-like junk parts circling the survivor: small colorful boxes/cones with readable motion from the default camera distance.
+- Ability effects should stay procedural and browser-friendly, using Three.js primitives instead of external textures or model files.
