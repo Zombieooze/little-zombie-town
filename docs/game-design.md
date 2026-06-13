@@ -4,8 +4,8 @@
 
 1. Start a five-minute run from the main menu.
 2. Move around a larger ruined town arena while walker zombies spawn at the edges.
-3. Let automatic baseball bat swings clear nearby zombies.
-4. Collect dropped XP gems.
+3. Let automatic fixed-range baseball bat swings clear nearby zombies.
+4. Collect dropped XP gems and rare health pickups.
 5. Level up, choose one of three upgrade cards, and keep surviving.
 6. Earn coins during the run, then save them locally when the run ends.
 
@@ -16,7 +16,8 @@
 - One readable procedural survivor character with WASD movement and sprinting.
 - Survivor visual direction: red shirt or jacket, dark undershirt, blue pants, dark shoes, white/red/black cap, simple brown backpack, and wooden baseball bat.
 - One enemy type: Walker Zombie.
-- Automatic bat swing attack with a gold swing arc; existing range, damage, and cooldown upgrades continue to drive the attack stats.
+- Automatic fixed-range bat swing attack with a gold swing arc; upgrades can improve damage, cooldown, movement, health, and knockback, but the bat radius/range should not grow over time.
+- Rare health pickups can drop from defeated zombies, and a few occasional world medkits can spawn around the map.
 - XP gems, level-up upgrade cards, coins, pause, win screen, and loss screen.
 
 ## Current prototype target
@@ -38,6 +39,9 @@
 
 - **WASD**: Move.
 - **Shift**: Sprint.
+- **Space**: Short hop.
+- **Mouse drag**: Orbit the camera around the player.
+- **Mouse wheel**: Zoom the camera within safe limits.
 - **P**: Pause or unpause.
 - **M**: Toggle mute placeholder.
 

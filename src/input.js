@@ -29,3 +29,32 @@ export function consumePress(key) {
   pressed.delete(key);
   return had;
 }
+
+
+const cameraDrag = { dragging: false, deltaX: 0, zoomDelta: 0 };
+
+export function initCameraInput(canvas) {
+  canvas.addEventListener('pointerdown', (event) => {
+    cameraDrag.dragging = true;
+    canvas.setPointerCapture(event.pointerId);
+  });
+  canvas.addEventListener('pointerup', (event) => {
+    cameraDrag.dragging = false;
+    if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+  });
+  canvas.addEventListener('pointercancel', () => { cameraDrag.dragging = false; });
+  canvas.addEventListener('pointermove', (event) => {
+    if (cameraDrag.dragging) cameraDrag.deltaX += event.movementX;
+  });
+  canvas.addEventListener('wheel', (event) => {
+    cameraDrag.zoomDelta += Math.sign(event.deltaY) * 0.08;
+    event.preventDefault();
+  }, { passive: false });
+}
+
+export function consumeCameraInput() {
+  const input = { deltaX: cameraDrag.deltaX, zoomDelta: cameraDrag.zoomDelta };
+  cameraDrag.deltaX = 0;
+  cameraDrag.zoomDelta = 0;
+  return input;
+}
