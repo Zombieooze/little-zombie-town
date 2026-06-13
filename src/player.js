@@ -3,6 +3,7 @@ import { CONFIG } from './config.js';
 import { getMoveVector, isDown } from './input.js';
 
 const makeMat = (color) => new THREE.MeshStandardMaterial({ color, roughness: 0.82 });
+const PLAYER_VISUAL_FACING_OFFSET = Math.PI;
 
 function part(geometry, material, position, rotation = [0, 0, 0]) {
   const mesh = new THREE.Mesh(geometry, material);
@@ -84,7 +85,7 @@ export function updatePlayer(player, delta, attackTimer = 0) {
   player.position.z = THREE.MathUtils.clamp(player.position.z, -limit, limit);
 
   const moving = Math.abs(input.x) + Math.abs(input.z) > 0;
-  if (moving) player.rotation.y = Math.atan2(input.x, input.z);
+  if (moving) player.rotation.y = Math.atan2(input.x, input.z) + PLAYER_VISUAL_FACING_OFFSET;
   const parts = player.userData.parts;
   player.userData.walkTime += delta * (moving ? 9.5 : 3.5);
   const stride = moving ? Math.sin(player.userData.walkTime) : 0;

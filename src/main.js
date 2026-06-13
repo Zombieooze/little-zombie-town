@@ -25,6 +25,21 @@ let hitParticles = [];
 let attackVisualTimer = 0;
 let cameraShake = 0;
 let pendingChoices = [];
+const cameraControls = {
+  yaw: Math.atan2(CONFIG.camera.offset.x, CONFIG.camera.offset.z),
+  pitch: Math.atan2(CONFIG.camera.offset.y, Math.hypot(CONFIG.camera.offset.x, CONFIG.camera.offset.z)),
+  distance: Math.hypot(CONFIG.camera.offset.x, CONFIG.camera.offset.y, CONFIG.camera.offset.z),
+  dragging: false,
+  pointerButton: null,
+};
+const cameraLimits = {
+  minPitch: THREE.MathUtils.degToRad(28),
+  maxPitch: THREE.MathUtils.degToRad(72),
+  minDistance: 16,
+  maxDistance: 42,
+  rotateSpeed: 0.006,
+  zoomSpeed: 0.0025,
+};
 
 const state = {
   elapsed: 0, health: 100, maxHealth: 100, level: 1, xp: 0, nextXp: CONFIG.level.baseXp,
@@ -33,6 +48,7 @@ const state = {
 };
 
 initInput();
+initCameraControls();
 createWorld(scene);
 initUI({ onStart: startGame, onUpgrade: chooseUpgrade, onMenu: returnToMenu });
 showScreen('menu-screen');
@@ -102,9 +118,54 @@ function endRun(won) {
   showEnd({ won, time: state.elapsed, kills: state.kills, level: state.level, coins: state.coins });
 }
 
+function initCameraControls() {
+  canvas.addEventListener('contextmenu', (event) => event.preventDefault());
+
+  canvas.addEventListener('mousedown', (event) => {
+    if (mode !== 'playing' || (event.button !== 2 && event.button !== 0)) return;
+    event.preventDefault();
+    cameraControls.dragging = true;
+    cameraControls.pointerButton = event.button;
+    if (event.button === 2 && canvas.requestPointerLock) canvas.requestPointerLock();
+  });
+
+  window.addEventListener('mouseup', (event) => {
+    if (!cameraControls.dragging || event.button !== cameraControls.pointerButton) return;
+    cameraControls.dragging = false;
+    cameraControls.pointerButton = null;
+    if (document.pointerLockElement === canvas) document.exitPointerLock();
+  });
+
+  window.addEventListener('mousemove', (event) => {
+    const locked = document.pointerLockElement === canvas;
+    if (!locked && !cameraControls.dragging) return;
+    cameraControls.yaw -= event.movementX * cameraLimits.rotateSpeed;
+    cameraControls.pitch = THREE.MathUtils.clamp(
+      cameraControls.pitch - event.movementY * cameraLimits.rotateSpeed,
+      cameraLimits.minPitch,
+      cameraLimits.maxPitch,
+    );
+  });
+
+  canvas.addEventListener('wheel', (event) => {
+    if (mode !== 'playing') return;
+    event.preventDefault();
+    cameraControls.distance = THREE.MathUtils.clamp(
+      cameraControls.distance * (1 + event.deltaY * cameraLimits.zoomSpeed),
+      cameraLimits.minDistance,
+      cameraLimits.maxDistance,
+    );
+  }, { passive: false });
+}
+
 function updateCamera(delta) {
-  const target = new THREE.Vector3(player.position.x, 0, player.position.z + CONFIG.camera.lookAhead);
-  const desired = target.clone().add(new THREE.Vector3(CONFIG.camera.offset.x, CONFIG.camera.offset.y, CONFIG.camera.offset.z));
+  const target = new THREE.Vector3(player.position.x, 0.8, player.position.z);
+  const horizontalDistance = Math.cos(cameraControls.pitch) * cameraControls.distance;
+  const desired = target.clone().add(new THREE.Vector3(
+    Math.sin(cameraControls.yaw) * horizontalDistance,
+    Math.sin(cameraControls.pitch) * cameraControls.distance,
+    Math.cos(cameraControls.yaw) * horizontalDistance,
+  ));
   if (cameraShake > 0) desired.x += (Math.random() - .5) * cameraShake;
   camera.position.lerp(desired, 1 - Math.pow(0.001, delta));
   camera.lookAt(target);
