@@ -14,12 +14,20 @@
 
 - Static browser game with no build system or backend.
 - Procedural low-poly town using basic Three.js geometry.
-- One readable procedural survivor character with WASD movement and sprinting.
-- Survivor visual direction: red shirt or jacket, dark undershirt, blue pants, dark shoes, white/red/black cap, simple brown backpack, and wooden baseball bat.
+- One readable procedural survivor character with WASD movement, sprinting, and a quick arcade jump.
+- Survivor visual direction: red shirt or jacket, dark undershirt, blue pants, dark shoes, white/red/black cap, simple brown backpack, and wooden baseball bat. The survivor rises as a whole when jumping, tucks the legs slightly while airborne, and uses a small landing dip when returning to the ground.
 - Multiple simple procedural zombie types that all chase the player directly.
 - Automatic bat swing attack with a gold swing arc. The bat is a fixed close-range emergency weapon; damage and cooldown can improve, but range/area does not scale. Knockback Up is removed from the current level-up card pool.
 - Special abilities are the primary ranged/offensive build system.
 - XP gems, medkit health pickups, level-up upgrade cards, coins, pause, win screen, and loss screen.
+
+## Movement and jump
+
+- Base player and zombie movement speeds are tuned about **10% faster** than the previous stable feel so the town pace is slightly snappier without changing the 10-minute run clock, spawn cadence, cooldowns, XP curve, medkit timers, or damage tick timers.
+- **Spacebar** starts a quick, modest arcade jump only while grounded. Holding Spacebar does not repeat jumps in midair.
+- The player keeps camera-relative steering while airborne, so pressing a new WASD direction during a jump changes the movement direction instead of locking the original takeoff direction.
+- Jumping is currently a movement-feel feature only: it does not grant invincibility, stomp damage, dodge frames, or special combat rules. Bat swings and special abilities can still operate while jumping.
+- Cars, buildings, and other town props still do not block movement in this pass. Obstacle collision remains planned for a later dedicated pass.
 
 ## Special ability system
 
@@ -126,7 +134,7 @@ Spawn pressure increases over the run: spawn delays shrink gradually, the active
 
 ## Future ideas
 
-- Expand the ability roster from 3 test abilities to 8 total choices while preserving the 4-per-run cap and Level 1-10 scaling.
+- Expand the ability roster from 4 implemented abilities to 8 total choices while preserving the 4-per-run cap and Level 1-10 scaling.
 - Give Spitter Zombies an isolated, easy-to-read projectile attack once the foundation is stable.
 - More town props, barricades, rubble clusters, signs, and readable low-poly landmarks.
 - Persistent cosmetic unlocks bought with coins.
@@ -137,7 +145,7 @@ Spawn pressure increases over the run: spawn delays shrink gradually, the active
 
 - **WASD**: Move camera-relative.
 - **Shift**: Sprint.
-- **Space**: Jump/hop, if available.
+- **Space**: Jump/hop.
 - **Right mouse drag**: Orbit the camera.
 - **Scroll**: Zoom the camera in or out.
 - **P**: Pause or unpause.
