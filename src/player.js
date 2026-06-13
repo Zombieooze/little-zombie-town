@@ -42,25 +42,40 @@ export function createPlayerModel() {
   const strapL = part(new THREE.BoxGeometry(0.08, 0.95, 0.08), makeMat(0x3b2e22), [-0.38, 1.31, -0.08], [0.08, 0, 0.08]);
   const strapR = strapL.clone(); strapR.position.x = 0.38; strapR.rotation.z = -0.08;
 
-  const armL = part(new THREE.BoxGeometry(0.24, 0.78, 0.24), skin, [-0.62, 1.25, -0.02]);
-  const sleeveL = part(new THREE.BoxGeometry(0.28, 0.34, 0.28), red, [-0.62, 1.56, -0.02]);
-  const armR = part(new THREE.BoxGeometry(0.24, 0.78, 0.24), skin, [0.62, 1.25, -0.02]);
-  const sleeveR = part(new THREE.BoxGeometry(0.28, 0.34, 0.28), red, [0.62, 1.56, -0.02]);
-  const handR = part(new THREE.BoxGeometry(0.2, 0.2, 0.2), skin, [0.62, 0.82, -0.08]);
+  const armL = new THREE.Group();
+  armL.position.set(-0.62, 1.64, -0.02);
+  const sleeveL = part(new THREE.BoxGeometry(0.28, 0.34, 0.28), red, [0, -0.12, 0]);
+  const forearmL = part(new THREE.BoxGeometry(0.24, 0.78, 0.24), skin, [0, -0.47, 0]);
+  armL.add(sleeveL, forearmL);
 
-  const legL = part(new THREE.BoxGeometry(0.34, 0.82, 0.32), blue, [-0.23, 0.48, 0]);
-  const legR = legL.clone(); legR.position.x = 0.23;
-  const shoeL = part(new THREE.BoxGeometry(0.38, 0.2, 0.42), shoe, [-0.23, 0.1, -0.05]);
-  const shoeR = shoeL.clone(); shoeR.position.x = 0.23;
+  const armR = new THREE.Group();
+  armR.position.set(0.62, 1.64, -0.02);
+  const sleeveR = part(new THREE.BoxGeometry(0.28, 0.34, 0.28), red, [0, -0.12, 0]);
+  const forearmR = part(new THREE.BoxGeometry(0.24, 0.78, 0.24), skin, [0, -0.47, 0]);
+  const handR = part(new THREE.BoxGeometry(0.2, 0.2, 0.2), skin, [0, -0.82, -0.06]);
+  armR.add(sleeveR, forearmR, handR);
+
+  const legL = new THREE.Group();
+  legL.position.set(-0.23, 0.88, 0);
+  const pantsL = part(new THREE.BoxGeometry(0.34, 0.82, 0.32), blue, [0, -0.4, 0]);
+  const shoeL = part(new THREE.BoxGeometry(0.38, 0.2, 0.42), shoe, [0, -0.78, -0.05]);
+  legL.add(pantsL, shoeL);
+
+  const legR = new THREE.Group();
+  legR.position.set(0.23, 0.88, 0);
+  const pantsR = part(new THREE.BoxGeometry(0.34, 0.82, 0.32), blue, [0, -0.4, 0]);
+  const shoeR = part(new THREE.BoxGeometry(0.38, 0.2, 0.42), shoe, [0, -0.78, -0.05]);
+  legR.add(pantsR, shoeR);
 
   const bat = new THREE.Group();
   const handle = part(new THREE.CylinderGeometry(0.055, 0.075, 0.72, 6), batMat, [0, 0, 0]);
   const barrel = part(new THREE.CylinderGeometry(0.18, 0.11, 1.0, 8), batMat, [0, 0.76, 0]);
   bat.add(handle, barrel);
-  bat.position.set(0.84, 1.0, -0.34);
+  bat.position.set(0.18, -0.82, -0.26);
   bat.rotation.set(0.95, 0.15, -0.72);
+  armR.add(bat);
 
-  group.add(torso, jacketL, jacketR, head, hair, capTop, capBack, brim, eyeL, eyeR, backpackBox, flap, buckle, strapL, strapR, armL, sleeveL, armR, sleeveR, handR, legL, legR, shoeL, shoeR, bat);
+  group.add(torso, jacketL, jacketR, head, hair, capTop, capBack, brim, eyeL, eyeR, backpackBox, flap, buckle, strapL, strapR, armL, armR, legL, legR);
   group.userData.parts = { armL, armR, sleeveL, sleeveR, legL, legR, bat };
   group.userData.baseY = 0;
   group.userData.walkTime = 0;
@@ -74,18 +89,22 @@ export function createPlayer(scene) {
   return group;
 }
 
-export function updatePlayer(player, delta, attackTimer = 0) {
+export function updatePlayer(player, delta, attackTimer = 0, cameraYaw = 0) {
   const input = getMoveVector();
+  const cos = Math.cos(cameraYaw);
+  const sin = Math.sin(cameraYaw);
+  const moveX = input.x * cos + input.z * sin;
+  const moveZ = input.z * cos - input.x * sin;
   const sprint = isDown('shift') ? CONFIG.player.sprintMultiplier : 1;
   const speed = CONFIG.player.speed * sprint;
-  player.position.x += input.x * speed * delta;
-  player.position.z += input.z * speed * delta;
+  player.position.x += moveX * speed * delta;
+  player.position.z += moveZ * speed * delta;
   const limit = CONFIG.arenaSize / 2 - 2;
   player.position.x = THREE.MathUtils.clamp(player.position.x, -limit, limit);
   player.position.z = THREE.MathUtils.clamp(player.position.z, -limit, limit);
 
   const moving = Math.abs(input.x) + Math.abs(input.z) > 0;
-  if (moving) player.rotation.y = Math.atan2(input.x, input.z) + PLAYER_VISUAL_FACING_OFFSET;
+  if (moving) player.rotation.y = Math.atan2(moveX, moveZ) + PLAYER_VISUAL_FACING_OFFSET;
   const parts = player.userData.parts;
   player.userData.walkTime += delta * (moving ? 9.5 : 3.5);
   const stride = moving ? Math.sin(player.userData.walkTime) : 0;
@@ -98,9 +117,12 @@ export function updatePlayer(player, delta, attackTimer = 0) {
   const swing = Math.max(0, attackTimer / CONFIG.pulse.visualDuration);
   if (swing > 0) {
     const a = Math.sin((1 - swing) * Math.PI);
-    parts.bat.rotation.set(0.55 + a * 1.45, -0.65 + a * 1.1, -1.05 + a * 1.75);
-    parts.armR.rotation.x = -0.55 - a * 0.7;
+    parts.armR.rotation.x = -0.55 - a * 1.05;
+    parts.armR.rotation.y = -0.1 - a * 0.45;
+    parts.armR.rotation.z = -0.1 + a * 0.75;
   } else {
+    parts.armR.rotation.y = 0;
+    parts.armR.rotation.z = 0;
     parts.bat.rotation.set(0.95, 0.15, -0.72);
   }
 }

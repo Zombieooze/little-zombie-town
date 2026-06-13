@@ -31,13 +31,16 @@ const cameraControls = {
   distance: Math.hypot(CONFIG.camera.offset.x, CONFIG.camera.offset.y, CONFIG.camera.offset.z),
   dragging: false,
   pointerButton: null,
+  lastX: 0,
+  lastY: 0,
 };
 const cameraLimits = {
-  minPitch: THREE.MathUtils.degToRad(28),
-  maxPitch: THREE.MathUtils.degToRad(72),
-  minDistance: 16,
-  maxDistance: 42,
-  rotateSpeed: 0.006,
+  minPitch: 0.32,
+  maxPitch: 1.25,
+  minDistance: 9.5,
+  maxDistance: 24,
+  yawSpeed: 0.0055,
+  pitchSpeed: 0.0042,
   zoomSpeed: 0.0025,
 };
 
@@ -126,22 +129,33 @@ function initCameraControls() {
     event.preventDefault();
     cameraControls.dragging = true;
     cameraControls.pointerButton = event.button;
+    cameraControls.lastX = event.clientX;
+    cameraControls.lastY = event.clientY;
     if (event.button === 2 && canvas.requestPointerLock) canvas.requestPointerLock();
   });
 
-  window.addEventListener('mouseup', (event) => {
-    if (!cameraControls.dragging || event.button !== cameraControls.pointerButton) return;
+  const stopDrag = () => {
     cameraControls.dragging = false;
     cameraControls.pointerButton = null;
     if (document.pointerLockElement === canvas) document.exitPointerLock();
+  };
+
+  window.addEventListener('mouseup', (event) => {
+    if (!cameraControls.dragging || event.button !== cameraControls.pointerButton) return;
+    stopDrag();
   });
+  window.addEventListener('blur', stopDrag);
 
   window.addEventListener('mousemove', (event) => {
     const locked = document.pointerLockElement === canvas;
     if (!locked && !cameraControls.dragging) return;
-    cameraControls.yaw -= event.movementX * cameraLimits.rotateSpeed;
+    const movementX = locked ? event.movementX : event.clientX - cameraControls.lastX;
+    const movementY = locked ? event.movementY : event.clientY - cameraControls.lastY;
+    cameraControls.lastX = event.clientX;
+    cameraControls.lastY = event.clientY;
+    cameraControls.yaw -= movementX * cameraLimits.yawSpeed;
     cameraControls.pitch = THREE.MathUtils.clamp(
-      cameraControls.pitch - event.movementY * cameraLimits.rotateSpeed,
+      cameraControls.pitch - movementY * cameraLimits.pitchSpeed,
       cameraLimits.minPitch,
       cameraLimits.maxPitch,
     );
@@ -167,7 +181,7 @@ function updateCamera(delta) {
     Math.cos(cameraControls.yaw) * horizontalDistance,
   ));
   if (cameraShake > 0) desired.x += (Math.random() - .5) * cameraShake;
-  camera.position.lerp(desired, 1 - Math.pow(0.001, delta));
+  camera.position.copy(desired);
   camera.lookAt(target);
 }
 
@@ -192,7 +206,7 @@ function tick() {
     CONFIG.player.speed = savedSpeed * state.speedMultiplier;
     attackVisualTimer = Math.max(0, attackVisualTimer - delta);
     cameraShake = Math.max(0, cameraShake - delta);
-    updatePlayer(player, delta, attackVisualTimer);
+    updatePlayer(player, delta, attackVisualTimer, cameraControls.yaw);
     CONFIG.player.speed = savedSpeed;
     spawnTimer -= delta; pulseTimer -= delta;
     if (spawnTimer <= 0) { spawnZombie(scene); spawnTimer = CONFIG.zombie.spawnEvery * Math.max(.38, 1 - state.elapsed / 260); }
