@@ -40,6 +40,18 @@ Special abilities live in `src/abilities.js` and are designed as a clean foundat
 - **Spinning Sawblade:** A bright low-poly spinning scrap disc that auto-launches on cooldown, targets roughly the nearest zombie, damages enemies it touches, and scales from Level 1-10 through modest damage, cooldown, hit-radius, speed/lifetime, and volley-count upgrades.
 - **Scrap Orbitals:** One or more visible low-poly scrap chunks orbit the player, spin automatically, and use contact/tick damage when orbiting chunks touch zombies. Scrap Orbitals scale from Level 1-10 through modest damage, orbital-count, orbital-speed, and hit-radius upgrades.
 
+## Developer testing commands
+
+For local/manual browser-console testing, the game exposes `window.LZTDebug`. These helpers are intended for development only and do not need to be used during normal gameplay.
+
+Examples:
+
+- `LZTDebug.help()` prints the available debug commands.
+- `LZTDebug.setAbilityLevel("sawblade", 10)` unlocks Spinning Sawblade if needed and sets it to Level 10.
+- `LZTDebug.setAbilityLevel("scrapOrbitals", 10)` unlocks Scrap Orbitals if needed and sets it to Level 10.
+- `LZTDebug.addXP(1000)` adds XP through the normal level-up path where practical.
+- `LZTDebug.clearCoins()` resets the saved total coin count in `localStorage`.
+
 ## Current prototype target
 
 - Survive **10 minutes** in a noticeably larger arena than the earliest prototype.

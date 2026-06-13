@@ -9,3 +9,8 @@ export function addCoins(amount) {
   localStorage.setItem(COINS_KEY, String(total));
   return total;
 }
+
+export function clearTotalCoins() {
+  localStorage.setItem(COINS_KEY, '0');
+  return 0;
+}

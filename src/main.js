@@ -2,13 +2,13 @@ import * as THREE from 'three';
 import { CONFIG } from './config.js';
 import { initInput, consumePress } from './input.js';
 import { initUI, updateHUD, showScreen, hideOverlays, showUpgrades, showEnd, setMuted, updateMenuCoins } from './ui.js';
-import { addCoins } from './save.js';
+import { addCoins, clearTotalCoins, getTotalCoins } from './save.js';
 import { createWorld } from './world.js';
 import { createPlayer, updatePlayer } from './player.js';
-import { spawnZombie, updateZombies, damageZombies, resetZombies, getSpawnDelay } from './zombies.js';
+import { spawnZombie, updateZombies, damageZombies, resetZombies, getSpawnDelay, getZombies } from './zombies.js';
 import { dropXp, dropMedkit, updatePickups, resetPickups, countWorldMedkits } from './pickups.js';
 import { getUpgradeChoices, applyUpgrade } from './upgrades.js';
-import { resetAbilities, updateAbilities, unlockAbility, applyAbilityUpgrade, isAbilityCard } from './abilities.js';
+import { ABILITY_DEFINITIONS, normalizeAbilityId, resetAbilities, updateAbilities, unlockAbility, setAbilityLevel, getAbilityLevel, isAbilityUnlocked, applyAbilityUpgrade, isAbilityCard } from './abilities.js';
 
 const canvas = document.getElementById('game-canvas');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -58,6 +58,117 @@ initCameraControls();
 createWorld(scene);
 initUI({ onStart: startGame, onUpgrade: chooseUpgrade, onMenu: returnToMenu });
 showScreen('menu-screen');
+setupDebugTools();
+
+
+// LZTDebug is a small browser-console helper for local/manual ability testing.
+// It is not used by normal gameplay and is intentionally safe to ignore in production builds.
+function setupDebugTools() {
+  const refreshUi = () => { updateHUD(state); updateMenuCoins(); };
+  const formatTimer = () => `${Math.floor(state.elapsed / 60)}:${Math.floor(state.elapsed % 60).toString().padStart(2, '0')}`;
+  const implementedAbilityIds = () => Object.keys(ABILITY_DEFINITIONS);
+  const describeAbilities = () => Object.fromEntries(
+    implementedAbilityIds().map((id) => [id, {
+      unlocked: isAbilityUnlocked(state, id),
+      level: getAbilityLevel(state, id),
+    }]),
+  );
+  const reportUnknownAbility = (abilityId) => {
+    console.warn(`[LZTDebug] Unknown ability: ${abilityId}. Known abilities: ${implementedAbilityIds().join(', ')}; alias: scrapOrbitals.`);
+    return null;
+  };
+
+  window.LZTDebug = {
+    help() {
+      console.info(`LZTDebug commands:\n` +
+        `  LZTDebug.showState()\n` +
+        `  LZTDebug.unlockAbility("sawblade")\n` +
+        `  LZTDebug.unlockAbility("scrapOrbitals")\n` +
+        `  LZTDebug.setAbilityLevel("sawblade", 10)\n` +
+        `  LZTDebug.setAbilityLevel("scrapOrbitals", 7)\n` +
+        `  LZTDebug.maxAbilities()\n` +
+        `  LZTDebug.resetAbilities()\n` +
+        `  LZTDebug.addXP(1000)\n` +
+        `  LZTDebug.levelUp()\n` +
+        `  LZTDebug.heal() or LZTDebug.heal(25)\n` +
+        `  LZTDebug.clearCoins()`);
+    },
+    showState() {
+      const snapshot = {
+        mode,
+        level: state.level,
+        xp: `${state.xp}/${state.nextXp}`,
+        health: `${Math.ceil(state.health)}/${state.maxHealth}`,
+        runCoins: state.coins,
+        totalCoins: getTotalCoins(),
+        abilities: describeAbilities(),
+        timer: formatTimer(),
+        zombies: getZombies().length,
+      };
+      console.table(snapshot.abilities);
+      console.info('[LZTDebug] State:', snapshot);
+      return snapshot;
+    },
+    unlockAbility(abilityId) {
+      const id = normalizeAbilityId(abilityId);
+      if (!ABILITY_DEFINITIONS[id]) return reportUnknownAbility(abilityId);
+      if (isAbilityUnlocked(state, id)) {
+        console.info(`[LZTDebug] ${id} is already unlocked at level ${getAbilityLevel(state, id)}.`);
+        return getAbilityLevel(state, id);
+      }
+      unlockAbility(scene, state, id, player);
+      refreshUi();
+      console.info(`[LZTDebug] Unlocked ${id} at level ${getAbilityLevel(state, id)}.`);
+      return getAbilityLevel(state, id);
+    },
+    setAbilityLevel(abilityId, level) {
+      const id = normalizeAbilityId(abilityId);
+      if (!ABILITY_DEFINITIONS[id]) return reportUnknownAbility(abilityId);
+      const nextLevel = setAbilityLevel(scene, state, id, level, player);
+      refreshUi();
+      console.info(`[LZTDebug] Set ${id} to level ${nextLevel}.`);
+      return nextLevel;
+    },
+    maxAbilities() {
+      for (const id of implementedAbilityIds()) setAbilityLevel(scene, state, id, ABILITY_DEFINITIONS[id].maxLevel, player);
+      refreshUi();
+      console.info('[LZTDebug] Maxed all implemented abilities.', describeAbilities());
+      return describeAbilities();
+    },
+    resetAbilities() {
+      resetAbilities(scene, state);
+      refreshUi();
+      console.info('[LZTDebug] Reset current-run abilities.');
+    },
+    addXP(amount) {
+      const xpAmount = Math.max(0, Math.floor(Number(amount) || 0));
+      gainXp(xpAmount);
+      refreshUi();
+      console.info(`[LZTDebug] Added ${xpAmount} XP.`);
+      return state.xp;
+    },
+    levelUp() {
+      const needed = Math.max(1, state.nextXp - state.xp);
+      gainXp(needed);
+      refreshUi();
+      console.info(`[LZTDebug] Forced a level-up with ${needed} XP.`);
+      return state.level;
+    },
+    heal(amount) {
+      const healAmount = amount === undefined ? state.maxHealth : Math.max(0, Number(amount) || 0);
+      state.health = Math.min(state.maxHealth, state.health + healAmount);
+      refreshUi();
+      console.info(`[LZTDebug] Health is now ${Math.ceil(state.health)}/${state.maxHealth}.`);
+      return state.health;
+    },
+    clearCoins() {
+      clearTotalCoins();
+      updateMenuCoins();
+      console.info('[LZTDebug] Cleared saved total coins.');
+      return getTotalCoins();
+    },
+  };
+}
 
 function resetState() {
   Object.assign(state, { elapsed: 0, health: CONFIG.player.maxHealth, maxHealth: CONFIG.player.maxHealth, level: 1, xp: 0,

@@ -5,6 +5,10 @@ import { CONFIG } from './config.js';
 export const MAX_SPECIAL_ABILITIES = 4;
 export const MAX_ABILITY_LEVEL = 10;
 
+export const ABILITY_ID_ALIASES = {
+  scrapOrbitals: 'orbitals',
+};
+
 export const ABILITY_DEFINITIONS = {
   sawblade: {
     id: 'sawblade',
@@ -48,6 +52,10 @@ export const ABILITY_DEFINITIONS = {
   },
 };
 
+export function normalizeAbilityId(id) {
+  return ABILITY_ID_ALIASES[id] ?? id;
+}
+
 function makeAbilityState() {
   return {
     chosen: [],
@@ -66,11 +74,13 @@ export function resetAbilities(scene, state) {
 }
 
 export function isAbilityUnlocked(state, id) {
-  return state.abilities?.chosen?.includes(id) ?? false;
+  const abilityId = normalizeAbilityId(id);
+  return state.abilities?.chosen?.includes(abilityId) ?? false;
 }
 
 export function getAbilityLevel(state, id) {
-  return state.abilities?.levels?.[id] ?? 0;
+  const abilityId = normalizeAbilityId(id);
+  return state.abilities?.levels?.[abilityId] ?? 0;
 }
 
 export function canUnlockMoreAbilities(state) {
@@ -78,10 +88,27 @@ export function canUnlockMoreAbilities(state) {
 }
 
 export function unlockAbility(scene, state, id, player) {
-  if (!ABILITY_DEFINITIONS[id] || isAbilityUnlocked(state, id) || !canUnlockMoreAbilities(state)) return;
-  state.abilities.chosen.push(id);
-  state.abilities.levels[id] = 1;
-  if (id === 'orbitals') syncOrbitals(scene, state, player);
+  const abilityId = normalizeAbilityId(id);
+  if (!state.abilities) resetAbilities(scene, state);
+  if (!ABILITY_DEFINITIONS[abilityId] || isAbilityUnlocked(state, abilityId) || !canUnlockMoreAbilities(state)) return;
+  state.abilities.chosen.push(abilityId);
+  state.abilities.levels[abilityId] = 1;
+  if (abilityId === 'orbitals') syncOrbitals(scene, state, player);
+}
+
+export function setAbilityLevel(scene, state, id, level, player) {
+  const abilityId = normalizeAbilityId(id);
+  const definition = ABILITY_DEFINITIONS[abilityId];
+  if (!definition) return null;
+  if (!state.abilities) resetAbilities(scene, state);
+  if (!isAbilityUnlocked(state, abilityId)) unlockAbility(scene, state, abilityId, player);
+
+  const nextLevel = THREE.MathUtils.clamp(Math.floor(Number(level) || 1), 1, definition.maxLevel);
+  state.abilities.levels[abilityId] = nextLevel;
+  resetAbilityTuning(state, abilityId);
+  for (let tuningLevel = 2; tuningLevel <= nextLevel; tuningLevel++) applyAbilityLevelTuning(state, abilityId, tuningLevel);
+  if (abilityId === 'orbitals') syncOrbitals(scene, state, player);
+  return nextLevel;
 }
 
 export function applyAbilityUpgrade(scene, state, id, player) {
@@ -93,6 +120,12 @@ export function applyAbilityUpgrade(scene, state, id, player) {
   state.abilities.levels[abilityId] = nextLevel;
   applyAbilityLevelTuning(state, abilityId, nextLevel);
   syncOrbitals(scene, state, player);
+}
+
+function resetAbilityTuning(state, abilityId) {
+  const definition = ABILITY_DEFINITIONS[abilityId];
+  if (!definition || !state.abilities?.[abilityId]) return;
+  Object.assign(state.abilities[abilityId], definition.defaults);
 }
 
 function applyAbilityLevelTuning(state, abilityId, level) {
