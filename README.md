@@ -30,6 +30,8 @@ No backend, build step, npm install, database, or framework is required.
 
 - **WASD**: Move
 - **Shift**: Sprint
+- **Right mouse drag**: Orbit the camera
+- **Mouse wheel**: Zoom the camera in or out
 - **P**: Pause or unpause
 - **M**: Toggle mute placeholder
 

@@ -38,6 +38,8 @@
 
 - **WASD**: Move.
 - **Shift**: Sprint.
+- **Right mouse drag**: Orbit the camera.
+- **Mouse wheel**: Zoom the camera in or out.
 - **P**: Pause or unpause.
 - **M**: Toggle mute placeholder.
 
