@@ -33,8 +33,8 @@ Medkits are the current basic healing system. They use simple low-poly red boxes
 
 - A collected medkit heals a fixed amount while clamping the player to max health.
 - Every defeated zombie still drops its XP gem. Medkits are an extra rare drop and never replace XP.
-- Drop chances live near zombie type tuning: Walkers are rare, Runners/Little Zombies and Spitters are slightly more likely, Brutes are more rewarding, and Mini Bosses always drop a medkit.
-- World medkits begin appearing around **0:45**, then occasionally respawn near—but not directly on—the player, with a small active cap so healing remains helpful without flooding the arena.
+- Drop chances live near zombie type tuning: Walkers are rare, Runners/Little Zombies and Spitters are slightly more likely, and Brutes/Crushers/Mini Bosses are more rewarding without replacing XP drops.
+- World medkits begin appearing around **0:45**, then occasionally respawn near—but not directly on—the player, with small world and total active caps so healing remains helpful without flooding the arena.
 
 ## Zombie progression
 
@@ -44,9 +44,10 @@ Zombie tuning lives in `src/config.js` so health, speed, damage, XP, coins, size
 - **1:30+ or level 3+:** Little Runner Zombies join as smaller, faster, lower-health chasers.
 - **3:00+ or level 5+:** Brute Zombies join as larger, slower, high-health chasers with stronger contact damage.
 - **5:00+ or level 6+:** Spitter Zombies join as toxic-colored visual variants; for now they still chase directly instead of firing projectiles.
-- **7:00+ or level 8+:** A Mini Boss Zombie can spawn rarely, limited to one boss per run for the 10-minute test.
+- **6:00+ or level 9+:** Crusher Zombies enter as late-game heavy chasers between Brutes and the Mini Boss.
+- **7:30+ or level 11+:** Mini Boss Zombies can spawn rarely, capped to about one or two bosses for the 10-minute test.
 
-Spawn pressure increases over the run: spawn delays shrink gradually, the active horde cap rises, and later zombie type weights become more prominent after they unlock. Enemy health scales slowly by elapsed minutes and contact damage scales even more lightly, keeping the opening approachable while preventing the late run from becoming too easy.
+Spawn pressure increases over the run: spawn delays shrink gradually, the active horde cap rises, and later zombie type weights become more prominent after they unlock, with extra late pressure on heavy enemies after minute five. Enemy health scales slowly by elapsed minutes and contact damage scales even more lightly, keeping the opening approachable while preventing the late run from becoming too easy. XP rewards also gain a modest time-based multiplier after minute five, and level XP growth softens after level 10, so upgrades keep feeding through the full 10-minute run. Strong successful play should trend closer to level 24-30 instead of stalling near the high teens.
 
 ## Zombie type roles
 
@@ -54,6 +55,7 @@ Spawn pressure increases over the run: spawn delays shrink gradually, the active
 - **Little/Runner Zombie:** Smaller body, purple accent, faster speed, lower health, and slightly higher XP than a walker.
 - **Brute Zombie:** Larger chunky body, brown/dark torso, slow speed, high health, higher contact damage, and stronger XP/coin rewards.
 - **Spitter Zombie:** Medium body with toxic green accent and a larger throat/head silhouette; currently behaves as a normal chaser with higher XP.
+- **Crusher Zombie:** Bigger than a Brute but smaller than the Mini Boss, with a rusty heavy torso, wide shoulders, more health and damage than a Brute, and a 4x-5x walker XP reward.
 - **Mini Boss Zombie:** Very large zombie with a dark torso, bigger arms, simple crown/spike cones, high health, slow speed, and a large XP/coin reward.
 
 ## Future ideas

@@ -49,16 +49,22 @@ function zombieMesh(typeKey = 'walker', progress = {}) {
   const head = new THREE.Mesh(new THREE.BoxGeometry(headSize, headSize, headSize), material(skin)); head.position.y = typeKey === 'runner' ? 1.82 : 1.9;
   g.add(body, head);
 
-  addLimb(g, skin, .65, 1.15, -.2, typeKey === 'brute' || typeKey === 'boss' ? .34 : .25, .8, .25);
-  addLimb(g, skin, -.65, 1.15, -.2, typeKey === 'brute' || typeKey === 'boss' ? .34 : .25, .8, .25);
+  const heavyArms = typeKey === 'brute' || typeKey === 'crusher' || typeKey === 'boss';
+  addLimb(g, skin, .65, 1.15, -.2, heavyArms ? .34 : .25, .8, .25);
+  addLimb(g, skin, -.65, 1.15, -.2, heavyArms ? .34 : .25, .8, .25);
 
   if (typeKey === 'runner') {
     const tuft = new THREE.Mesh(new THREE.ConeGeometry(.18, .34, 5), material(0x5a258f));
     tuft.position.y = 2.35; g.add(tuft);
   }
-  if (typeKey === 'brute' || typeKey === 'boss') {
-    const belly = new THREE.Mesh(new THREE.BoxGeometry(1.08, .72, .68), material(shirt));
+  if (typeKey === 'brute' || typeKey === 'crusher' || typeKey === 'boss') {
+    const bellyWidth = typeKey === 'crusher' ? 1.24 : 1.08;
+    const belly = new THREE.Mesh(new THREE.BoxGeometry(bellyWidth, .72, .68), material(shirt));
     belly.position.y = .78; g.add(belly);
+  }
+  if (typeKey === 'crusher') {
+    const shoulder = new THREE.Mesh(new THREE.BoxGeometry(1.42, .34, .7), material(0x4b4038));
+    shoulder.position.y = 1.42; g.add(shoulder);
   }
   if (typeKey === 'spitter') {
     const throat = new THREE.Mesh(new THREE.SphereGeometry(.34, 8, 6), material(0xb7ff4a));
@@ -78,9 +84,9 @@ function zombieMesh(typeKey = 'walker', progress = {}) {
   return g;
 }
 
-function unlockedTypes({ elapsed = 0, level = 1, bossSpawned = false } = {}) {
+function unlockedTypes({ elapsed = 0, level = 1, bossSpawnCount = 0 } = {}) {
   return Object.entries(ZOMBIE_TYPES).filter(([key, type]) => {
-    if (key === 'boss' && bossSpawned) return false;
+    if (key === 'boss' && bossSpawnCount >= 2) return false;
     return elapsed >= type.unlockTime || level >= type.unlockLevel;
   });
 }
@@ -100,7 +106,10 @@ function chooseZombieType(progress) {
 function getTypeWeight(key, type, elapsedMinutes) {
   if (key === 'walker') return type.weight;
   const latePressure = 1 + elapsedMinutes * CONFIG.zombie.pacing.lateTypeWeightPerMinute;
-  return type.weight * latePressure;
+  const heavyPressure = key === 'brute' || key === 'crusher' || key === 'boss'
+    ? 1 + Math.max(0, elapsedMinutes - 5) * CONFIG.zombie.pacing.heavyTypeWeightPerMinuteAfterFive
+    : 1;
+  return type.weight * latePressure * heavyPressure;
 }
 
 export function resetZombies(scene) { zombies.splice(0).forEach((z) => scene.remove(z)); }

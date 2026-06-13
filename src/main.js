@@ -49,7 +49,7 @@ const cameraLimits = {
 const state = {
   elapsed: 0, health: 100, maxHealth: 100, level: 1, xp: 0, nextXp: CONFIG.level.baseXp,
   coins: 0, kills: 0, pulseCooldown: CONFIG.pulse.cooldown, pulseRange: CONFIG.pulse.range,
-  pulseDamage: CONFIG.pulse.damage, speedMultiplier: 1, bossSpawned: false,
+  pulseDamage: CONFIG.pulse.damage, speedMultiplier: 1, bossSpawnCount: 0,
 };
 
 initInput();
@@ -61,7 +61,7 @@ showScreen('menu-screen');
 function resetState() {
   Object.assign(state, { elapsed: 0, health: CONFIG.player.maxHealth, maxHealth: CONFIG.player.maxHealth, level: 1, xp: 0,
     nextXp: CONFIG.level.baseXp, coins: 0, kills: 0, pulseCooldown: CONFIG.pulse.cooldown, pulseRange: CONFIG.pulse.range,
-    pulseDamage: CONFIG.pulse.damage, speedMultiplier: 1, bossSpawned: false });
+    pulseDamage: CONFIG.pulse.damage, speedMultiplier: 1, bossSpawnCount: 0 });
   spawnTimer = 0; worldMedkitTimer = CONFIG.medkit.worldFirstSpawn; pulseTimer = 0; pendingChoices = [];
 }
 
@@ -87,10 +87,25 @@ function chooseUpgrade(id) {
   mode = 'playing';
 }
 
+function getXpReward(baseAmount) {
+  const elapsedAfterMultiplier = Math.max(0, state.elapsed - CONFIG.rewards.xpMultiplierStartTime);
+  const elapsedMinutes = elapsedAfterMultiplier / 60;
+  const multiplier = Math.min(
+    CONFIG.rewards.maxXpMultiplier,
+    1 + elapsedMinutes * CONFIG.rewards.xpMultiplierPerMinute,
+  );
+  return Math.ceil(baseAmount * multiplier);
+}
+
+function getNextLevelXp() {
+  const growth = state.level >= CONFIG.level.lateGrowthStartLevel ? CONFIG.level.lateGrowth : CONFIG.level.growth;
+  return Math.floor(state.nextXp * growth);
+}
+
 function gainXp(amount) {
   state.xp += amount;
   while (state.xp >= state.nextXp) {
-    state.xp -= state.nextXp; state.level += 1; state.nextXp = Math.floor(state.nextXp * CONFIG.level.growth);
+    state.xp -= state.nextXp; state.level += 1; state.nextXp = getNextLevelXp();
     pendingChoices = getUpgradeChoices(); mode = 'upgrade'; showUpgrades(pendingChoices); break;
   }
 }
@@ -171,7 +186,7 @@ function createHitParticles(position) {
 function doPulse() {
   createPulseVisual();
   damageZombies(scene, player.position, state.pulseRange, state.pulseDamage, (position, type, typeKey) => {
-    state.kills += 1; state.coins += type.coins; dropXp(scene, position, type.xp);
+    state.kills += 1; state.coins += type.coins; dropXp(scene, position, getXpReward(type.xp));
     maybeDropMedkit(position, type, typeKey);
   }, createHitParticles);
 }
@@ -270,8 +285,8 @@ function tick() {
     CONFIG.player.speed = savedSpeed;
     spawnTimer -= delta; pulseTimer -= delta; worldMedkitTimer -= delta;
     if (spawnTimer <= 0) {
-      const spawned = spawnZombie(scene, { elapsed: state.elapsed, level: state.level, bossSpawned: state.bossSpawned });
-      if (spawned?.userData.typeKey === 'boss') state.bossSpawned = true;
+      const spawned = spawnZombie(scene, { elapsed: state.elapsed, level: state.level, bossSpawnCount: state.bossSpawnCount });
+      if (spawned?.userData.typeKey === 'boss') state.bossSpawnCount += 1;
       spawnTimer = getSpawnDelay(state.elapsed);
     }
     if (worldMedkitTimer <= 0) {
