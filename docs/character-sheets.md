@@ -64,6 +64,15 @@ Cartoon post-apocalyptic and non-graphic. The mood is dark green and purple nigh
 
 ## Special ability visual notes
 
-- Spinning Sawblade should read as a bright low-poly scrap disc: flat metal body, chunky teeth, fast spin, and no gore.
-- Scrap Orbitals should read as toy-like junk parts circling the survivor: small colorful boxes/cones with readable motion from the default camera distance.
-- Ability effects should stay procedural and browser-friendly, using Three.js primitives instead of external textures or model files.
+All special abilities should stay low-poly, toy-like, readable from the default camera, and built from procedural Three.js primitives. No external textures, sprite sheets, GLTF files, or realistic gore.
+
+1. **Spinning Sawblade:** Bright low-poly scrap disc with a flat metal body, chunky teeth, fast spin, and no gore.
+2. **Scrap Orbitals:** Toy-like junk parts circling the survivor, using small colorful boxes/cones with readable motion from the default camera distance.
+3. **Electric Zapper:** Simple blue/yellow lightning segments or short glowing rods that jump from the player to one zombie, later forking to nearby zombies.
+4. **Fire Bottle:** Small bottle or jar shape arcing outward, then a compact orange/red low-poly flame patch on the ground.
+5. **Nail Blaster:** Tiny silver nail/bolt shapes fired in quick straight paths with small spark hits.
+6. **Shockwave Stomp:** Expanding flat ring or low cylinder pulse around the player, colored pale yellow or cyan, with a brief dust puff feel.
+7. **Bear Trap Toss:** Chunky dark metal trap made from simple semicircle/box teeth on the ground; keep it readable and non-realistic.
+8. **Junkyard Turret:** Small squat scrap tripod or box turret with a short barrel, using mismatched metal colors and simple muzzle flashes.
+
+Future ability effects should reinforce that ranged power comes from special abilities while the bat remains a fixed-range emergency weapon.

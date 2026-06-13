@@ -13,6 +13,7 @@ export const ABILITY_DEFINITIONS = {
     unlockName: 'Unlock Spinning Sawblade',
     unlockDescription: 'Auto-launch a spinning scrap sawblade at nearby zombies.',
     maxLevel: MAX_ABILITY_LEVEL,
+    implemented: true,
     defaults: { damage: 28, cooldown: 3.2, bladeCount: 1, speed: 11, lifetime: 2.1, hitRadius: .72 },
     upgrades: {
       2: 'Sawblade damage increases.',
@@ -33,6 +34,7 @@ export const ABILITY_DEFINITIONS = {
     unlockName: 'Unlock Scrap Orbitals',
     unlockDescription: 'Add orbiting scrap chunks that damage zombies on contact.',
     maxLevel: MAX_ABILITY_LEVEL,
+    implemented: true,
     defaults: { damage: 14, orbitalCount: 2, speed: 2.25, radius: 2.25, hitRadius: .7, hitCooldown: .3 },
     upgrades: {
       2: 'Scrap orbitals hit harder.',
@@ -46,7 +48,82 @@ export const ABILITY_DEFINITIONS = {
       10: 'Scrap orbitals get a final damage boost.',
     },
   },
+
+  zapper: {
+    id: 'zapper',
+    name: 'Electric Zapper',
+    shortName: 'Zapper',
+    unlockName: 'Unlock Electric Zapper',
+    unlockDescription: 'Planned: automatic electric chain attack for crowd control.',
+    maxLevel: MAX_ABILITY_LEVEL,
+    implemented: false,
+    plannedRole: 'Zaps one nearby zombie, then later chains to more zombies.',
+    upgrades: {},
+  },
+  fireBottle: {
+    id: 'fireBottle',
+    name: 'Fire Bottle',
+    shortName: 'Fire',
+    unlockName: 'Unlock Fire Bottle',
+    unlockDescription: 'Planned: throw a bottle that creates a small fire area.',
+    maxLevel: MAX_ABILITY_LEVEL,
+    implemented: false,
+    plannedRole: 'Area damage over time for controlling space.',
+    upgrades: {},
+  },
+  nailBlaster: {
+    id: 'nailBlaster',
+    name: 'Nail Blaster',
+    shortName: 'Nails',
+    unlockName: 'Unlock Nail Blaster',
+    unlockDescription: 'Planned: fast nail or bolt projectiles at nearby zombies.',
+    maxLevel: MAX_ABILITY_LEVEL,
+    implemented: false,
+    plannedRole: 'Fast ranged damage with later extra projectiles and piercing.',
+    upgrades: {},
+  },
+  shockwaveStomp: {
+    id: 'shockwaveStomp',
+    name: 'Shockwave Stomp',
+    shortName: 'Stomp',
+    unlockName: 'Unlock Shockwave Stomp',
+    unlockDescription: 'Planned: timed shockwave around the player.',
+    maxLevel: MAX_ABILITY_LEVEL,
+    implemented: false,
+    plannedRole: 'Panic crowd-control that damages and pushes zombies back.',
+    upgrades: {},
+  },
+  bearTrap: {
+    id: 'bearTrap',
+    name: 'Bear Trap Toss',
+    shortName: 'Traps',
+    unlockName: 'Unlock Bear Trap Toss',
+    unlockDescription: 'Planned: drop traps that punish zombies stepping on them.',
+    maxLevel: MAX_ABILITY_LEVEL,
+    implemented: false,
+    plannedRole: 'Area control with later slow effects.',
+    upgrades: {},
+  },
+  turret: {
+    id: 'turret',
+    name: 'Junkyard Turret',
+    shortName: 'Turret',
+    unlockName: 'Unlock Junkyard Turret',
+    unlockDescription: 'Planned: deploy a small scrap turret that shoots nearby zombies.',
+    maxLevel: MAX_ABILITY_LEVEL,
+    implemented: false,
+    plannedRole: 'Hold an area with automatic ranged fire.',
+    upgrades: {},
+  },
 };
+
+export function getImplementedAbilityDefinitions() {
+  return Object.values(ABILITY_DEFINITIONS).filter((ability) => ability.implemented);
+}
+
+export function getAbilityDisplayName(id) {
+  return ABILITY_DEFINITIONS[id]?.shortName ?? ABILITY_DEFINITIONS[id]?.name ?? id;
+}
 
 function makeAbilityState() {
   return {
@@ -78,7 +155,7 @@ export function canUnlockMoreAbilities(state) {
 }
 
 export function unlockAbility(scene, state, id, player) {
-  if (!ABILITY_DEFINITIONS[id] || isAbilityUnlocked(state, id) || !canUnlockMoreAbilities(state)) return;
+  if (!ABILITY_DEFINITIONS[id]?.implemented || isAbilityUnlocked(state, id) || !canUnlockMoreAbilities(state)) return;
   state.abilities.chosen.push(id);
   state.abilities.levels[id] = 1;
   if (id === 'orbitals') syncOrbitals(scene, state, player);
@@ -86,7 +163,7 @@ export function unlockAbility(scene, state, id, player) {
 
 export function applyAbilityUpgrade(scene, state, id, player) {
   const abilityId = id.replace('upgrade_', '');
-  if (!ABILITY_DEFINITIONS[abilityId] || !isAbilityUnlocked(state, abilityId)) return;
+  if (!ABILITY_DEFINITIONS[abilityId]?.implemented || !isAbilityUnlocked(state, abilityId)) return;
   const currentLevel = getAbilityLevel(state, abilityId);
   if (currentLevel >= ABILITY_DEFINITIONS[abilityId].maxLevel) return;
   const nextLevel = currentLevel + 1;
@@ -123,7 +200,7 @@ function applyAbilityLevelTuning(state, abilityId, level) {
 
 export function getAbilityCards(state) {
   const cards = [];
-  for (const ability of Object.values(ABILITY_DEFINITIONS)) {
+  for (const ability of getImplementedAbilityDefinitions()) {
     const level = getAbilityLevel(state, ability.id);
     if (!isAbilityUnlocked(state, ability.id)) {
       if (canUnlockMoreAbilities(state)) cards.push({ id: `unlock_${ability.id}`, name: ability.unlockName, description: ability.unlockDescription });
