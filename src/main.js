@@ -155,7 +155,7 @@ function initCameraControls() {
     cameraControls.lastY = event.clientY;
     cameraControls.yaw -= movementX * cameraLimits.yawSpeed;
     cameraControls.pitch = THREE.MathUtils.clamp(
-      cameraControls.pitch - movementY * cameraLimits.pitchSpeed,
+      cameraControls.pitch + movementY * cameraLimits.pitchSpeed,
       cameraLimits.minPitch,
       cameraLimits.maxPitch,
     );
