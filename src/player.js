@@ -5,8 +5,8 @@ import { getMoveVector, isDown } from './input.js';
 const makeMat = (color) => new THREE.MeshStandardMaterial({ color, roughness: 0.82 });
 // Character art faces local -Z; movement rotation math points local +Z, so keep visuals flipped once here.
 const PLAYER_VISUAL_FACING_OFFSET = Math.PI;
-const BAT_IDLE_POSITION = new THREE.Vector3(0.02, -0.8, -0.08);
-const BAT_IDLE_ROTATION = new THREE.Euler(3.55, 0.05, -0.18);
+const BAT_IDLE_POSITION = new THREE.Vector3(0, -0.82, -0.06);
+const BAT_IDLE_ROTATION = new THREE.Euler(0, 0.28, 0.22);
 
 function part(geometry, material, position, rotation = [0, 0, 0]) {
   const mesh = new THREE.Mesh(geometry, material);
@@ -72,10 +72,12 @@ export function createPlayerModel() {
 
   const bat = new THREE.Group();
   // Keep the bat's local origin at the hand grip so arm rotation swings the barrel naturally.
-  const knob = part(new THREE.CylinderGeometry(0.095, 0.095, 0.08, 6), batMat, [0, -0.08, 0]);
-  const handle = part(new THREE.CylinderGeometry(0.055, 0.07, 0.58, 6), batMat, [0, 0.2, 0]);
-  const barrel = part(new THREE.CylinderGeometry(0.18, 0.1, 0.86, 8), batMat, [0, 0.92, 0]);
-  bat.add(knob, handle, barrel);
+  // Cylinders are built along local X so the idle bat sits sideways instead of hanging down.
+  const knob = part(new THREE.CylinderGeometry(0.095, 0.095, 0.08, 6), batMat, [-0.08, 0, 0], [0, 0, Math.PI / 2]);
+  const handle = part(new THREE.CylinderGeometry(0.055, 0.07, 0.42, 6), batMat, [0.17, 0, 0], [0, 0, Math.PI / 2]);
+  const barrel = part(new THREE.CylinderGeometry(0.17, 0.095, 0.82, 8), batMat, [0.76, 0, 0], [0, 0, Math.PI / 2]);
+  const endCap = part(new THREE.CylinderGeometry(0.18, 0.18, 0.06, 8), batMat, [1.2, 0, 0], [0, 0, Math.PI / 2]);
+  bat.add(knob, handle, barrel, endCap);
   bat.position.copy(BAT_IDLE_POSITION);
   bat.rotation.copy(BAT_IDLE_ROTATION);
   armR.add(bat);
@@ -122,11 +124,11 @@ export function updatePlayer(player, delta, attackTimer = 0, cameraYaw = 0) {
   const swing = Math.max(0, attackTimer / CONFIG.pulse.visualDuration);
   if (swing > 0) {
     const progress = 1 - swing;
-    const eased = 0.5 - Math.cos(progress * Math.PI) * 0.5;
+    const eased = progress * progress * progress * (progress * (progress * 6 - 15) + 10);
     const followThrough = Math.sin(progress * Math.PI);
-    parts.armR.rotation.x = THREE.MathUtils.lerp(-0.25, -0.82, eased) - followThrough * 0.18;
-    parts.armR.rotation.y = THREE.MathUtils.lerp(-0.55, 0.62, eased);
-    parts.armR.rotation.z = THREE.MathUtils.lerp(-0.18, -0.48, eased) - followThrough * 0.18;
+    parts.armR.rotation.x = THREE.MathUtils.lerp(-0.18, -0.58, eased) - followThrough * 0.08;
+    parts.armR.rotation.y = THREE.MathUtils.lerp(0.55, -0.55, eased);
+    parts.armR.rotation.z = THREE.MathUtils.lerp(-0.14, -0.36, eased) - followThrough * 0.08;
     parts.bat.position.copy(BAT_IDLE_POSITION);
     parts.bat.rotation.copy(BAT_IDLE_ROTATION);
   } else {
