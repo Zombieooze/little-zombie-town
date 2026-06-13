@@ -3,7 +3,10 @@ import { CONFIG } from './config.js';
 import { getMoveVector, isDown } from './input.js';
 
 const makeMat = (color) => new THREE.MeshStandardMaterial({ color, roughness: 0.82 });
+// Character art faces local -Z; movement rotation math points local +Z, so keep visuals flipped once here.
 const PLAYER_VISUAL_FACING_OFFSET = Math.PI;
+const BAT_IDLE_POSITION = new THREE.Vector3(0.04, -0.82, -0.06);
+const BAT_IDLE_ROTATION = new THREE.Euler(2.25, 0.1, -0.45);
 
 function part(geometry, material, position, rotation = [0, 0, 0]) {
   const mesh = new THREE.Mesh(geometry, material);
@@ -71,8 +74,8 @@ export function createPlayerModel() {
   const handle = part(new THREE.CylinderGeometry(0.055, 0.075, 0.72, 6), batMat, [0, 0, 0]);
   const barrel = part(new THREE.CylinderGeometry(0.18, 0.11, 1.0, 8), batMat, [0, 0.76, 0]);
   bat.add(handle, barrel);
-  bat.position.set(0.18, -0.82, -0.26);
-  bat.rotation.set(0.95, 0.15, -0.72);
+  bat.position.copy(BAT_IDLE_POSITION);
+  bat.rotation.copy(BAT_IDLE_ROTATION);
   armR.add(bat);
 
   group.add(torso, jacketL, jacketR, head, hair, capTop, capBack, brim, eyeL, eyeR, backpackBox, flap, buckle, strapL, strapR, armL, armR, legL, legR);
@@ -116,13 +119,16 @@ export function updatePlayer(player, delta, attackTimer = 0, cameraYaw = 0) {
 
   const swing = Math.max(0, attackTimer / CONFIG.pulse.visualDuration);
   if (swing > 0) {
-    const a = Math.sin((1 - swing) * Math.PI);
-    parts.armR.rotation.x = -0.55 - a * 1.05;
-    parts.armR.rotation.y = -0.1 - a * 0.45;
-    parts.armR.rotation.z = -0.1 + a * 0.75;
+    const progress = 1 - swing;
+    const sweep = Math.sin(progress * Math.PI);
+    parts.armR.rotation.x = THREE.MathUtils.lerp(0.75, -0.85, progress);
+    parts.armR.rotation.y = THREE.MathUtils.lerp(0.85, -0.85, progress);
+    parts.armR.rotation.z = -0.35 + sweep * 0.35;
+    parts.bat.rotation.copy(BAT_IDLE_ROTATION);
   } else {
     parts.armR.rotation.y = 0;
     parts.armR.rotation.z = 0;
-    parts.bat.rotation.set(0.95, 0.15, -0.72);
+    parts.bat.position.copy(BAT_IDLE_POSITION);
+    parts.bat.rotation.copy(BAT_IDLE_ROTATION);
   }
 }

@@ -4,6 +4,8 @@ import { CONFIG } from './config.js';
 const zombies = [];
 const mat = new THREE.MeshStandardMaterial({ color: 0x78c850, roughness: 0.85 });
 const shirt = new THREE.MeshStandardMaterial({ color: 0x6d5bd0, roughness: 0.85 });
+// Zombie art faces local -Z; chase rotation math points local +Z toward the player.
+const ZOMBIE_VISUAL_FACING_OFFSET = Math.PI;
 
 function zombieMesh() {
   const g = new THREE.Group();
@@ -33,7 +35,7 @@ export function updateZombies(player, delta, onDamage) {
     const dist = Math.hypot(dx, dz) || 1;
     z.position.x += (dx / dist) * CONFIG.zombie.speed * delta;
     z.position.z += (dz / dist) * CONFIG.zombie.speed * delta;
-    z.rotation.y = Math.atan2(dx, dz);
+    z.rotation.y = Math.atan2(dx, dz) + ZOMBIE_VISUAL_FACING_OFFSET;
     z.userData.hitTimer = Math.max(0, z.userData.hitTimer - delta);
     if (dist < CONFIG.player.radius + CONFIG.zombie.radius && z.userData.hitTimer <= 0) {
       z.userData.hitTimer = CONFIG.zombie.hitCooldown;
