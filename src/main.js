@@ -27,6 +27,7 @@ let cameraShake = 0;
 let pendingChoices = [];
 let cameraAngle = 0;
 let cameraZoom = 1;
+const BAT_SWING_ARC = Math.PI * 0.82;
 
 const state = {
   elapsed: 0, health: 100, maxHealth: 100, level: 1, xp: 0, nextXp: CONFIG.level.baseXp,
@@ -77,8 +78,11 @@ function gainXp(amount) {
 }
 
 function createPulseVisual() {
-  const arc = new THREE.Mesh(new THREE.RingGeometry(state.pulseRange * .72, state.pulseRange, 48, 1, -Math.PI * .68, Math.PI * 1.36), new THREE.MeshBasicMaterial({ color: 0xffd166, transparent: true, opacity: .9, side: THREE.DoubleSide }));
-  arc.rotation.x = -Math.PI / 2; arc.rotation.z = -player.rotation.y; arc.position.copy(player.position); arc.position.y = .16;
+  const arcStart = Math.PI / 2 - BAT_SWING_ARC / 2;
+  const arc = new THREE.Mesh(new THREE.RingGeometry(state.pulseRange * .72, state.pulseRange, 48, 1, arcStart, BAT_SWING_ARC), new THREE.MeshBasicMaterial({ color: 0xffd166, transparent: true, opacity: .9, side: THREE.DoubleSide }));
+  arc.rotation.x = -Math.PI / 2;
+  arc.rotation.y = player.rotation.y;
+  arc.position.copy(player.position); arc.position.y = .16;
   arc.userData.life = CONFIG.pulse.visualDuration; arc.userData.maxLife = CONFIG.pulse.visualDuration; arc.scale.setScalar(.25);
   scene.add(arc); pulseVisuals.push(arc);
   attackVisualTimer = CONFIG.pulse.visualDuration; cameraShake = .12;
@@ -95,9 +99,10 @@ function createHitParticles(position) {
 
 function doPulse() {
   createPulseVisual();
+  const forward = new THREE.Vector3(-Math.sin(player.rotation.y), 0, -Math.cos(player.rotation.y));
   damageZombies(scene, player.position, state.pulseRange, state.pulseDamage, state.knockback, (position) => {
     state.kills += 1; state.coins += CONFIG.zombie.coins; dropXp(scene, position); maybeDropZombieHealth(scene, position);
-  }, createHitParticles);
+  }, createHitParticles, forward, BAT_SWING_ARC);
 }
 
 function endRun(won) {
@@ -109,7 +114,7 @@ function updateCamera(delta) {
   const cameraInput = consumeCameraInput();
   cameraAngle += cameraInput.deltaX * 0.006;
   cameraZoom = THREE.MathUtils.clamp(cameraZoom + cameraInput.zoomDelta, CONFIG.camera.minZoom, CONFIG.camera.maxZoom);
-  const target = new THREE.Vector3(player.position.x, 0, player.position.z + CONFIG.camera.lookAhead);
+  const target = new THREE.Vector3(player.position.x, CONFIG.camera.targetHeight, player.position.z);
   const offset = new THREE.Vector3(CONFIG.camera.offset.x, CONFIG.camera.offset.y, CONFIG.camera.offset.z).multiplyScalar(cameraZoom);
   offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraAngle);
   const desired = target.clone().add(offset);
@@ -139,7 +144,7 @@ function tick() {
     CONFIG.player.speed = savedSpeed * state.speedMultiplier;
     attackVisualTimer = Math.max(0, attackVisualTimer - delta);
     cameraShake = Math.max(0, cameraShake - delta);
-    updatePlayer(player, delta, attackVisualTimer);
+    updatePlayer(player, delta, attackVisualTimer, cameraAngle);
     CONFIG.player.speed = savedSpeed;
     spawnTimer -= delta; pulseTimer -= delta;
     if (spawnTimer <= 0) { spawnZombie(scene); spawnTimer = CONFIG.zombie.spawnEvery * Math.max(.38, 1 - state.elapsed / 260); }

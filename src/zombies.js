@@ -42,11 +42,11 @@ export function updateZombies(player, delta, onDamage) {
   }
 }
 
-export function damageZombies(scene, origin, range, damage, knockback, onKilled, onHit = () => {}) {
+export function damageZombies(scene, origin, range, damage, knockback, onKilled, onHit = () => {}, facing = null, arc = Math.PI * 2) {
   for (let i = zombies.length - 1; i >= 0; i--) {
     const z = zombies[i];
     const dist = Math.hypot(origin.x - z.position.x, origin.z - z.position.z);
-    if (dist <= range) {
+    if (dist <= range && isInsideSwingArc(origin, z.position, facing, arc)) {
       z.userData.health -= damage;
       onHit(z.position.clone());
       const dx = z.position.x - origin.x, dz = z.position.z - origin.z;
@@ -64,4 +64,13 @@ export function damageZombies(scene, origin, range, damage, knockback, onKilled,
       }
     }
   }
+}
+
+function isInsideSwingArc(origin, target, facing, arc) {
+  if (!facing || arc >= Math.PI * 2) return true;
+  const dx = target.x - origin.x;
+  const dz = target.z - origin.z;
+  const length = Math.hypot(dx, dz) || 1;
+  const dot = THREE.MathUtils.clamp((dx / length) * facing.x + (dz / length) * facing.z, -1, 1);
+  return Math.acos(dot) <= arc / 2;
 }

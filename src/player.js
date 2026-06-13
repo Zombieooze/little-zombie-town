@@ -83,8 +83,8 @@ export function createPlayer(scene) {
   return group;
 }
 
-export function updatePlayer(player, delta, attackTimer = 0) {
-  const input = getMoveVector();
+export function updatePlayer(player, delta, attackTimer = 0, cameraYaw = 0) {
+  const input = getMoveVector(cameraYaw);
   const sprint = isDown('shift') ? CONFIG.player.sprintMultiplier : 1;
   const speed = CONFIG.player.speed * sprint;
   player.position.x += input.x * speed * delta;
@@ -114,10 +114,14 @@ export function updatePlayer(player, delta, attackTimer = 0) {
 
   const swing = Math.max(0, attackTimer / CONFIG.pulse.visualDuration);
   if (swing > 0) {
-    const a = Math.sin((1 - swing) * Math.PI);
-    parts.bat.rotation.set(0.55 + a * 1.45, -0.65 + a * 1.1, -1.05 + a * 1.75);
-    parts.shoulderR.rotation.x = -0.55 - a * 0.7;
+    const progress = 1 - swing;
+    const a = Math.sin(progress * Math.PI);
+    const sweep = THREE.MathUtils.lerp(0.95, -0.95, progress);
+    parts.bat.rotation.set(0.35 + a * 1.1, sweep, -1.2 + a * 1.45);
+    parts.shoulderR.rotation.x = -0.45 - a * 0.65;
+    parts.shoulderR.rotation.y = -0.25 + progress * 0.5;
   } else {
+    parts.shoulderR.rotation.y = 0;
     parts.bat.rotation.set(0.95, 0.15, -0.72);
   }
 }

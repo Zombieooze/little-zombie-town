@@ -16,7 +16,7 @@
 - One readable procedural survivor character with WASD movement and sprinting.
 - Survivor visual direction: red shirt or jacket, dark undershirt, blue pants, dark shoes, white/red/black cap, simple brown backpack, and wooden baseball bat.
 - One enemy type: Walker Zombie.
-- Automatic fixed-range bat swing attack with a gold swing arc; upgrades can improve damage, cooldown, movement, health, and knockback, but the bat radius/range should not grow over time.
+- Automatic fixed-range forward baseball bat swing with a gold arc in front of the survivor; upgrades can improve damage, cooldown, movement, health, and knockback, but the bat radius/range should not grow over time.
 - Rare health pickups can drop from defeated zombies, and a few occasional world medkits can spawn around the map.
 - XP gems, level-up upgrade cards, coins, pause, win screen, and loss screen.
 

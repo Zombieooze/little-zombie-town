@@ -7,5 +7,5 @@ export const CONFIG = {
   xp: { pickupRadius: 1.5, magnetRadius: 5.5, speed: 10 },
   healthPickup: { zombieDropChance: 0.065, healPercent: 0.22, pickupRadius: 1.35, worldSpawnMin: 45, worldSpawnMax: 75, maxWorldActive: 3 },
   level: { baseXp: 60, growth: 1.35 },
-  camera: { offset: { x: 0, y: 22, z: 19 }, lookAhead: 2.5, minZoom: 0.65, maxZoom: 1.55 },
+  camera: { offset: { x: 0, y: 19, z: 16 }, targetHeight: 1.35, minZoom: 0.7, maxZoom: 1.55 },
 };

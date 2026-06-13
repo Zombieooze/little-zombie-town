@@ -11,15 +11,24 @@ export function initInput() {
   window.addEventListener('keyup', (event) => keys.delete(event.key.toLowerCase()));
 }
 
-export function getMoveVector() {
-  let x = 0;
-  let z = 0;
-  if (keys.has('a')) x -= 1;
-  if (keys.has('d')) x += 1;
-  if (keys.has('w')) z -= 1;
-  if (keys.has('s')) z += 1;
-  const length = Math.hypot(x, z) || 1;
-  return { x: x / length, z: z / length };
+export function getMoveVector(cameraYaw = 0) {
+  let strafe = 0;
+  let forwardInput = 0;
+  if (keys.has('a')) strafe -= 1;
+  if (keys.has('d')) strafe += 1;
+  if (keys.has('w')) forwardInput += 1;
+  if (keys.has('s')) forwardInput -= 1;
+
+  const inputLength = Math.hypot(strafe, forwardInput) || 1;
+  strafe /= inputLength;
+  forwardInput /= inputLength;
+
+  const forward = { x: -Math.sin(cameraYaw), z: -Math.cos(cameraYaw) };
+  const right = { x: Math.cos(cameraYaw), z: -Math.sin(cameraYaw) };
+  return {
+    x: right.x * strafe + forward.x * forwardInput,
+    z: right.z * strafe + forward.z * forwardInput,
+  };
 }
 
 export function isDown(key) { return keys.has(key.toLowerCase()); }
