@@ -75,11 +75,21 @@ export const ABILITY_DEFINITIONS = {
     name: 'Fire Bottle',
     shortName: 'Fire',
     unlockName: 'Unlock Fire Bottle',
-    unlockDescription: 'Planned: throw a bottle that creates a small fire area.',
+    unlockDescription: 'Throw bottles that burst into fire patches under nearby zombies.',
     maxLevel: MAX_ABILITY_LEVEL,
-    implemented: false,
-    plannedRole: 'Area damage over time for controlling space.',
-    upgrades: {},
+    implemented: true,
+    defaults: { damage: 9, cooldown: 5.2, range: 9, duration: 3, radius: 2, tickInterval: .42, bottleCount: 1, travelTime: .62, maxPatches: 7 },
+    upgrades: {
+      2: 'Fire damage increases.',
+      3: 'Fire patches last longer.',
+      4: 'Throw bottles more often.',
+      5: 'Fire patch radius increases.',
+      6: 'Fire damage increases.',
+      7: 'Throw an extra bottle.',
+      8: 'Throw bottles more often.',
+      9: 'Fire damage increases.',
+      10: 'Fire damage and fire patch radius increase.',
+    },
   },
   nailBlaster: {
     id: 'nailBlaster',
@@ -142,6 +152,7 @@ function makeAbilityState() {
     sawblade: { ...ABILITY_DEFINITIONS.sawblade.defaults, timer: .8, projectiles: [] },
     orbitals: { ...ABILITY_DEFINITIONS.orbitals.defaults, angle: 0, meshes: [], recentHits: new Map() },
     electricZapper: { ...ABILITY_DEFINITIONS.electricZapper.defaults, timer: 1.2, effects: [] },
+    fireBottle: { ...ABILITY_DEFINITIONS.fireBottle.defaults, timer: 1.8, bottles: [], patches: [] },
   };
 }
 
@@ -150,6 +161,8 @@ export function resetAbilities(scene, state) {
     state.abilities.sawblade?.projectiles?.forEach((blade) => scene.remove(blade.mesh));
     state.abilities.orbitals?.meshes?.forEach((mesh) => scene.remove(mesh));
     state.abilities.electricZapper?.effects?.forEach((effect) => removeZapperEffect(scene, effect));
+    state.abilities.fireBottle?.bottles?.forEach((bottle) => removeFireBottle(scene, bottle));
+    state.abilities.fireBottle?.patches?.forEach((patch) => removeFirePatch(scene, patch));
   }
   state.abilities = makeAbilityState();
 }
@@ -208,6 +221,17 @@ function applyAbilityLevelTuning(state, abilityId, level) {
     if (level === 9) abilities.electricZapper.chainDistance += 1.1;
     if (level === 10) { abilities.electricZapper.damage += 12; abilities.electricZapper.chainTargets = Math.min(4, abilities.electricZapper.chainTargets + 1); }
   }
+  if (abilityId === 'fireBottle') {
+    if (level === 2) abilities.fireBottle.damage += 4;
+    if (level === 3) abilities.fireBottle.duration += .75;
+    if (level === 4) abilities.fireBottle.cooldown = Math.max(3.1, abilities.fireBottle.cooldown * .84);
+    if (level === 5) abilities.fireBottle.radius += .28;
+    if (level === 6) abilities.fireBottle.damage += 5;
+    if (level === 7) abilities.fireBottle.bottleCount = Math.min(2, abilities.fireBottle.bottleCount + 1);
+    if (level === 8) abilities.fireBottle.cooldown = Math.max(3.1, abilities.fireBottle.cooldown * .84);
+    if (level === 9) abilities.fireBottle.damage += 6;
+    if (level === 10) { abilities.fireBottle.damage += 8; abilities.fireBottle.radius += .25; }
+  }
   if (abilityId === 'orbitals') {
     if (level === 2) abilities.orbitals.damage += 4;
     if (level === 3) abilities.orbitals.orbitalCount = Math.min(3, abilities.orbitals.orbitalCount + 1);
@@ -246,6 +270,7 @@ export function updateAbilities(scene, state, player, delta, onKilled, onHit) {
   if (isAbilityUnlocked(state, 'sawblade')) updateSawblades(scene, state, player, delta, onKilled, onHit);
   if (isAbilityUnlocked(state, 'orbitals')) updateOrbitals(scene, state, player, delta, onKilled, onHit);
   if (isAbilityUnlocked(state, 'electricZapper')) updateElectricZapper(scene, state, player, delta, onKilled, onHit);
+  if (isAbilityUnlocked(state, 'fireBottle')) updateFireBottle(scene, state, player, delta, onKilled, onHit);
 }
 
 function removeZapperEffect(scene, effect) {
@@ -408,6 +433,110 @@ function updateElectricZapper(scene, state, player, delta, onKilled, onHit) {
     fireElectricZapper(scene, state, player, onKilled, onHit);
     zapper.timer = zapper.cooldown;
   }
+}
+
+
+function createFireBottleMesh() {
+  const group = new THREE.Group();
+  const bottle = new THREE.Mesh(new THREE.CylinderGeometry(.09, .12, .45, 7), new THREE.MeshStandardMaterial({ color: 0x65a30d, roughness: .55, metalness: .05 }));
+  bottle.rotation.z = Math.PI / 2;
+  const rag = new THREE.Mesh(new THREE.BoxGeometry(.16, .06, .06), new THREE.MeshBasicMaterial({ color: 0xffc44d }));
+  rag.position.x = .28;
+  group.add(bottle, rag);
+  return group;
+}
+
+function removeFireBottle(scene, bottle) {
+  scene.remove(bottle.mesh);
+  bottle.mesh.traverse((part) => {
+    part.geometry?.dispose?.();
+    part.material?.dispose?.();
+  });
+}
+
+function createFirePatchMesh(radius) {
+  const group = new THREE.Group();
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, .035, 20), new THREE.MeshBasicMaterial({ color: 0xff7a18, transparent: true, opacity: .46 }));
+  base.position.y = .025;
+  group.add(base);
+  for (let i = 0; i < 7; i++) {
+    const flame = new THREE.Mesh(new THREE.ConeGeometry(.16 + Math.random() * .1, .55 + Math.random() * .35, 5), new THREE.MeshBasicMaterial({ color: i % 2 ? 0xffd84a : 0xff5a1f, transparent: true, opacity: .9 }));
+    const angle = (i / 7) * Math.PI * 2;
+    const distance = radius * (.18 + Math.random() * .5);
+    flame.position.set(Math.cos(angle) * distance, .22, Math.sin(angle) * distance);
+    flame.rotation.y = Math.random() * Math.PI;
+    group.add(flame);
+  }
+  return group;
+}
+
+function removeFirePatch(scene, patch) {
+  scene.remove(patch.mesh);
+  patch.mesh.traverse((part) => {
+    part.geometry?.dispose?.();
+    part.material?.dispose?.();
+  });
+}
+
+function addFirePatch(scene, fire, position) {
+  while (fire.patches.length >= fire.maxPatches) removeFirePatch(scene, fire.patches.shift());
+  const mesh = createFirePatchMesh(fire.radius);
+  mesh.position.set(position.x, 0, position.z);
+  scene.add(mesh);
+  fire.patches.push({ mesh, life: fire.duration, maxLife: fire.duration, tickTimer: 0 });
+}
+
+function throwFireBottles(scene, state, player) {
+  const fire = state.abilities.fireBottle;
+  const target = getNearestZombieInRange(player.position, fire.range);
+  const baseAngle = target ? Math.atan2(target.position.x - player.position.x, target.position.z - player.position.z) : player.rotation.y;
+  const distance = target ? Math.min(fire.range, Math.hypot(target.position.x - player.position.x, target.position.z - player.position.z)) : fire.range * .7;
+  for (let i = 0; i < fire.bottleCount; i++) {
+    const spread = (i - (fire.bottleCount - 1) / 2) * .42;
+    const angle = baseAngle + spread;
+    const start = new THREE.Vector3(player.position.x, 1.15, player.position.z);
+    const end = new THREE.Vector3(player.position.x + Math.sin(angle) * distance, 0, player.position.z + Math.cos(angle) * distance);
+    const mesh = createFireBottleMesh();
+    mesh.position.copy(start);
+    scene.add(mesh);
+    fire.bottles.push({ mesh, start, end, age: 0, travelTime: fire.travelTime });
+  }
+}
+
+function updateFireBottle(scene, state, player, delta, onKilled, onHit) {
+  const fire = state.abilities.fireBottle;
+  fire.timer -= delta;
+  if (fire.timer <= 0) {
+    throwFireBottles(scene, state, player);
+    fire.timer = fire.cooldown;
+  }
+  fire.bottles = fire.bottles.filter((bottle) => {
+    bottle.age += delta;
+    const t = Math.min(1, bottle.age / bottle.travelTime);
+    bottle.mesh.position.lerpVectors(bottle.start, bottle.end, t);
+    bottle.mesh.position.y = .12 + Math.sin(t * Math.PI) * 1.8;
+    bottle.mesh.rotation.x += delta * 9;
+    bottle.mesh.rotation.z += delta * 7;
+    if (t >= 1) {
+      addFirePatch(scene, fire, bottle.end);
+      removeFireBottle(scene, bottle);
+      return false;
+    }
+    return true;
+  });
+  fire.patches = fire.patches.filter((patch) => {
+    patch.life -= delta;
+    patch.tickTimer -= delta;
+    const fade = Math.max(0, patch.life / patch.maxLife);
+    patch.mesh.scale.setScalar(.85 + .15 * Math.sin(state.elapsed * 9));
+    patch.mesh.traverse((part) => { if (part.material) part.material.opacity = Math.min(part.material.opacity, fade); });
+    if (patch.tickTimer <= 0) {
+      damageZombies(scene, patch.mesh.position, fire.radius, fire.damage, onKilled, onHit);
+      patch.tickTimer = fire.tickInterval;
+    }
+    if (patch.life <= 0) { removeFirePatch(scene, patch); return false; }
+    return true;
+  });
 }
 
 function createScrapMesh(index) {
