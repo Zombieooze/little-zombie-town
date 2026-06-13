@@ -3,7 +3,6 @@ import { getAbilityCards } from './abilities.js';
 export const UPGRADES = [
   { id: 'cooldown', name: 'Faster Swing', description: 'Baseball bat swing recharges 18% faster.' },
   { id: 'damage', name: 'Heavier Bat', description: 'Bat swing damage increases by 12.' },
-  { id: 'knockback', name: 'Knockback Up', description: 'Bat hits push zombies back slightly more.' },
   { id: 'health', name: 'Healthy Snack', description: 'Gain max health and heal a little.' },
   { id: 'speed', name: 'Quick Feet', description: 'Move 12% faster.' },
 ];
