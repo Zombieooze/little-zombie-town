@@ -36,10 +36,11 @@
 
 ## Controls
 
-- **WASD**: Move.
+- **WASD**: Move camera-relative.
 - **Shift**: Sprint.
+- **Space**: Jump/hop, if available.
 - **Right mouse drag**: Orbit the camera.
-- **Mouse wheel**: Zoom the camera in or out.
+- **Scroll**: Zoom the camera in or out.
 - **P**: Pause or unpause.
 - **M**: Toggle mute placeholder.
 
