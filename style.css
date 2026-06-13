@@ -37,3 +37,40 @@ button:hover { transform: translateY(-2px) scale(1.02); filter: brightness(1.08)
 .upgrade-card h3 { margin: 0 0 8px; color: var(--gold); }
 .stats { display: grid; gap: 8px; margin: 18px auto; color: #eee8ff; font-weight: 800; }
 @media (max-width: 720px) { .upgrade-cards { grid-template-columns: 1fr; } .hud { inset: 8px; gap: 6px; } .hud-card { padding: 8px 10px; min-width: 82px; } }
+
+.mobile-hint, #touch-controls, #rotate-overlay { display: none; }
+#touch-controls { position: fixed; inset: 0; z-index: 8; pointer-events: none; touch-action: none; }
+.touch-joystick { position: absolute; left: max(22px, env(safe-area-inset-left)); bottom: max(22px, env(safe-area-inset-bottom)); width: 132px; height: 132px; border-radius: 50%; border: 2px solid rgba(151, 255, 157, .34); background: rgba(17, 15, 31, .46); box-shadow: 0 12px 34px rgba(0,0,0,.28); pointer-events: auto; touch-action: none; }
+.touch-joystick.active { background: rgba(39, 56, 49, .58); }
+.touch-joystick-thumb { position: absolute; left: 50%; top: 50%; width: 58px; height: 58px; border-radius: 50%; transform: translate(-50%, -50%); background: rgba(151, 255, 157, .62); border: 2px solid rgba(255,255,255,.44); box-shadow: inset 0 0 18px rgba(255,255,255,.18), 0 6px 20px rgba(0,0,0,.3); }
+.touch-jump-button { position: absolute; right: max(24px, env(safe-area-inset-right)); bottom: max(28px, env(safe-area-inset-bottom)); width: 104px; height: 104px; margin: 0; border-radius: 50%; background: rgba(183, 140, 255, .58); color: #fff; border: 2px solid rgba(255,255,255,.38); box-shadow: 0 10px 28px rgba(0,0,0,.34); pointer-events: auto; touch-action: none; user-select: none; }
+.touch-jump-button:active { transform: scale(.96); filter: brightness(1.15); }
+#rotate-overlay { position: fixed; inset: 0; z-index: 30; padding: 24px; place-items: center; background: rgba(6, 8, 16, .94); }
+.rotate-panel p { color: #eee8ff; font-weight: 800; }
+
+.mobile-controls-enabled, .mobile-controls-enabled #game-root, .mobile-controls-enabled #game-canvas { touch-action: none; overscroll-behavior: none; }
+.mobile-controls-enabled #touch-controls { display: block; }
+.mobile-controls-enabled .mobile-hint { display: block; }
+.mobile-controls-enabled .screen, .mobile-controls-enabled .hud, .mobile-controls-enabled button, .mobile-controls-enabled .upgrade-card { touch-action: manipulation; }
+
+@media (hover: none), (pointer: coarse), (max-width: 820px), (max-height: 520px) {
+  .hud { inset: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) auto max(8px, env(safe-area-inset-left)); gap: 6px; }
+  .hud-card { padding: 7px 9px; min-width: 74px; border-radius: 13px; font-size: .78rem; }
+  .hud-card strong { font-size: 1rem; }
+  .hud-card.wide { min-width: 150px; }
+  .hud-card.small { max-width: calc(100vw - 250px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .upgrade-panel { width: min(760px, 96vw); padding: 18px; }
+  .upgrade-cards { gap: 14px; }
+  .upgrade-card { min-height: 128px; padding: 16px; font-size: .95rem; touch-action: manipulation; }
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  .upgrade-cards { grid-template-columns: repeat(3, minmax(150px, 1fr)); }
+  .panel { padding: 18px; }
+  h1 { font-size: clamp(2rem, 7vw, 4rem); }
+  h2 { font-size: clamp(1.6rem, 4vw, 2.5rem); }
+}
+
+@media (max-width: 720px) and (orientation: portrait) {
+  body.mobile-touch-device.mobile-controls-enabled #rotate-overlay { display: grid; }
+}
