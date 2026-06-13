@@ -49,16 +49,26 @@ export const ABILITY_DEFINITIONS = {
     },
   },
 
-  zapper: {
-    id: 'zapper',
+  electricZapper: {
+    id: 'electricZapper',
     name: 'Electric Zapper',
     shortName: 'Zapper',
     unlockName: 'Unlock Electric Zapper',
-    unlockDescription: 'Planned: automatic electric chain attack for crowd control.',
+    unlockDescription: 'Automatically zap a nearby zombie with chain lightning.',
     maxLevel: MAX_ABILITY_LEVEL,
-    implemented: false,
-    plannedRole: 'Zaps one nearby zombie, then later chains to more zombies.',
-    upgrades: {},
+    implemented: true,
+    defaults: { damage: 22, cooldown: 2.6, range: 8, chainTargets: 1, chainDistance: 4.8, visualLifetime: .14 },
+    upgrades: {
+      2: 'Electric damage increases.',
+      3: 'Zapper recharges faster.',
+      4: 'Zapper range increases.',
+      5: 'Electricity can chain to another zombie.',
+      6: 'Electric damage increases.',
+      7: 'Zapper recharges faster.',
+      8: 'Electricity can chain to another zombie.',
+      9: 'Electric chain range increases.',
+      10: 'Electricity can chain to another zombie with stronger damage.',
+    },
   },
   fireBottle: {
     id: 'fireBottle',
@@ -131,6 +141,7 @@ function makeAbilityState() {
     levels: {},
     sawblade: { ...ABILITY_DEFINITIONS.sawblade.defaults, timer: .8, projectiles: [] },
     orbitals: { ...ABILITY_DEFINITIONS.orbitals.defaults, angle: 0, meshes: [], recentHits: new Map() },
+    electricZapper: { ...ABILITY_DEFINITIONS.electricZapper.defaults, timer: 1.2, effects: [] },
   };
 }
 
@@ -138,6 +149,7 @@ export function resetAbilities(scene, state) {
   if (state.abilities) {
     state.abilities.sawblade?.projectiles?.forEach((blade) => scene.remove(blade.mesh));
     state.abilities.orbitals?.meshes?.forEach((mesh) => scene.remove(mesh));
+    state.abilities.electricZapper?.effects?.forEach((effect) => removeZapperEffect(scene, effect));
   }
   state.abilities = makeAbilityState();
 }
@@ -185,6 +197,17 @@ function applyAbilityLevelTuning(state, abilityId, level) {
     if (level === 9) abilities.sawblade.damage += 10;
     if (level === 10) abilities.sawblade.damage += 14;
   }
+  if (abilityId === 'electricZapper') {
+    if (level === 2) abilities.electricZapper.damage += 8;
+    if (level === 3) abilities.electricZapper.cooldown = Math.max(1.45, abilities.electricZapper.cooldown * .84);
+    if (level === 4) abilities.electricZapper.range += 1.2;
+    if (level === 5) abilities.electricZapper.chainTargets = Math.min(2, abilities.electricZapper.chainTargets + 1);
+    if (level === 6) abilities.electricZapper.damage += 9;
+    if (level === 7) abilities.electricZapper.cooldown = Math.max(1.45, abilities.electricZapper.cooldown * .84);
+    if (level === 8) abilities.electricZapper.chainTargets = Math.min(3, abilities.electricZapper.chainTargets + 1);
+    if (level === 9) abilities.electricZapper.chainDistance += 1.1;
+    if (level === 10) { abilities.electricZapper.damage += 12; abilities.electricZapper.chainTargets = Math.min(4, abilities.electricZapper.chainTargets + 1); }
+  }
   if (abilityId === 'orbitals') {
     if (level === 2) abilities.orbitals.damage += 4;
     if (level === 3) abilities.orbitals.orbitalCount = Math.min(3, abilities.orbitals.orbitalCount + 1);
@@ -222,6 +245,15 @@ export function updateAbilities(scene, state, player, delta, onKilled, onHit) {
   if (!state.abilities) resetAbilities(scene, state);
   if (isAbilityUnlocked(state, 'sawblade')) updateSawblades(scene, state, player, delta, onKilled, onHit);
   if (isAbilityUnlocked(state, 'orbitals')) updateOrbitals(scene, state, player, delta, onKilled, onHit);
+  if (isAbilityUnlocked(state, 'electricZapper')) updateElectricZapper(scene, state, player, delta, onKilled, onHit);
+}
+
+function removeZapperEffect(scene, effect) {
+  effect.parts?.forEach((part) => {
+    scene.remove(part);
+    part.geometry?.dispose?.();
+    part.material?.dispose?.();
+  });
 }
 
 function createSawbladeMesh() {
@@ -272,6 +304,110 @@ function updateSawblades(scene, state, player, delta, onKilled, onHit) {
     if (blade.life <= 0) { scene.remove(blade.mesh); return false; }
     return true;
   });
+}
+
+function createElectricLine(start, end) {
+  const points = [];
+  const segments = 5;
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const point = start.clone().lerp(end, t);
+    if (i > 0 && i < segments) {
+      point.x += (Math.random() - .5) * .28;
+      point.y += (Math.random() - .5) * .22;
+      point.z += (Math.random() - .5) * .28;
+    }
+    points.push(point);
+  }
+  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+  return new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: Math.random() < .5 ? 0x38bdf8 : 0xfff1a8, transparent: true, opacity: 1 }));
+}
+
+function createZapperSpark(position, index) {
+  const spark = new THREE.Mesh(
+    new THREE.BoxGeometry(.12, .12, .12),
+    new THREE.MeshBasicMaterial({ color: index % 2 ? 0xfff1a8 : 0x38bdf8, transparent: true, opacity: 1 }),
+  );
+  spark.position.set(position.x + (Math.random() - .5) * .45, 1.05 + Math.random() * .65, position.z + (Math.random() - .5) * .45);
+  spark.userData.velocity = new THREE.Vector3((Math.random() - .5) * 1.8, 1.2 + Math.random() * 1.4, (Math.random() - .5) * 1.8);
+  return spark;
+}
+
+function addZapperEffect(scene, state, links, hitPositions) {
+  const zapper = state.abilities.electricZapper;
+  const parts = [];
+  links.forEach(([start, end]) => {
+    const line = createElectricLine(start, end);
+    scene.add(line); parts.push(line);
+  });
+  hitPositions.forEach((position) => {
+    for (let i = 0; i < 3; i++) {
+      const spark = createZapperSpark(position, i);
+      scene.add(spark); parts.push(spark);
+    }
+  });
+  zapper.effects.push({ life: zapper.visualLifetime, maxLife: zapper.visualLifetime, parts });
+}
+
+function getNearestZombieInRange(origin, range, ignored = new Set()) {
+  return getZombies().reduce((best, zombie) => {
+    if (ignored.has(zombie)) return best;
+    const dist = Math.hypot(origin.x - zombie.position.x, origin.z - zombie.position.z);
+    if (dist > range) return best;
+    return !best || dist < best.dist ? { zombie, dist } : best;
+  }, null)?.zombie ?? null;
+}
+
+function fireElectricZapper(scene, state, player, onKilled, onHit) {
+  const zapper = state.abilities.electricZapper;
+  const hitZombies = [];
+  const links = [];
+  const hitPositions = [];
+  const first = getNearestZombieInRange(player.position, zapper.range);
+  if (!first) return;
+  let previousPosition = new THREE.Vector3(player.position.x, 1.15, player.position.z);
+  let current = first;
+  const ignored = new Set();
+  while (current && hitZombies.length < zapper.chainTargets) {
+    ignored.add(current);
+    const hitPosition = current.position.clone();
+    const visualPosition = new THREE.Vector3(hitPosition.x, 1.15, hitPosition.z);
+    links.push([previousPosition.clone(), visualPosition.clone()]);
+    hitPositions.push(hitPosition.clone());
+    hitZombies.push(current);
+    previousPosition = visualPosition;
+    current = getNearestZombieInRange(hitPosition, zapper.chainDistance, ignored);
+  }
+  addZapperEffect(scene, state, links, hitPositions);
+  hitZombies.forEach((zombie, index) => {
+    if (getZombies().includes(zombie)) damageZombie(scene, zombie, index === 0 ? player.position : hitPositions[index - 1], zapper.damage, onKilled, onHit);
+  });
+}
+
+function updateElectricZapperEffects(scene, zapper, delta) {
+  zapper.effects = zapper.effects.filter((effect) => {
+    effect.life -= delta;
+    const t = Math.max(0, effect.life / effect.maxLife);
+    effect.parts.forEach((part) => {
+      if (part.material) part.material.opacity = t;
+      if (part.userData.velocity) {
+        part.position.addScaledVector(part.userData.velocity, delta);
+        part.userData.velocity.y -= 5 * delta;
+      }
+    });
+    if (effect.life <= 0) { removeZapperEffect(scene, effect); return false; }
+    return true;
+  });
+}
+
+function updateElectricZapper(scene, state, player, delta, onKilled, onHit) {
+  const zapper = state.abilities.electricZapper;
+  zapper.timer -= delta;
+  updateElectricZapperEffects(scene, zapper, delta);
+  if (zapper.timer <= 0) {
+    fireElectricZapper(scene, state, player, onKilled, onHit);
+    zapper.timer = zapper.cooldown;
+  }
 }
 
 function createScrapMesh(index) {
