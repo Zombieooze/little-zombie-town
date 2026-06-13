@@ -145,27 +145,30 @@ export function updateZombies(player, delta, onDamage) {
   }
 }
 
+export function damageZombie(scene, zombie, origin, damage, onKilled, onHit = () => {}, knockback = 0) {
+  if (!zombies.includes(zombie)) return;
+  zombie.userData.health -= damage;
+  zombie.userData.hitFlash = .12;
+  onHit(zombie.position.clone());
+  if (knockback > 0) {
+    const dx = zombie.position.x - origin.x;
+    const dz = zombie.position.z - origin.z;
+    const dist = Math.hypot(dx, dz) || 1;
+    zombie.position.x += (dx / dist) * knockback;
+    zombie.position.z += (dz / dist) * knockback;
+  }
+  if (zombie.userData.health <= 0) {
+    const type = ZOMBIE_TYPES[zombie.userData.typeKey] ?? ZOMBIE_TYPES.walker;
+    zombies.splice(zombies.indexOf(zombie), 1);
+    scene.remove(zombie);
+    onKilled(zombie.position.clone(), type, zombie.userData.typeKey);
+  }
+}
+
 export function damageZombies(scene, origin, range, damage, onKilled, onHit = () => {}, knockback = 0) {
   for (let i = zombies.length - 1; i >= 0; i--) {
     const z = zombies[i];
     const dist = Math.hypot(origin.x - z.position.x, origin.z - z.position.z);
-    if (dist <= range) {
-      z.userData.health -= damage;
-      z.userData.hitFlash = .12;
-      onHit(z.position.clone());
-      if (knockback > 0) {
-        const dx = z.position.x - origin.x;
-        const dz = z.position.z - origin.z;
-        const dist = Math.hypot(dx, dz) || 1;
-        z.position.x += (dx / dist) * knockback;
-        z.position.z += (dz / dist) * knockback;
-      }
-      if (z.userData.health <= 0) {
-        const type = ZOMBIE_TYPES[z.userData.typeKey] ?? ZOMBIE_TYPES.walker;
-        zombies.splice(i, 1);
-        scene.remove(z);
-        onKilled(z.position.clone(), type, z.userData.typeKey);
-      }
-    }
+    if (dist <= range) damageZombie(scene, z, origin, damage, onKilled, onHit, knockback);
   }
 }

@@ -17,7 +17,7 @@
 - One readable procedural survivor character with WASD movement and sprinting.
 - Survivor visual direction: red shirt or jacket, dark undershirt, blue pants, dark shoes, white/red/black cap, simple brown backpack, and wooden baseball bat.
 - Multiple simple procedural zombie types that all chase the player directly.
-- Automatic bat swing attack with a gold swing arc. The bat is a fixed close-range emergency weapon; damage, cooldown, and knockback can improve, but range/area does not scale.
+- Automatic bat swing attack with a gold swing arc. The bat is a fixed close-range emergency weapon; damage and cooldown can improve, but range/area does not scale. Knockback Up is removed from the current level-up card pool.
 - Special abilities are the primary ranged/offensive build system.
 - XP gems, medkit health pickups, level-up upgrade cards, coins, pause, win screen, and loss screen.
 
@@ -27,15 +27,18 @@ Special abilities live in `src/abilities.js` and are designed as a clean foundat
 
 - The long-term plan is **8 total special abilities**.
 - A single run can unlock only **4 special abilities**.
+- Each special ability has **Level 1-10** scaling with a max level of 10.
+- Unlocking a special ability makes it **Level 1**.
 - If the player already has 4 chosen special abilities, level-up cards should stop offering unlock cards for unchosen abilities.
-- Once an ability is unlocked, its future cards become upgrades for that chosen ability.
-- Ability definitions own their unlock text, default tuning, cooldowns/timers, update behavior, zombie damage, and simple low-poly visual effects.
+- Once an ability is unlocked, only chosen abilities appear for further ability upgrade cards.
+- Ability upgrade cards raise that ability by one level, show the next level such as `Lv. 2/10`, and stop appearing once the ability reaches Level 10.
+- Ability definitions own their unlock text, level-up text, default tuning, cooldowns/timers, update behavior, zombie damage, and simple low-poly visual effects.
 - Ability kills still use the same reward path as bat kills, so every defeated zombie continues to drop XP.
 
 ### First implemented test abilities
 
-- **Spinning Sawblade:** A bright low-poly spinning scrap disc that auto-launches on cooldown, targets roughly the nearest zombie, damages enemies it touches, and supports early damage, cooldown, and extra-blade upgrades.
-- **Scrap Orbitals:** One or more visible low-poly scrap chunks orbit the player, spin automatically, damage zombies on contact, and support early damage, extra-orbital, and speed upgrades.
+- **Spinning Sawblade:** A bright low-poly spinning scrap disc that auto-launches on cooldown, targets roughly the nearest zombie, damages enemies it touches, and scales from Level 1-10 through modest damage, cooldown, hit-radius, speed/lifetime, and volley-count upgrades.
+- **Scrap Orbitals:** One or more visible low-poly scrap chunks orbit the player, spin automatically, and use contact/tick damage when orbiting chunks touch zombies. Scrap Orbitals scale from Level 1-10 through modest damage, orbital-count, orbital-speed, and hit-radius upgrades.
 
 ## Current prototype target
 
@@ -77,7 +80,7 @@ Spawn pressure increases over the run: spawn delays shrink gradually, the active
 
 ## Future ideas
 
-- Expand the ability roster from 2 test abilities to 8 total choices while preserving the 4-per-run cap.
+- Expand the ability roster from 2 test abilities to 8 total choices while preserving the 4-per-run cap and Level 1-10 scaling.
 - Give Spitter Zombies an isolated, easy-to-read projectile attack once the foundation is stable.
 - More town props, barricades, rubble clusters, signs, and readable low-poly landmarks.
 - Persistent cosmetic unlocks bought with coins.
