@@ -40,6 +40,10 @@ A large, chunky zombie with a brown or dark torso and heavier arms. Brutes move 
 
 A medium zombie with toxic green accents and a slightly different silhouette, such as a bigger head or rounded throat/belly shape. In the current foundation pass, Spitters do not shoot projectiles; they chase like other zombies while staying visually distinct and rewarding more XP. They begin appearing around level 6 or 4:00 into the run.
 
+## Crusher Zombie
+
+A late-game heavy zombie that bridges the gap between Brutes and the Mini Boss. The Crusher is bigger than a Brute but smaller than a Boss, with a rusty brown or dark gray torso, wide blocky shoulders, chunky arms, and a heavy silhouette built only from simple procedural low-poly primitives. It is a simple chaser for now: no projectiles, no area attacks, and no special attack behavior.
+
 ## Boss / Mini Boss Zombie
 
 A much larger zombie with a dark torso, oversized arms, and simple cone spikes or a crown-like silhouette. The Mini Boss has high health, slow movement, stronger contact damage, and a much higher XP and coin reward. It should appear rarely, generally once around 7:00 to 8:00 during the 10-minute test run or after the player reaches a high enough level.

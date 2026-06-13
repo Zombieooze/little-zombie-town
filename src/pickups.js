@@ -28,12 +28,18 @@ export function dropXp(scene, position, value = CONFIG.zombie.types.walker.xp) {
   pickups.push(gem); scene.add(gem);
 }
 
+export function countActiveMedkits() {
+  return pickups.filter((p) => p.userData.kind === 'medkit').length;
+}
+
 export function dropMedkit(scene, position, source = 'zombie') {
+  if (countActiveMedkits() >= CONFIG.medkit.maxActive) return null;
   const medkit = createMedkitMesh();
   medkit.position.copy(position);
   medkit.position.y = medkit.userData.baseY;
   medkit.userData = { ...medkit.userData, kind: 'medkit', source, healAmount: CONFIG.medkit.healAmount, age: Math.random() * Math.PI * 2 };
   pickups.push(medkit); scene.add(medkit);
+  return medkit;
 }
 
 export function countWorldMedkits() {
