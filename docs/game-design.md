@@ -44,17 +44,17 @@ Only these abilities should currently appear in the level-up card pool:
 
 1. **Spinning Sawblade:** A bright low-poly spinning scrap disc that auto-launches on cooldown, targets roughly the nearest zombie, damages enemies it touches, and scales from Level 1-10 through modest damage, cooldown, hit-radius, speed/lifetime, and volley-count upgrades.
 2. **Scrap Orbitals:** One or more visible low-poly scrap chunks orbit the player, spin automatically, and use contact/tick damage when orbiting chunks touch zombies. Scrap Orbitals scale from Level 1-10 through modest damage, orbital-count, orbital-speed, and hit-radius upgrades.
+3. **Electric Zapper:** An automatic chain-zap special ability that fires on cooldown, hits the nearest zombie in range, then gains more damage, faster recharge, longer range, and extra chain targets as it upgrades from Level 1-10. Electric Zapper counts toward the 4 special ability limit and uses the normal zombie damage/death/reward path so kills still award XP and coins.
 
 ### Planned special abilities not available yet
 
 These are roadmap entries only. They must not appear in gameplay or level-up cards until implemented later.
 
-3. **Electric Zapper:** Automatic electric chain attack. Zaps one nearby zombie, later chains to more zombies. Good for crowd control.
-4. **Fire Bottle:** Throws a bottle that creates a small fire area on the ground. Area damage over time. Good for controlling space.
-5. **Nail Blaster:** Shoots small nail/bolt projectiles at nearby zombies. Fast ranged damage. Can later gain extra projectiles and piercing.
-6. **Shockwave Stomp:** Releases a timed shockwave around the player. Damages and pushes zombies back. Good panic/crowd-control ability.
-7. **Bear Trap Toss:** Drops traps on the ground. Zombies that step on traps take damage and later can be slowed. Good for area control.
-8. **Junkyard Turret:** Deploys a small scrap turret that shoots nearby zombies. Good for holding an area.
+3. **Fire Bottle:** Throws a bottle that creates a small fire area on the ground. Area damage over time. Good for controlling space.
+4. **Nail Blaster:** Shoots small nail/bolt projectiles at nearby zombies. Fast ranged damage. Can later gain extra projectiles and piercing.
+5. **Shockwave Stomp:** Releases a timed shockwave around the player. Damages and pushes zombies back. Good panic/crowd-control ability.
+6. **Bear Trap Toss:** Drops traps on the ground. Zombies that step on traps take damage and later can be slowed. Good for area control.
+7. **Junkyard Turret:** Deploys a small scrap turret that shoots nearby zombies. Good for holding an area.
 
 ## Passive run upgrades
 
@@ -126,7 +126,7 @@ Spawn pressure increases over the run: spawn delays shrink gradually, the active
 
 ## Future ideas
 
-- Expand the ability roster from 2 test abilities to 8 total choices while preserving the 4-per-run cap and Level 1-10 scaling.
+- Expand the ability roster from 3 test abilities to 8 total choices while preserving the 4-per-run cap and Level 1-10 scaling.
 - Give Spitter Zombies an isolated, easy-to-read projectile attack once the foundation is stable.
 - More town props, barricades, rubble clusters, signs, and readable low-poly landmarks.
 - Persistent cosmetic unlocks bought with coins.
