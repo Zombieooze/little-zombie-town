@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
     <title>Little Zombie Town</title>
     <link rel="stylesheet" href="style.css" />
     <script type="importmap">
@@ -25,6 +25,7 @@
           <p class="coins">Total Coins: <span id="menu-total-coins">0</span></p>
           <button id="start-button" class="primary-button">Start Game</button>
           <p class="hint">WASD move · Shift sprint · Space jump · Right-drag camera · Wheel zoom · P pause · M mute</p>
+          <p class="hint mobile-hint">Mobile: left stick move · right side drag camera · JUMP button</p>
         </div>
       </section>
 
@@ -61,6 +62,20 @@
           <button id="menu-button" class="secondary-button">Main Menu</button>
         </div>
       </section>
+
+      <div id="touch-controls" aria-hidden="true">
+        <div id="touch-joystick" class="touch-joystick">
+          <div id="touch-joystick-thumb" class="touch-joystick-thumb"></div>
+        </div>
+        <button id="touch-jump-button" class="touch-jump-button" type="button" aria-label="Jump">JUMP</button>
+      </div>
+
+      <div id="rotate-overlay" aria-live="polite">
+        <div class="panel rotate-panel">
+          <h2>Rotate your phone</h2>
+          <p>Rotate your phone to play Little Zombie Town in landscape.</p>
+        </div>
+      </div>
     </div>
     <script type="module" src="src/main.js"></script>
   </body>

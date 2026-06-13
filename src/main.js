@@ -33,6 +33,7 @@ const cameraControls = {
   pitch: Math.atan2(CONFIG.camera.offset.y, Math.hypot(CONFIG.camera.offset.x, CONFIG.camera.offset.z)),
   distance: Math.hypot(CONFIG.camera.offset.x, CONFIG.camera.offset.y, CONFIG.camera.offset.z),
   dragging: false,
+  touchPointerId: null,
   pointerButton: null,
   lastX: 0,
   lastY: 0,
@@ -44,6 +45,8 @@ const cameraLimits = {
   maxDistance: 24,
   yawSpeed: 0.0055,
   pitchSpeed: 0.0042,
+  touchYawSpeed: 0.0042,
+  touchPitchSpeed: 0.0034,
   zoomSpeed: 0.0025,
 };
 
@@ -240,6 +243,39 @@ function initCameraControls() {
       cameraLimits.maxPitch,
     );
   });
+
+
+  canvas.addEventListener('pointerdown', (event) => {
+    if (mode !== 'playing' || event.pointerType === 'mouse' || event.clientX < window.innerWidth * 0.45) return;
+    event.preventDefault();
+    canvas.setPointerCapture(event.pointerId);
+    cameraControls.touchPointerId = event.pointerId;
+    cameraControls.lastX = event.clientX;
+    cameraControls.lastY = event.clientY;
+  });
+
+  canvas.addEventListener('pointermove', (event) => {
+    if (cameraControls.touchPointerId !== event.pointerId) return;
+    event.preventDefault();
+    const movementX = event.clientX - cameraControls.lastX;
+    const movementY = event.clientY - cameraControls.lastY;
+    cameraControls.lastX = event.clientX;
+    cameraControls.lastY = event.clientY;
+    cameraControls.yaw -= movementX * cameraLimits.touchYawSpeed;
+    cameraControls.pitch = THREE.MathUtils.clamp(
+      cameraControls.pitch + movementY * cameraLimits.touchPitchSpeed,
+      cameraLimits.minPitch,
+      cameraLimits.maxPitch,
+    );
+  });
+
+  const stopTouchDrag = (event) => {
+    if (cameraControls.touchPointerId !== event.pointerId) return;
+    if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+    cameraControls.touchPointerId = null;
+  };
+  canvas.addEventListener('pointerup', stopTouchDrag);
+  canvas.addEventListener('pointercancel', stopTouchDrag);
 
   canvas.addEventListener('wheel', (event) => {
     if (mode !== 'playing') return;

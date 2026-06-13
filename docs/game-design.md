@@ -14,7 +14,7 @@
 
 - Static browser game with no build system or backend.
 - Procedural low-poly town using basic Three.js geometry.
-- One readable procedural survivor character with WASD movement, sprinting, and a quick arcade jump.
+- One readable procedural survivor character with WASD movement, sprinting, touch joystick support, and a quick arcade jump.
 - Survivor visual direction: red shirt or jacket, dark undershirt, blue pants, dark shoes, white/red/black cap, simple brown backpack, and wooden baseball bat. The survivor rises as a whole when jumping, tucks the legs slightly while airborne, and uses a small landing dip when returning to the ground.
 - Multiple simple procedural zombie types that all chase the player directly.
 - Automatic bat swing attack with a gold swing arc. The bat is a fixed close-range emergency weapon; damage and cooldown can improve, but range/area does not scale. Knockback Up is removed from the current level-up card pool.
@@ -143,6 +143,8 @@ Spawn pressure increases over the run: spawn delays shrink gradually, the active
 
 ## Controls
 
+Desktop controls remain keyboard and mouse:
+
 - **WASD**: Move camera-relative.
 - **Shift**: Sprint.
 - **Space**: Jump/hop.
@@ -150,6 +152,14 @@ Spawn pressure increases over the run: spawn delays shrink gradually, the active
 - **Scroll**: Zoom the camera in or out.
 - **P**: Pause or unpause.
 - **M**: Toggle mute placeholder.
+
+Mobile/touch controls appear on touch-capable or small screens:
+
+- **Left virtual joystick**: Move the player camera-relative, including diagonal movement.
+- **Right-side drag**: Orbit the camera with the same horizontal/vertical feel as mouse camera drag.
+- **Lower-right JUMP button**: Triggers the same grounded jump as Spacebar and can be tapped while moving.
+- **Level-up cards**: Large touch-safe card buttons; while the level-up overlay is open, touch controls do not move the player or rotate the camera.
+- **Small phone portrait screens**: Show a rotate-phone overlay requiring landscape play. The overlay is a CSS/JS fallback and desktop controls remain unaffected.
 
 ## Win/loss condition
 
