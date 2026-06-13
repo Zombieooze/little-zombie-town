@@ -5,8 +5,8 @@ import { initUI, updateHUD, showScreen, hideOverlays, showUpgrades, showEnd, set
 import { addCoins } from './save.js';
 import { createWorld } from './world.js';
 import { createPlayer, updatePlayer } from './player.js';
-import { spawnZombie, updateZombies, damageZombies, resetZombies } from './zombies.js';
-import { dropXp, updatePickups, resetPickups } from './pickups.js';
+import { spawnZombie, updateZombies, damageZombies, resetZombies, getSpawnDelay } from './zombies.js';
+import { dropXp, dropMedkit, updatePickups, resetPickups, countWorldMedkits } from './pickups.js';
 import { getUpgradeChoices, applyUpgrade } from './upgrades.js';
 
 const canvas = document.getElementById('game-canvas');
@@ -19,9 +19,11 @@ let player;
 let mode = 'menu';
 let muted = false;
 let spawnTimer = 0;
+let worldMedkitTimer = CONFIG.medkit.worldFirstSpawn;
 let pulseTimer = 0;
 let pulseVisuals = [];
 let hitParticles = [];
+let healFloaters = [];
 let attackVisualTimer = 0;
 let cameraShake = 0;
 let pendingChoices = [];
@@ -60,7 +62,7 @@ function resetState() {
   Object.assign(state, { elapsed: 0, health: CONFIG.player.maxHealth, maxHealth: CONFIG.player.maxHealth, level: 1, xp: 0,
     nextXp: CONFIG.level.baseXp, coins: 0, kills: 0, pulseCooldown: CONFIG.pulse.cooldown, pulseRange: CONFIG.pulse.range,
     pulseDamage: CONFIG.pulse.damage, speedMultiplier: 1, bossSpawned: false });
-  spawnTimer = 0; pulseTimer = 0; pendingChoices = [];
+  spawnTimer = 0; worldMedkitTimer = CONFIG.medkit.worldFirstSpawn; pulseTimer = 0; pendingChoices = [];
 }
 
 function startGame() {
@@ -69,6 +71,7 @@ function startGame() {
   resetZombies(scene); resetPickups(scene);
   pulseVisuals.forEach((v) => scene.remove(v)); pulseVisuals = [];
   hitParticles.forEach((p) => scene.remove(p)); hitParticles = [];
+  healFloaters.forEach((p) => scene.remove(p)); healFloaters = [];
   attackVisualTimer = 0; cameraShake = 0;
   player = createPlayer(scene);
   hideOverlays(); document.getElementById('menu-screen').classList.add('hidden');
@@ -92,6 +95,62 @@ function gainXp(amount) {
   }
 }
 
+function collectPickup(pickup) {
+  if (pickup.kind === 'xp') {
+    gainXp(pickup.value);
+    return;
+  }
+  if (pickup.kind === 'medkit') {
+    const oldHealth = state.health;
+    state.health = Math.min(state.maxHealth, state.health + pickup.healAmount);
+    createHealFloater(player.position, Math.ceil(state.health - oldHealth));
+  }
+}
+
+function createHealFloater(position, amount) {
+  if (amount <= 0) return;
+  const canvasText = document.createElement('canvas');
+  canvasText.width = 128; canvasText.height = 64;
+  const ctx = canvasText.getContext('2d');
+  ctx.font = 'bold 34px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = '#9d1f2d';
+  ctx.lineWidth = 6;
+  const text = `+${amount} HP`;
+  ctx.strokeText(text, 64, 42);
+  ctx.fillText(text, 64, 42);
+  const texture = new THREE.CanvasTexture(canvasText);
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true }));
+  sprite.position.set(position.x, 2.6, position.z);
+  sprite.scale.set(2.4, 1.2, 1);
+  sprite.userData = { life: .9, maxLife: .9 };
+  scene.add(sprite); healFloaters.push(sprite);
+}
+
+function maybeDropMedkit(position, type, typeKey) {
+  const chance = type.medkitChance ?? CONFIG.zombie.types[typeKey]?.medkitChance ?? 0;
+  if (Math.random() < chance) dropMedkit(scene, position, 'zombie');
+}
+
+function scheduleNextWorldMedkit() {
+  const { worldSpawnMin, worldSpawnMax } = CONFIG.medkit;
+  worldMedkitTimer = worldSpawnMin + Math.random() * (worldSpawnMax - worldSpawnMin);
+}
+
+function spawnWorldMedkit() {
+  if (countWorldMedkits() >= CONFIG.medkit.maxWorldActive) return;
+  const angle = Math.random() * Math.PI * 2;
+  const distance = CONFIG.medkit.spawnMinDistance + Math.random() * (CONFIG.medkit.spawnMaxDistance - CONFIG.medkit.spawnMinDistance);
+  const half = CONFIG.arenaSize / 2 - 3;
+  const position = new THREE.Vector3(
+    THREE.MathUtils.clamp(player.position.x + Math.cos(angle) * distance, -half, half),
+    0,
+    THREE.MathUtils.clamp(player.position.z + Math.sin(angle) * distance, -half, half),
+  );
+  dropMedkit(scene, position, 'world');
+}
+
 function createPulseVisual() {
   const arc = new THREE.Mesh(new THREE.RingGeometry(state.pulseRange * .72, state.pulseRange, 48, 1, -Math.PI * .68, Math.PI * 1.36), new THREE.MeshBasicMaterial({ color: 0xffd166, transparent: true, opacity: .9, side: THREE.DoubleSide }));
   arc.rotation.x = -Math.PI / 2; arc.rotation.z = -player.rotation.y; arc.position.copy(player.position); arc.position.y = .16;
@@ -111,8 +170,9 @@ function createHitParticles(position) {
 
 function doPulse() {
   createPulseVisual();
-  damageZombies(scene, player.position, state.pulseRange, state.pulseDamage, (position, type) => {
+  damageZombies(scene, player.position, state.pulseRange, state.pulseDamage, (position, type, typeKey) => {
     state.kills += 1; state.coins += type.coins; dropXp(scene, position, type.xp);
+    maybeDropMedkit(position, type, typeKey);
   }, createHitParticles);
 }
 
@@ -208,14 +268,18 @@ function tick() {
     cameraShake = Math.max(0, cameraShake - delta);
     updatePlayer(player, delta, attackVisualTimer, cameraControls.yaw);
     CONFIG.player.speed = savedSpeed;
-    spawnTimer -= delta; pulseTimer -= delta;
+    spawnTimer -= delta; pulseTimer -= delta; worldMedkitTimer -= delta;
     if (spawnTimer <= 0) {
       const spawned = spawnZombie(scene, { elapsed: state.elapsed, level: state.level, bossSpawned: state.bossSpawned });
       if (spawned?.userData.typeKey === 'boss') state.bossSpawned = true;
-      spawnTimer = CONFIG.zombie.spawnEvery * Math.max(.38, 1 - state.elapsed / 520);
+      spawnTimer = getSpawnDelay(state.elapsed);
+    }
+    if (worldMedkitTimer <= 0) {
+      spawnWorldMedkit();
+      scheduleNextWorldMedkit();
     }
     updateZombies(player, delta, (damage) => { state.health = Math.max(0, state.health - damage); });
-    updatePickups(scene, player, delta, gainXp);
+    updatePickups(scene, player, delta, collectPickup);
     if (pulseTimer <= 0) { doPulse(); pulseTimer = state.pulseCooldown; }
     if (state.health <= 0) endRun(false);
     if (state.elapsed >= CONFIG.runDuration) endRun(true);
@@ -233,6 +297,15 @@ function tick() {
     spark.userData.life -= delta; spark.position.addScaledVector(spark.userData.velocity, delta);
     spark.userData.velocity.y -= 7 * delta; spark.material.opacity = Math.max(0, spark.userData.life / .36);
     if (spark.userData.life <= 0) { scene.remove(spark); return false; }
+    return true;
+  });
+  healFloaters = healFloaters.filter((sprite) => {
+    sprite.userData.life -= delta;
+    sprite.position.y += delta * 1.1;
+    sprite.material.opacity = Math.max(0, sprite.userData.life / sprite.userData.maxLife);
+    if (sprite.userData.life <= 0) {
+      sprite.material.map.dispose(); sprite.material.dispose(); scene.remove(sprite); return false;
+    }
     return true;
   });
   renderer.render(scene, camera);

@@ -19,8 +19,27 @@ function addSpike(group, x, y, z) {
   spike.position.set(x, y, z); spike.rotation.x = Math.PI; group.add(spike);
 }
 
-function zombieMesh(typeKey = 'walker') {
+function getScaling(elapsed = 0) {
+  const elapsedMinutes = elapsed / 60;
+  return {
+    health: 1 + elapsedMinutes * CONFIG.zombie.scaling.healthPerMinute,
+    damage: 1 + elapsedMinutes * CONFIG.zombie.scaling.damagePerMinute,
+  };
+}
+
+export function getSpawnDelay(elapsed = 0) {
+  const pressure = Math.max(CONFIG.zombie.pacing.minSpawnMultiplier, 1 - elapsed / 520);
+  return CONFIG.zombie.spawnEvery * pressure;
+}
+
+function getMaxAlive(elapsed = 0) {
+  const progress = Math.min(1, elapsed / CONFIG.runDuration);
+  return Math.floor(CONFIG.zombie.maxAlive + CONFIG.zombie.pacing.maxAliveBonus * progress);
+}
+
+function zombieMesh(typeKey = 'walker', progress = {}) {
   const type = ZOMBIE_TYPES[typeKey] ?? ZOMBIE_TYPES.walker;
+  const scaling = getScaling(progress.elapsed);
   const g = new THREE.Group();
   const skin = type.skin;
   const shirt = type.shirt;
@@ -55,7 +74,7 @@ function zombieMesh(typeKey = 'walker') {
   g.traverse((part) => {
     if (part.isMesh) part.userData.baseColor = part.material.color.clone();
   });
-  g.userData = { typeKey, health: type.health, hitTimer: 0, hitFlash: 0, bossSpawned: false };
+  g.userData = { typeKey, health: type.health * scaling.health, damageMultiplier: scaling.damage, hitTimer: 0, hitFlash: 0, bossSpawned: false };
   return g;
 }
 
@@ -68,22 +87,29 @@ function unlockedTypes({ elapsed = 0, level = 1, bossSpawned = false } = {}) {
 
 function chooseZombieType(progress) {
   const choices = unlockedTypes(progress);
-  const total = choices.reduce((sum, [, type]) => sum + type.weight, 0);
+  const elapsedMinutes = (progress.elapsed ?? 0) / 60;
+  const total = choices.reduce((sum, [key, type]) => sum + getTypeWeight(key, type, elapsedMinutes), 0);
   let roll = Math.random() * total;
   for (const [key, type] of choices) {
-    roll -= type.weight;
+    roll -= getTypeWeight(key, type, elapsedMinutes);
     if (roll <= 0) return key;
   }
   return 'walker';
+}
+
+function getTypeWeight(key, type, elapsedMinutes) {
+  if (key === 'walker') return type.weight;
+  const latePressure = 1 + elapsedMinutes * CONFIG.zombie.pacing.lateTypeWeightPerMinute;
+  return type.weight * latePressure;
 }
 
 export function resetZombies(scene) { zombies.splice(0).forEach((z) => scene.remove(z)); }
 export function getZombies() { return zombies; }
 
 export function spawnZombie(scene, progress = {}) {
-  if (zombies.length >= CONFIG.zombie.maxAlive) return null;
+  if (zombies.length >= getMaxAlive(progress.elapsed)) return null;
   const typeKey = chooseZombieType(progress);
-  const z = zombieMesh(typeKey);
+  const z = zombieMesh(typeKey, progress);
   const edge = Math.floor(Math.random() * 4), half = CONFIG.arenaSize / 2 + 2, roll = (Math.random() - .5) * CONFIG.arenaSize;
   z.position.set(edge < 2 ? (edge === 0 ? -half : half) : roll, 0, edge >= 2 ? (edge === 2 ? -half : half) : roll);
   zombies.push(z); scene.add(z); return z;
@@ -105,7 +131,7 @@ export function updateZombies(player, delta, onDamage) {
     });
     if (dist < CONFIG.player.radius + type.radius && z.userData.hitTimer <= 0) {
       z.userData.hitTimer = CONFIG.zombie.hitCooldown;
-      onDamage(type.damage);
+      onDamage(type.damage * (z.userData.damageMultiplier ?? 1));
     }
   }
 }

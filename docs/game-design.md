@@ -6,8 +6,9 @@
 2. Move around a larger ruined town arena while zombies spawn at the edges.
 3. Let automatic baseball bat swings clear nearby zombies.
 4. Collect dropped XP gems from every defeated zombie.
-5. Level up, choose one of three upgrade cards, and keep surviving.
-6. Earn coins during the run, then save them locally when the run ends.
+5. Grab medkits as the basic healing system when damage starts to pile up.
+6. Level up, choose one of three upgrade cards, and keep surviving.
+7. Earn coins during the run, then save them locally when the run ends.
 
 ## First version scope
 
@@ -17,13 +18,23 @@
 - Survivor visual direction: red shirt or jacket, dark undershirt, blue pants, dark shoes, white/red/black cap, simple brown backpack, and wooden baseball bat.
 - Multiple simple procedural zombie types that all chase the player directly.
 - Automatic bat swing attack with a gold swing arc; existing range, damage, and cooldown upgrades continue to drive the attack stats.
-- XP gems, level-up upgrade cards, coins, pause, win screen, and loss screen.
+- XP gems, medkit health pickups, level-up upgrade cards, coins, pause, win screen, and loss screen.
 
 ## Current prototype target
 
 - Survive **10 minutes** in a noticeably larger arena than the earliest prototype.
 - Keep the first playable loop approachable: enemies pressure the player, but there is enough room to kite zombies and collect XP.
+- Use increased late-run spawn pressure plus light enemy health and damage scaling so the 10-minute test stays tense after the player levels up.
 - Use simple browser-friendly geometry only: boxes, cylinders, spheres, cones, low-poly primitives, flat colors, and no imported models or textures.
+
+## Healing and pickups
+
+Medkits are the current basic healing system. They use simple low-poly red boxes with white crosses so they stay readable on the ground without external textures.
+
+- A collected medkit heals a fixed amount while clamping the player to max health.
+- Every defeated zombie still drops its XP gem. Medkits are an extra rare drop and never replace XP.
+- Drop chances live near zombie type tuning: Walkers are rare, Runners/Little Zombies and Spitters are slightly more likely, Brutes are more rewarding, and Mini Bosses always drop a medkit.
+- World medkits begin appearing around **0:45**, then occasionally respawn near—but not directly on—the player, with a small active cap so healing remains helpful without flooding the arena.
 
 ## Zombie progression
 
@@ -32,8 +43,10 @@ Zombie tuning lives in `src/config.js` so health, speed, damage, XP, coins, size
 - **0:00 to 1:30 / levels 1-2:** Walker Zombies are the default threat.
 - **1:30+ or level 3+:** Little Runner Zombies join as smaller, faster, lower-health chasers.
 - **3:00+ or level 5+:** Brute Zombies join as larger, slower, high-health chasers with stronger contact damage.
-- **4:00+ or level 6+:** Spitter Zombies join as toxic-colored visual variants; for now they still chase directly instead of firing projectiles.
+- **5:00+ or level 6+:** Spitter Zombies join as toxic-colored visual variants; for now they still chase directly instead of firing projectiles.
 - **7:00+ or level 8+:** A Mini Boss Zombie can spawn rarely, limited to one boss per run for the 10-minute test.
+
+Spawn pressure increases over the run: spawn delays shrink gradually, the active horde cap rises, and later zombie type weights become more prominent after they unlock. Enemy health scales slowly by elapsed minutes and contact damage scales even more lightly, keeping the opening approachable while preventing the late run from becoming too easy.
 
 ## Zombie type roles
 
