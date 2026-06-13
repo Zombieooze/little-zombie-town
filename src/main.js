@@ -21,6 +21,9 @@ let muted = false;
 let spawnTimer = 0;
 let pulseTimer = 0;
 let pulseVisuals = [];
+let hitParticles = [];
+let attackVisualTimer = 0;
+let cameraShake = 0;
 let pendingChoices = [];
 
 const state = {
@@ -44,7 +47,10 @@ function resetState() {
 function startGame() {
   resetState();
   if (player) scene.remove(player);
-  resetZombies(scene); resetPickups(scene); pulseVisuals.forEach((v) => scene.remove(v)); pulseVisuals = [];
+  resetZombies(scene); resetPickups(scene);
+  pulseVisuals.forEach((v) => scene.remove(v)); pulseVisuals = [];
+  hitParticles.forEach((p) => scene.remove(p)); hitParticles = [];
+  attackVisualTimer = 0; cameraShake = 0;
   player = createPlayer(scene);
   hideOverlays(); document.getElementById('menu-screen').classList.add('hidden');
   document.getElementById('hud').classList.remove('hidden');
@@ -68,16 +74,27 @@ function gainXp(amount) {
 }
 
 function createPulseVisual() {
-  const ring = new THREE.Mesh(new THREE.RingGeometry(state.pulseRange * .94, state.pulseRange, 48), new THREE.MeshBasicMaterial({ color: 0x9bffb2, transparent: true, opacity: .85, side: THREE.DoubleSide }));
-  ring.rotation.x = -Math.PI / 2; ring.position.copy(player.position); ring.position.y = .13; ring.userData.life = CONFIG.pulse.visualDuration;
-  scene.add(ring); pulseVisuals.push(ring);
+  const arc = new THREE.Mesh(new THREE.RingGeometry(state.pulseRange * .72, state.pulseRange, 48, 1, -Math.PI * .68, Math.PI * 1.36), new THREE.MeshBasicMaterial({ color: 0xffd166, transparent: true, opacity: .9, side: THREE.DoubleSide }));
+  arc.rotation.x = -Math.PI / 2; arc.rotation.z = -player.rotation.y; arc.position.copy(player.position); arc.position.y = .16;
+  arc.userData.life = CONFIG.pulse.visualDuration; arc.userData.maxLife = CONFIG.pulse.visualDuration; arc.scale.setScalar(.25);
+  scene.add(arc); pulseVisuals.push(arc);
+  attackVisualTimer = CONFIG.pulse.visualDuration; cameraShake = .12;
+}
+
+function createHitParticles(position) {
+  for (let i = 0; i < 5; i++) {
+    const spark = new THREE.Mesh(new THREE.BoxGeometry(.16, .16, .16), new THREE.MeshBasicMaterial({ color: i % 2 ? 0xfff1a8 : 0xffb703, transparent: true, opacity: 1 }));
+    spark.position.set(position.x + (Math.random() - .5) * .55, 1 + Math.random() * .85, position.z + (Math.random() - .5) * .55);
+    spark.userData = { life: .36, velocity: new THREE.Vector3((Math.random() - .5) * 3, 2 + Math.random() * 2, (Math.random() - .5) * 3) };
+    scene.add(spark); hitParticles.push(spark);
+  }
 }
 
 function doPulse() {
   createPulseVisual();
   damageZombies(scene, player.position, state.pulseRange, state.pulseDamage, (position) => {
     state.kills += 1; state.coins += CONFIG.zombie.coins; dropXp(scene, position);
-  });
+  }, createHitParticles);
 }
 
 function endRun(won) {
@@ -88,6 +105,7 @@ function endRun(won) {
 function updateCamera(delta) {
   const target = new THREE.Vector3(player.position.x, 0, player.position.z + CONFIG.camera.lookAhead);
   const desired = target.clone().add(new THREE.Vector3(CONFIG.camera.offset.x, CONFIG.camera.offset.y, CONFIG.camera.offset.z));
+  if (cameraShake > 0) desired.x += (Math.random() - .5) * cameraShake;
   camera.position.lerp(desired, 1 - Math.pow(0.001, delta));
   camera.lookAt(target);
 }
@@ -111,7 +129,9 @@ function tick() {
     state.elapsed += delta;
     const savedSpeed = CONFIG.player.speed;
     CONFIG.player.speed = savedSpeed * state.speedMultiplier;
-    updatePlayer(player, delta);
+    attackVisualTimer = Math.max(0, attackVisualTimer - delta);
+    cameraShake = Math.max(0, cameraShake - delta);
+    updatePlayer(player, delta, attackVisualTimer);
     CONFIG.player.speed = savedSpeed;
     spawnTimer -= delta; pulseTimer -= delta;
     if (spawnTimer <= 0) { spawnZombie(scene); spawnTimer = CONFIG.zombie.spawnEvery * Math.max(.38, 1 - state.elapsed / 260); }
@@ -124,8 +144,16 @@ function tick() {
   }
 
   pulseVisuals = pulseVisuals.filter((ring) => {
-    ring.userData.life -= delta; ring.material.opacity = Math.max(0, ring.userData.life / CONFIG.pulse.visualDuration);
+    ring.userData.life -= delta;
+    const t = Math.max(0, ring.userData.life / ring.userData.maxLife);
+    ring.material.opacity = t * .9; ring.scale.setScalar(.25 + (1 - t) * .9);
     if (ring.userData.life <= 0) { scene.remove(ring); return false; }
+    return true;
+  });
+  hitParticles = hitParticles.filter((spark) => {
+    spark.userData.life -= delta; spark.position.addScaledVector(spark.userData.velocity, delta);
+    spark.userData.velocity.y -= 7 * delta; spark.material.opacity = Math.max(0, spark.userData.life / .36);
+    if (spark.userData.life <= 0) { scene.remove(spark); return false; }
     return true;
   });
   renderer.render(scene, camera);
