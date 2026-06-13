@@ -45,12 +45,12 @@ Only these abilities should currently appear in the level-up card pool:
 1. **Spinning Sawblade:** A bright low-poly spinning scrap disc that auto-launches on cooldown, targets roughly the nearest zombie, damages enemies it touches, and scales from Level 1-10 through modest damage, cooldown, hit-radius, speed/lifetime, and volley-count upgrades.
 2. **Scrap Orbitals:** One or more visible low-poly scrap chunks orbit the player, spin automatically, and use contact/tick damage when orbiting chunks touch zombies. Scrap Orbitals scale from Level 1-10 through modest damage, orbital-count, orbital-speed, and hit-radius upgrades.
 3. **Electric Zapper:** An automatic chain-zap special ability that fires on cooldown, hits the nearest zombie in range, then gains more damage, faster recharge, longer range, and extra chain targets as it upgrades from Level 1-10. Electric Zapper counts toward the 4 special ability limit and uses the normal zombie damage/death/reward path so kills still award XP and coins.
+4. **Fire Bottle:** An automatic thrown area-damage special ability. It throws a small bottle toward the nearest zombie in range, or forward if no target is available, then creates a cartoon fire patch on the ground. Zombies in the patch take damage over time through the normal zombie damage/death/reward path. Fire Bottle counts toward the 4 special ability limit and upgrades from Level 1 to Level 10 through damage, duration, cooldown, radius, and extra-bottle improvements.
 
 ### Planned special abilities not available yet
 
 These are roadmap entries only. They must not appear in gameplay or level-up cards until implemented later.
 
-3. **Fire Bottle:** Throws a bottle that creates a small fire area on the ground. Area damage over time. Good for controlling space.
 4. **Nail Blaster:** Shoots small nail/bolt projectiles at nearby zombies. Fast ranged damage. Can later gain extra projectiles and piercing.
 5. **Shockwave Stomp:** Releases a timed shockwave around the player. Damages and pushes zombies back. Good panic/crowd-control ability.
 6. **Bear Trap Toss:** Drops traps on the ground. Zombies that step on traps take damage and later can be slowed. Good for area control.
