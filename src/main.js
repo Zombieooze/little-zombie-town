@@ -47,7 +47,7 @@ const cameraLimits = {
 const state = {
   elapsed: 0, health: 100, maxHealth: 100, level: 1, xp: 0, nextXp: CONFIG.level.baseXp,
   coins: 0, kills: 0, pulseCooldown: CONFIG.pulse.cooldown, pulseRange: CONFIG.pulse.range,
-  pulseDamage: CONFIG.pulse.damage, speedMultiplier: 1,
+  pulseDamage: CONFIG.pulse.damage, speedMultiplier: 1, bossSpawned: false,
 };
 
 initInput();
@@ -59,7 +59,7 @@ showScreen('menu-screen');
 function resetState() {
   Object.assign(state, { elapsed: 0, health: CONFIG.player.maxHealth, maxHealth: CONFIG.player.maxHealth, level: 1, xp: 0,
     nextXp: CONFIG.level.baseXp, coins: 0, kills: 0, pulseCooldown: CONFIG.pulse.cooldown, pulseRange: CONFIG.pulse.range,
-    pulseDamage: CONFIG.pulse.damage, speedMultiplier: 1 });
+    pulseDamage: CONFIG.pulse.damage, speedMultiplier: 1, bossSpawned: false });
   spawnTimer = 0; pulseTimer = 0; pendingChoices = [];
 }
 
@@ -111,8 +111,8 @@ function createHitParticles(position) {
 
 function doPulse() {
   createPulseVisual();
-  damageZombies(scene, player.position, state.pulseRange, state.pulseDamage, (position) => {
-    state.kills += 1; state.coins += CONFIG.zombie.coins; dropXp(scene, position);
+  damageZombies(scene, player.position, state.pulseRange, state.pulseDamage, (position, type) => {
+    state.kills += 1; state.coins += type.coins; dropXp(scene, position, type.xp);
   }, createHitParticles);
 }
 
@@ -209,7 +209,11 @@ function tick() {
     updatePlayer(player, delta, attackVisualTimer, cameraControls.yaw);
     CONFIG.player.speed = savedSpeed;
     spawnTimer -= delta; pulseTimer -= delta;
-    if (spawnTimer <= 0) { spawnZombie(scene); spawnTimer = CONFIG.zombie.spawnEvery * Math.max(.38, 1 - state.elapsed / 260); }
+    if (spawnTimer <= 0) {
+      const spawned = spawnZombie(scene, { elapsed: state.elapsed, level: state.level, bossSpawned: state.bossSpawned });
+      if (spawned?.userData.typeKey === 'boss') state.bossSpawned = true;
+      spawnTimer = CONFIG.zombie.spawnEvery * Math.max(.38, 1 - state.elapsed / 520);
+    }
     updateZombies(player, delta, (damage) => { state.health = Math.max(0, state.health - damage); });
     updatePickups(scene, player, delta, gainXp);
     if (pulseTimer <= 0) { doPulse(); pulseTimer = state.pulseCooldown; }
