@@ -1,12 +1,12 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
-import { initInput, consumePress } from './input.js';
+import { initInput, initCameraInput, consumeCameraInput, consumePress } from './input.js';
 import { initUI, updateHUD, showScreen, hideOverlays, showUpgrades, showEnd, setMuted, updateMenuCoins } from './ui.js';
 import { addCoins } from './save.js';
 import { createWorld } from './world.js';
 import { createPlayer, updatePlayer } from './player.js';
 import { spawnZombie, updateZombies, damageZombies, resetZombies } from './zombies.js';
-import { dropXp, updatePickups, resetPickups } from './pickups.js';
+import { dropXp, maybeDropZombieHealth, updatePickups, resetPickups } from './pickups.js';
 import { getUpgradeChoices, applyUpgrade } from './upgrades.js';
 
 const canvas = document.getElementById('game-canvas');
@@ -25,14 +25,17 @@ let hitParticles = [];
 let attackVisualTimer = 0;
 let cameraShake = 0;
 let pendingChoices = [];
+let cameraAngle = 0;
+let cameraZoom = 1;
 
 const state = {
   elapsed: 0, health: 100, maxHealth: 100, level: 1, xp: 0, nextXp: CONFIG.level.baseXp,
   coins: 0, kills: 0, pulseCooldown: CONFIG.pulse.cooldown, pulseRange: CONFIG.pulse.range,
-  pulseDamage: CONFIG.pulse.damage, speedMultiplier: 1,
+  pulseDamage: CONFIG.pulse.damage, knockback: CONFIG.pulse.knockback, speedMultiplier: 1,
 };
 
 initInput();
+initCameraInput(canvas);
 createWorld(scene);
 initUI({ onStart: startGame, onUpgrade: chooseUpgrade, onMenu: returnToMenu });
 showScreen('menu-screen');
@@ -40,7 +43,7 @@ showScreen('menu-screen');
 function resetState() {
   Object.assign(state, { elapsed: 0, health: CONFIG.player.maxHealth, maxHealth: CONFIG.player.maxHealth, level: 1, xp: 0,
     nextXp: CONFIG.level.baseXp, coins: 0, kills: 0, pulseCooldown: CONFIG.pulse.cooldown, pulseRange: CONFIG.pulse.range,
-    pulseDamage: CONFIG.pulse.damage, speedMultiplier: 1 });
+    pulseDamage: CONFIG.pulse.damage, knockback: CONFIG.pulse.knockback, speedMultiplier: 1 });
   spawnTimer = 0; pulseTimer = 0; pendingChoices = [];
 }
 
@@ -50,7 +53,7 @@ function startGame() {
   resetZombies(scene); resetPickups(scene);
   pulseVisuals.forEach((v) => scene.remove(v)); pulseVisuals = [];
   hitParticles.forEach((p) => scene.remove(p)); hitParticles = [];
-  attackVisualTimer = 0; cameraShake = 0;
+  attackVisualTimer = 0; cameraShake = 0; cameraAngle = 0; cameraZoom = 1;
   player = createPlayer(scene);
   hideOverlays(); document.getElementById('menu-screen').classList.add('hidden');
   document.getElementById('hud').classList.remove('hidden');
@@ -92,8 +95,8 @@ function createHitParticles(position) {
 
 function doPulse() {
   createPulseVisual();
-  damageZombies(scene, player.position, state.pulseRange, state.pulseDamage, (position) => {
-    state.kills += 1; state.coins += CONFIG.zombie.coins; dropXp(scene, position);
+  damageZombies(scene, player.position, state.pulseRange, state.pulseDamage, state.knockback, (position) => {
+    state.kills += 1; state.coins += CONFIG.zombie.coins; dropXp(scene, position); maybeDropZombieHealth(scene, position);
   }, createHitParticles);
 }
 
@@ -103,8 +106,13 @@ function endRun(won) {
 }
 
 function updateCamera(delta) {
+  const cameraInput = consumeCameraInput();
+  cameraAngle += cameraInput.deltaX * 0.006;
+  cameraZoom = THREE.MathUtils.clamp(cameraZoom + cameraInput.zoomDelta, CONFIG.camera.minZoom, CONFIG.camera.maxZoom);
   const target = new THREE.Vector3(player.position.x, 0, player.position.z + CONFIG.camera.lookAhead);
-  const desired = target.clone().add(new THREE.Vector3(CONFIG.camera.offset.x, CONFIG.camera.offset.y, CONFIG.camera.offset.z));
+  const offset = new THREE.Vector3(CONFIG.camera.offset.x, CONFIG.camera.offset.y, CONFIG.camera.offset.z).multiplyScalar(cameraZoom);
+  offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraAngle);
+  const desired = target.clone().add(offset);
   if (cameraShake > 0) desired.x += (Math.random() - .5) * cameraShake;
   camera.position.lerp(desired, 1 - Math.pow(0.001, delta));
   camera.lookAt(target);
@@ -136,7 +144,12 @@ function tick() {
     spawnTimer -= delta; pulseTimer -= delta;
     if (spawnTimer <= 0) { spawnZombie(scene); spawnTimer = CONFIG.zombie.spawnEvery * Math.max(.38, 1 - state.elapsed / 260); }
     updateZombies(player, delta, (damage) => { state.health = Math.max(0, state.health - damage); });
-    updatePickups(scene, player, delta, gainXp);
+    updatePickups(scene, player, delta, gainXp, () => {
+      const heal = Math.ceil(state.maxHealth * CONFIG.healthPickup.healPercent);
+      const before = state.health;
+      state.health = Math.min(state.maxHealth, state.health + heal);
+      return state.health - before;
+    });
     if (pulseTimer <= 0) { doPulse(); pulseTimer = state.pulseCooldown; }
     if (state.health <= 0) endRun(false);
     if (state.elapsed >= CONFIG.runDuration) endRun(true);

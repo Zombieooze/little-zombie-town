@@ -13,7 +13,7 @@ Current procedural model direction:
 - Simple brown backpack with a flap and buckle.
 - Wooden baseball bat held in hand.
 
-The player should stay simple and game-ready. Build the character from basic Three.js primitives only, with no external models, textures, sprite sheets, GLTF files, or Blender assets.
+The player should stay simple and game-ready. Build the character from basic Three.js primitives only, with no external models, textures, sprite sheets, GLTF files, or Blender assets. The arms should swing from shoulder pivots, and the legs should swing from hip pivots so the walking animation reads cleanly.
 
 ## Player attack identity
 
@@ -22,7 +22,7 @@ The main attack identity is a baseball bat swing. The current game can keep usin
 - The bat moves during each attack.
 - A short yellow/gold swing arc appears around the survivor.
 - Small square spark particles can pop from hit zombies.
-- Upgrades can improve swing cooldown, range, and damage.
+- Upgrades can improve swing cooldown, damage, and knockback, but the bat keeps a mostly fixed attack range so the swing stays readable.
 
 ## Walker Zombie
 
@@ -48,3 +48,11 @@ Future zombies and town props should follow the same simple low-poly geometry st
 ## Visual tone
 
 Cartoon post-apocalyptic and non-graphic. The mood is dark green and purple night-time, but objects should remain bright, readable, and toy-like.
+
+## Health pickups
+
+Small red-and-white medkits can appear as rare zombie drops or occasional world pickups. Collecting one restores a modest amount of health without exceeding max health, with a quick `+HP` floating feedback label.
+
+## Movement feel
+
+The survivor faces the current movement/attack direction, keeps the existing walking bob, and can use Space for a short hop. Mouse drag can orbit the camera, and the wheel zooms in or out within safe limits while keeping the default camera feel.
