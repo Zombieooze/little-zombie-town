@@ -1,7 +1,7 @@
 export const UPGRADES = [
-  { id: 'cooldown', name: 'Faster Pulse', description: 'Defense pulse recharges 18% faster.' },
-  { id: 'range', name: 'Bigger Pulse', description: 'Pulse range grows by 20%.' },
-  { id: 'damage', name: 'Stronger Pulse', description: 'Pulse damage increases by 12.' },
+  { id: 'cooldown', name: 'Faster Swing', description: 'Baseball bat swing recharges 18% faster.' },
+  { id: 'range', name: 'Wider Swing', description: 'Swing range grows by 20%.' },
+  { id: 'damage', name: 'Heavier Bat', description: 'Bat swing damage increases by 12.' },
   { id: 'health', name: 'Healthy Snack', description: 'Gain max health and heal a little.' },
   { id: 'speed', name: 'Quick Feet', description: 'Move 12% faster.' },
 ];

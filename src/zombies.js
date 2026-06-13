@@ -42,12 +42,13 @@ export function updateZombies(player, delta, onDamage) {
   }
 }
 
-export function damageZombies(scene, origin, range, damage, onKilled) {
+export function damageZombies(scene, origin, range, damage, onKilled, onHit = () => {}) {
   for (let i = zombies.length - 1; i >= 0; i--) {
     const z = zombies[i];
     const dist = Math.hypot(origin.x - z.position.x, origin.z - z.position.z);
     if (dist <= range) {
       z.userData.health -= damage;
+      onHit(z.position.clone());
       z.scale.setScalar(1.15);
       if (z.userData.health <= 0) {
         zombies.splice(i, 1);
