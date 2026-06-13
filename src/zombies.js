@@ -145,7 +145,7 @@ export function updateZombies(player, delta, onDamage) {
   }
 }
 
-export function damageZombies(scene, origin, range, damage, onKilled, onHit = () => {}) {
+export function damageZombies(scene, origin, range, damage, onKilled, onHit = () => {}, knockback = 0) {
   for (let i = zombies.length - 1; i >= 0; i--) {
     const z = zombies[i];
     const dist = Math.hypot(origin.x - z.position.x, origin.z - z.position.z);
@@ -153,6 +153,13 @@ export function damageZombies(scene, origin, range, damage, onKilled, onHit = ()
       z.userData.health -= damage;
       z.userData.hitFlash = .12;
       onHit(z.position.clone());
+      if (knockback > 0) {
+        const dx = z.position.x - origin.x;
+        const dz = z.position.z - origin.z;
+        const dist = Math.hypot(dx, dz) || 1;
+        z.position.x += (dx / dist) * knockback;
+        z.position.z += (dz / dist) * knockback;
+      }
       if (z.userData.health <= 0) {
         const type = ZOMBIE_TYPES[z.userData.typeKey] ?? ZOMBIE_TYPES.walker;
         zombies.splice(i, 1);
