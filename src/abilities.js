@@ -96,11 +96,21 @@ export const ABILITY_DEFINITIONS = {
     name: 'Nail Blaster',
     shortName: 'Nails',
     unlockName: 'Unlock Nail Blaster',
-    unlockDescription: 'Planned: fast nail or bolt projectiles at nearby zombies.',
+    unlockDescription: 'Fire fast nail bolts at nearby zombies automatically.',
     maxLevel: MAX_ABILITY_LEVEL,
-    implemented: false,
-    plannedRole: 'Fast ranged damage with later extra projectiles and piercing.',
-    upgrades: {},
+    implemented: true,
+    defaults: { damage: 18, cooldown: 1.55, range: 9.5, projectileCount: 1, speed: 16.5, lifetime: .75, hitRadius: .34, pierce: 0, spread: .13 },
+    upgrades: {
+      2: 'Nail damage increases.',
+      3: 'Nail Blaster fires faster.',
+      4: 'Fire an extra nail.',
+      5: 'Nails pierce through zombies.',
+      6: 'Nail damage increases.',
+      7: 'Nail Blaster fires faster.',
+      8: 'Fire an extra nail in a wider burst.',
+      9: 'Nails pierce through more zombies.',
+      10: 'Unleash a stronger nail storm.',
+    },
   },
   shockwaveStomp: {
     id: 'shockwaveStomp',
@@ -153,6 +163,7 @@ function makeAbilityState() {
     orbitals: { ...ABILITY_DEFINITIONS.orbitals.defaults, angle: 0, meshes: [], recentHits: new Map() },
     electricZapper: { ...ABILITY_DEFINITIONS.electricZapper.defaults, timer: 1.2, effects: [] },
     fireBottle: { ...ABILITY_DEFINITIONS.fireBottle.defaults, timer: 1.8, bottles: [], patches: [] },
+    nailBlaster: { ...ABILITY_DEFINITIONS.nailBlaster.defaults, timer: .45, nails: [] },
   };
 }
 
@@ -163,6 +174,7 @@ export function resetAbilities(scene, state) {
     state.abilities.electricZapper?.effects?.forEach((effect) => removeZapperEffect(scene, effect));
     state.abilities.fireBottle?.bottles?.forEach((bottle) => removeFireBottle(scene, bottle));
     state.abilities.fireBottle?.patches?.forEach((patch) => removeFirePatch(scene, patch));
+    state.abilities.nailBlaster?.nails?.forEach((nail) => removeNail(scene, nail));
   }
   state.abilities = makeAbilityState();
 }
@@ -221,6 +233,17 @@ function applyAbilityLevelTuning(state, abilityId, level) {
     if (level === 9) abilities.electricZapper.chainDistance += 1.1;
     if (level === 10) { abilities.electricZapper.damage += 12; abilities.electricZapper.chainTargets = Math.min(4, abilities.electricZapper.chainTargets + 1); }
   }
+  if (abilityId === 'nailBlaster') {
+    if (level === 2) abilities.nailBlaster.damage += 6;
+    if (level === 3) abilities.nailBlaster.cooldown = Math.max(.85, abilities.nailBlaster.cooldown * .82);
+    if (level === 4) abilities.nailBlaster.projectileCount = Math.min(2, abilities.nailBlaster.projectileCount + 1);
+    if (level === 5) abilities.nailBlaster.pierce = Math.max(1, abilities.nailBlaster.pierce);
+    if (level === 6) abilities.nailBlaster.damage += 7;
+    if (level === 7) abilities.nailBlaster.cooldown = Math.max(.85, abilities.nailBlaster.cooldown * .82);
+    if (level === 8) { abilities.nailBlaster.projectileCount = Math.min(3, abilities.nailBlaster.projectileCount + 1); abilities.nailBlaster.spread += .05; }
+    if (level === 9) abilities.nailBlaster.pierce = Math.max(2, abilities.nailBlaster.pierce);
+    if (level === 10) { abilities.nailBlaster.damage += 12; abilities.nailBlaster.projectileCount = Math.min(5, abilities.nailBlaster.projectileCount + 2); abilities.nailBlaster.pierce = Math.max(3, abilities.nailBlaster.pierce); }
+  }
   if (abilityId === 'fireBottle') {
     if (level === 2) abilities.fireBottle.damage += 4;
     if (level === 3) abilities.fireBottle.duration += .75;
@@ -271,6 +294,7 @@ export function updateAbilities(scene, state, player, delta, onKilled, onHit) {
   if (isAbilityUnlocked(state, 'orbitals')) updateOrbitals(scene, state, player, delta, onKilled, onHit);
   if (isAbilityUnlocked(state, 'electricZapper')) updateElectricZapper(scene, state, player, delta, onKilled, onHit);
   if (isAbilityUnlocked(state, 'fireBottle')) updateFireBottle(scene, state, player, delta, onKilled, onHit);
+  if (isAbilityUnlocked(state, 'nailBlaster')) updateNailBlaster(scene, state, player, delta, onKilled, onHit);
 }
 
 function removeZapperEffect(scene, effect) {
@@ -327,6 +351,75 @@ function updateSawblades(scene, state, player, delta, onKilled, onHit) {
       blade.hitTimer = .18;
     }
     if (blade.life <= 0) { scene.remove(blade.mesh); return false; }
+    return true;
+  });
+}
+
+
+function createNailMesh() {
+  const group = new THREE.Group();
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(.035, .035, .48, 6), new THREE.MeshStandardMaterial({ color: 0xc8ced6, metalness: .35, roughness: .42 }));
+  shaft.rotation.x = Math.PI / 2;
+  const tip = new THREE.Mesh(new THREE.ConeGeometry(.055, .16, 6), new THREE.MeshStandardMaterial({ color: 0xf1f5f9, metalness: .3, roughness: .38 }));
+  tip.position.z = .32;
+  tip.rotation.x = Math.PI / 2;
+  const head = new THREE.Mesh(new THREE.BoxGeometry(.16, .16, .045), new THREE.MeshStandardMaterial({ color: 0x8f98a3, metalness: .25, roughness: .48 }));
+  head.position.z = -.27;
+  group.add(shaft, tip, head);
+  return group;
+}
+
+function removeNail(scene, nail) {
+  scene.remove(nail.mesh);
+  nail.mesh.traverse((part) => {
+    part.geometry?.dispose?.();
+    part.material?.dispose?.();
+  });
+}
+
+function fireNailBlaster(scene, state, player) {
+  const blaster = state.abilities.nailBlaster;
+  const target = getNearestZombieInRange(player.position, blaster.range);
+  if (!target) return false;
+  const baseAngle = Math.atan2(target.position.x - player.position.x, target.position.z - player.position.z);
+  for (let i = 0; i < blaster.projectileCount; i++) {
+    const spread = (i - (blaster.projectileCount - 1) / 2) * blaster.spread;
+    const angle = baseAngle + spread;
+    const mesh = createNailMesh();
+    mesh.position.set(player.position.x, 1.1, player.position.z);
+    mesh.rotation.y = angle;
+    scene.add(mesh);
+    blaster.nails.push({
+      mesh,
+      velocity: new THREE.Vector3(Math.sin(angle) * blaster.speed, 0, Math.cos(angle) * blaster.speed),
+      life: blaster.lifetime,
+      hitZombies: new Set(),
+      hitsLeft: blaster.pierce + 1,
+    });
+  }
+  return true;
+}
+
+function updateNailBlaster(scene, state, player, delta, onKilled, onHit) {
+  const blaster = state.abilities.nailBlaster;
+  blaster.timer -= delta;
+  if (blaster.timer <= 0 && fireNailBlaster(scene, state, player)) blaster.timer = blaster.cooldown;
+  blaster.nails = blaster.nails.filter((nail) => {
+    nail.life -= delta;
+    nail.mesh.position.addScaledVector(nail.velocity, delta);
+    nail.mesh.rotation.z += delta * 18;
+    for (const zombie of [...getZombies()]) {
+      if (nail.hitZombies.has(zombie)) continue;
+      const type = CONFIG.zombie.types[zombie.userData.typeKey] ?? CONFIG.zombie.types.walker;
+      const hitRange = blaster.hitRadius + type.radius;
+      const dist = Math.hypot(nail.mesh.position.x - zombie.position.x, nail.mesh.position.z - zombie.position.z);
+      if (dist > hitRange) continue;
+      nail.hitZombies.add(zombie);
+      nail.hitsLeft -= 1;
+      damageZombie(scene, zombie, nail.mesh.position, blaster.damage, onKilled, onHit);
+      if (nail.hitsLeft <= 0) break;
+    }
+    if (nail.life <= 0 || nail.hitsLeft <= 0) { removeNail(scene, nail); return false; }
     return true;
   });
 }

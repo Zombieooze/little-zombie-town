@@ -70,7 +70,7 @@ All special abilities should stay low-poly, toy-like, readable from the default 
 2. **Scrap Orbitals:** Toy-like junk parts circling the survivor, using small colorful boxes/cones with readable motion from the default camera distance.
 3. **Electric Zapper:** Quick blue/yellow electric line from the player to a zombie, then short chain lines between zombies at higher levels. Add tiny blue/yellow spark cubes at hit points for a low-poly arcade effect.
 4. **Fire Bottle:** Small thrown bottle arcing outward, then a cartoon low-poly fire patch on the ground with orange/yellow arcade flames. Keep it readable and playful with no gore or realistic burning.
-5. **Nail Blaster:** Tiny silver nail/bolt shapes fired in quick straight paths with small spark hits.
+5. **Nail Blaster:** Small gray nail/bolt projectiles fired in fast projectile bursts. Keep the bolts thin, low-poly, arcade-readable, and lightweight enough for many simultaneous shots; optional tiny spark hits can be added without gore or external assets.
 6. **Shockwave Stomp:** Expanding flat ring or low cylinder pulse around the player, colored pale yellow or cyan, with a brief dust puff feel.
 7. **Bear Trap Toss:** Chunky dark metal trap made from simple semicircle/box teeth on the ground; keep it readable and non-realistic.
 8. **Junkyard Turret:** Small squat scrap tripod or box turret with a short barrel, using mismatched metal colors and simple muzzle flashes.
