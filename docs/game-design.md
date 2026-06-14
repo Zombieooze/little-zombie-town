@@ -150,15 +150,18 @@ Desktop controls remain keyboard and mouse:
 - **Space**: Jump/hop.
 - **Right mouse drag**: Orbit the camera.
 - **Scroll**: Zoom the camera in or out.
-- **P**: Pause or unpause.
+- **P** or **Escape**: Pause or unpause. The on-screen pause button also pauses and resumes the current run without resetting timer progress, coins, zombies, pickups, or abilities.
 - **M**: Toggle mute placeholder.
 
-Mobile/touch controls appear on touch-capable or small screens:
+Mobile/touch controls are hidden on normal desktop/laptop screens and appear only for coarse-pointer touch layouts or small viewports:
 
 - **Left virtual joystick**: Move the player camera-relative, including diagonal movement.
 - **Right-side drag**: Orbit the camera with the same horizontal/vertical feel as mouse camera drag.
+- **Two-finger pinch on the game canvas**: Smoothly zooms the camera closer or farther from the player, clamped to safe minimum and maximum distances and not saved permanently.
 - **Lower-right JUMP button**: Triggers the same grounded jump as Spacebar and can be tapped while moving.
 - **Level-up cards**: Large touch-safe card buttons; while the level-up overlay is open, touch controls do not move the player or rotate the camera.
+- **Fullscreen buttons**: Mobile menu/gameplay buttons request browser fullscreen and landscape orientation where supported. Fullscreen is optional because mobile browsers cannot always hide the address bar; mobile web app meta tags and fullscreen requests simply help reduce browser chrome when available.
+- **Pause button**: Pauses the run, timer, zombies, pickups, special abilities, fire patches/timed effects, player input, and camera touch controls until Resume/P/Escape is used.
 - **Small phone portrait screens**: Show a rotate-phone overlay requiring landscape play. The overlay is a CSS/JS fallback and desktop controls remain unaffected.
 
 ## Win/loss condition

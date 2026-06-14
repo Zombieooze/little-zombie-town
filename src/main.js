@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
-import { initInput, consumePress } from './input.js';
-import { initUI, updateHUD, showScreen, hideOverlays, showUpgrades, showEnd, setMuted, updateMenuCoins } from './ui.js';
+import { initInput, consumePress, resetTouchMovement } from './input.js';
+import { initUI, updateHUD, showScreen, hideOverlays, showUpgrades, showEnd, setMuted, updateMenuCoins, setGameActionsVisible, setPauseButtonVisible } from './ui.js';
 import { addCoins } from './save.js';
 import { createWorld } from './world.js';
 import { createPlayer, updatePlayer } from './player.js';
@@ -32,17 +32,22 @@ const cameraControls = {
   yaw: Math.atan2(CONFIG.camera.offset.x, CONFIG.camera.offset.z),
   pitch: Math.atan2(CONFIG.camera.offset.y, Math.hypot(CONFIG.camera.offset.x, CONFIG.camera.offset.z)),
   distance: Math.hypot(CONFIG.camera.offset.x, CONFIG.camera.offset.y, CONFIG.camera.offset.z),
+  targetDistance: Math.hypot(CONFIG.camera.offset.x, CONFIG.camera.offset.y, CONFIG.camera.offset.z),
   dragging: false,
   touchPointerId: null,
   pointerButton: null,
   lastX: 0,
   lastY: 0,
+  touchPointers: new Map(),
+  pinching: false,
+  pinchStartDistance: 0,
+  pinchStartCameraDistance: 0,
 };
 const cameraLimits = {
   minPitch: 0.32,
   maxPitch: 1.25,
-  minDistance: 9.5,
-  maxDistance: 24,
+  minDistance: CONFIG.camera.minDistance,
+  maxDistance: CONFIG.camera.maxDistance,
   yawSpeed: 0.0055,
   pitchSpeed: 0.0042,
   touchYawSpeed: 0.0042,
@@ -59,7 +64,7 @@ const state = {
 initInput();
 initCameraControls();
 createWorld(scene);
-initUI({ onStart: startGame, onUpgrade: chooseUpgrade, onMenu: returnToMenu });
+initUI({ onStart: startGame, onUpgrade: chooseUpgrade, onMenu: returnToMenu, onPause: pauseGame, onResume: resumeGame, onFullscreen: requestGameFullscreen });
 showScreen('menu-screen');
 
 function resetState() {
@@ -82,16 +87,45 @@ function startGame() {
   player = createPlayer(scene);
   hideOverlays(); document.getElementById('menu-screen').classList.add('hidden');
   document.getElementById('hud').classList.remove('hidden');
+  setGameActionsVisible(true); setPauseButtonVisible(true); document.body.classList.remove('paused');
   mode = 'playing';
 }
 
-function returnToMenu() { mode = 'menu'; showScreen('menu-screen'); updateMenuCoins(); }
+function returnToMenu() { mode = 'menu'; setGameActionsVisible(false); document.body.classList.remove('paused'); showScreen('menu-screen'); updateMenuCoins(); }
+
+function pauseGame() {
+  if (mode !== 'playing') return;
+  mode = 'paused';
+  resetTouchMovement();
+  stopCameraTouchControls();
+  document.body.classList.add('paused');
+  showScreen('pause-screen');
+}
+
+function resumeGame() {
+  if (mode !== 'paused') return;
+  mode = 'playing';
+  document.body.classList.remove('paused');
+  hideOverlays();
+  document.getElementById('hud').classList.remove('hidden');
+}
+
+async function requestGameFullscreen() {
+  const root = document.getElementById('game-root');
+  try {
+    if (!document.fullscreenElement && root?.requestFullscreen) await root.requestFullscreen();
+    if (screen.orientation?.lock) await screen.orientation.lock('landscape').catch(() => {});
+  } catch (_) {
+    // Fullscreen and orientation lock support varies across mobile browsers. Playing remains optional.
+  }
+}
 
 function chooseUpgrade(id) {
   if (id.startsWith('unlock_')) unlockAbility(scene, state, id.replace('unlock_', ''), player);
   else if (isAbilityCard(id)) applyAbilityUpgrade(scene, state, id, player);
   else applyUpgrade(state, id);
   hideOverlays(); document.getElementById('hud').classList.remove('hidden');
+  setPauseButtonVisible(true);
   mode = 'playing';
 }
 
@@ -114,7 +148,7 @@ function gainXp(amount) {
   state.xp += amount;
   while (state.xp >= state.nextXp) {
     state.xp -= state.nextXp; state.level += 1; state.nextXp = getNextLevelXp();
-    pendingChoices = getUpgradeChoices(state); mode = 'upgrade'; showUpgrades(pendingChoices); break;
+    pendingChoices = getUpgradeChoices(state); mode = 'upgrade'; setPauseButtonVisible(false); stopCameraTouchControls(); resetTouchMovement(); showUpgrades(pendingChoices); break;
   }
 }
 
@@ -200,7 +234,7 @@ function doPulse() {
 }
 
 function endRun(won) {
-  mode = 'ended'; addCoins(state.coins);
+  mode = 'ended'; setGameActionsVisible(false); document.body.classList.remove('paused'); addCoins(state.coins);
   showEnd({ won, time: state.elapsed, kills: state.kills, level: state.level, coins: state.coins });
 }
 
@@ -245,18 +279,52 @@ function initCameraControls() {
   });
 
 
+  const getPinchDistance = () => {
+    const points = [...cameraControls.touchPointers.values()];
+    if (points.length < 2) return 0;
+    return Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+  };
+
+  const beginPinch = () => {
+    const pinchDistance = getPinchDistance();
+    if (pinchDistance <= 0) return;
+    cameraControls.pinching = true;
+    cameraControls.touchPointerId = null;
+    cameraControls.pinchStartDistance = pinchDistance;
+    cameraControls.pinchStartCameraDistance = cameraControls.targetDistance;
+  };
+
   canvas.addEventListener('pointerdown', (event) => {
-    if (mode !== 'playing' || event.pointerType === 'mouse' || event.clientX < window.innerWidth * 0.45) return;
+    if (mode !== 'playing' || event.pointerType === 'mouse') return;
     event.preventDefault();
     canvas.setPointerCapture(event.pointerId);
+    cameraControls.touchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (cameraControls.touchPointers.size >= 2) {
+      beginPinch();
+      return;
+    }
+    if (event.clientX < window.innerWidth * 0.45) return;
     cameraControls.touchPointerId = event.pointerId;
     cameraControls.lastX = event.clientX;
     cameraControls.lastY = event.clientY;
   });
 
   canvas.addEventListener('pointermove', (event) => {
-    if (cameraControls.touchPointerId !== event.pointerId) return;
+    if (!cameraControls.touchPointers.has(event.pointerId) && cameraControls.touchPointerId !== event.pointerId) return;
     event.preventDefault();
+    if (cameraControls.touchPointers.has(event.pointerId)) cameraControls.touchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (cameraControls.pinching && cameraControls.touchPointers.size >= 2) {
+      const pinchDistance = getPinchDistance();
+      if (pinchDistance > 0) {
+        cameraControls.targetDistance = THREE.MathUtils.clamp(
+          cameraControls.pinchStartCameraDistance * (cameraControls.pinchStartDistance / pinchDistance),
+          cameraLimits.minDistance,
+          cameraLimits.maxDistance,
+        );
+      }
+      return;
+    }
+    if (cameraControls.touchPointerId !== event.pointerId) return;
     const movementX = event.clientX - cameraControls.lastX;
     const movementY = event.clientY - cameraControls.lastY;
     cameraControls.lastX = event.clientX;
@@ -270,9 +338,10 @@ function initCameraControls() {
   });
 
   const stopTouchDrag = (event) => {
-    if (cameraControls.touchPointerId !== event.pointerId) return;
     if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
-    cameraControls.touchPointerId = null;
+    cameraControls.touchPointers.delete(event.pointerId);
+    if (cameraControls.touchPointerId === event.pointerId) cameraControls.touchPointerId = null;
+    if (cameraControls.touchPointers.size < 2) cameraControls.pinching = false;
   };
   canvas.addEventListener('pointerup', stopTouchDrag);
   canvas.addEventListener('pointercancel', stopTouchDrag);
@@ -280,15 +349,22 @@ function initCameraControls() {
   canvas.addEventListener('wheel', (event) => {
     if (mode !== 'playing') return;
     event.preventDefault();
-    cameraControls.distance = THREE.MathUtils.clamp(
-      cameraControls.distance * (1 + event.deltaY * cameraLimits.zoomSpeed),
+    cameraControls.targetDistance = THREE.MathUtils.clamp(
+      cameraControls.targetDistance * (1 + event.deltaY * cameraLimits.zoomSpeed),
       cameraLimits.minDistance,
       cameraLimits.maxDistance,
     );
   }, { passive: false });
 }
 
+function stopCameraTouchControls() {
+  cameraControls.touchPointerId = null;
+  cameraControls.pinching = false;
+  cameraControls.touchPointers.clear();
+}
+
 function updateCamera(delta) {
+  cameraControls.distance = THREE.MathUtils.lerp(cameraControls.distance, cameraControls.targetDistance, 1 - Math.exp(-14 * delta));
   const target = new THREE.Vector3(player.position.x, 0.8, player.position.z);
   const horizontalDistance = Math.cos(cameraControls.pitch) * cameraControls.distance;
   const desired = target.clone().add(new THREE.Vector3(
@@ -314,7 +390,7 @@ function tick() {
   const delta = Math.min(clock.getDelta(), 0.05);
   resize();
   if (consumePress('m')) { muted = !muted; setMuted(muted); }
-  if (consumePress('p') && (mode === 'playing' || mode === 'paused')) { mode = mode === 'playing' ? 'paused' : 'playing'; mode === 'paused' ? showScreen('pause-screen') : hideOverlays(); }
+  if ((consumePress('p') || consumePress('escape')) && (mode === 'playing' || mode === 'paused')) { mode === 'playing' ? pauseGame() : resumeGame(); }
 
   if (mode === 'playing') {
     state.elapsed += delta;
@@ -346,6 +422,7 @@ function tick() {
     updateHUD(state); updateCamera(delta);
   }
 
+  if (mode === 'playing') {
   pulseVisuals = pulseVisuals.filter((ring) => {
     ring.userData.life -= delta;
     const t = Math.max(0, ring.userData.life / ring.userData.maxLife);
@@ -368,6 +445,7 @@ function tick() {
     }
     return true;
   });
+  }
   renderer.render(scene, camera);
 }
 
