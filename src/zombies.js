@@ -120,8 +120,8 @@ function createRunnerZombieModel(group, skin, shirt) {
   addBox(group, 0x7a1919, .03, 1.42, -.5, .18, .06, .035);
   addBox(group, darkSkin, 0, 1.34, -.43, .44, .09, .12);
 
-  const rightArm = addRunnerArm(group, skin, darkSkin, .55, 1.08, -.14, 1, -.92);
-  const leftArm = addRunnerArm(group, skin, darkSkin, -.55, 1.1, -.18, -1, 1.02);
+  const rightArm = addRunnerArm(group, skin, darkSkin, .44, 1.18, -.14, 1, -.92);
+  const leftArm = addRunnerArm(group, skin, darkSkin, -.44, 1.19, -.18, -1, 1.02);
   const leftLeg = addRunnerLeg(group, pants, boots, pantsPatch, -.17, .72, -.62);
   const rightLeg = addRunnerLeg(group, pants, boots, pantsPatch, .18, .72, .48);
 
@@ -277,7 +277,7 @@ function zombieMesh(typeKey = 'walker', progress = {}) {
     walkTime: 0,
     baseY: g.position.y,
   };
-  captureWalkerAnimationRestPose(g);
+  captureZombieAnimationRestPose(g);
   return g;
 }
 
@@ -321,8 +321,8 @@ export function spawnZombie(scene, progress = {}) {
   zombies.push(z); scene.add(z); return z;
 }
 
-function captureWalkerAnimationRestPose(zombie) {
-  if (zombie.userData.typeKey !== 'walker' || !zombie.userData.parts) return;
+function captureZombieAnimationRestPose(zombie) {
+  if (!['walker', 'runner'].includes(zombie.userData.typeKey) || !zombie.userData.parts) return;
   const { leftArm, rightArm, leftLeg, rightLeg } = zombie.userData.parts;
   zombie.userData.walkRestPose = {
     rootY: zombie.position.y,
@@ -334,26 +334,32 @@ function captureWalkerAnimationRestPose(zombie) {
   };
 }
 
-function updateWalkerWalkAnimation(zombie, delta, isMoving) {
-  if (zombie.userData.typeKey !== 'walker' || !zombie.userData.parts || !zombie.userData.walkRestPose) return;
+const ZOMBIE_ANIMATION_PRESETS = {
+  walker: { cycleSpeed: 3.8, activityDamp: 8, armSwing: .18, legSwing: .13, bob: .035, sway: .035 },
+  runner: { cycleSpeed: 8.7, activityDamp: 12, armSwing: .32, legSwing: .25, bob: .045, sway: .045 },
+};
+
+function updateZombieMovementAnimation(zombie, delta, isMoving) {
+  const preset = ZOMBIE_ANIMATION_PRESETS[zombie.userData.typeKey];
+  if (!preset || !zombie.userData.parts || !zombie.userData.walkRestPose) return;
 
   const { leftArm, rightArm, leftLeg, rightLeg } = zombie.userData.parts;
   const rest = zombie.userData.walkRestPose;
   const activityTarget = isMoving ? 1 : 0;
-  zombie.userData.walkActivity = THREE.MathUtils.damp(zombie.userData.walkActivity ?? 0, activityTarget, 8, delta);
-  zombie.userData.walkTime = (zombie.userData.walkTime ?? 0) + delta * 3.8 * zombie.userData.walkActivity;
+  zombie.userData.walkActivity = THREE.MathUtils.damp(zombie.userData.walkActivity ?? 0, activityTarget, preset.activityDamp, delta);
+  zombie.userData.walkTime = (zombie.userData.walkTime ?? 0) + delta * preset.cycleSpeed * zombie.userData.walkActivity;
 
   const activity = zombie.userData.walkActivity;
   const stride = Math.sin(zombie.userData.walkTime);
   const counterStride = Math.sin(zombie.userData.walkTime + Math.PI);
   const lift = Math.abs(Math.sin(zombie.userData.walkTime * 2));
 
-  leftArm.rotation.x = rest.leftArmX + stride * .18 * activity;
-  rightArm.rotation.x = rest.rightArmX + counterStride * .18 * activity;
-  leftLeg.rotation.x = rest.leftLegX + counterStride * .13 * activity;
-  rightLeg.rotation.x = rest.rightLegX + stride * .13 * activity;
-  zombie.position.y = rest.rootY + lift * .035 * activity;
-  zombie.rotation.z = rest.rootRotZ + Math.sin(zombie.userData.walkTime * 2) * .035 * activity;
+  leftArm.rotation.x = rest.leftArmX + stride * preset.armSwing * activity;
+  rightArm.rotation.x = rest.rightArmX + counterStride * preset.armSwing * activity;
+  leftLeg.rotation.x = rest.leftLegX + counterStride * preset.legSwing * activity;
+  rightLeg.rotation.x = rest.rightLegX + stride * preset.legSwing * activity;
+  zombie.position.y = rest.rootY + lift * preset.bob * activity;
+  zombie.rotation.z = rest.rootRotZ + Math.sin(zombie.userData.walkTime * 2) * preset.sway * activity;
 }
 
 export function updateZombies(player, delta, onDamage) {
@@ -364,7 +370,7 @@ export function updateZombies(player, delta, onDamage) {
     z.position.x += (dx / dist) * type.speed * delta;
     z.position.z += (dz / dist) * type.speed * delta;
     z.rotation.y = Math.atan2(dx, dz) + ZOMBIE_VISUAL_FACING_OFFSET;
-    updateWalkerWalkAnimation(z, delta, dist > CONFIG.player.radius + type.radius * .5);
+    updateZombieMovementAnimation(z, delta, dist > CONFIG.player.radius + type.radius * .5);
     z.userData.hitTimer = Math.max(0, z.userData.hitTimer - delta);
     z.userData.hitFlash = Math.max(0, z.userData.hitFlash - delta);
     const flash = z.userData.hitFlash / .12;
