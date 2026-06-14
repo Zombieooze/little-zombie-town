@@ -193,7 +193,7 @@ button.controller-selected:hover {
 
 .boss-health {
   position: fixed;
-  top: max(12px, env(safe-area-inset-top));
+  top: max(76px, calc(env(safe-area-inset-top) + 76px));
   left: 50%;
   z-index: 6;
   transform: translateX(-50%);
@@ -227,7 +227,7 @@ button.controller-selected:hover {
 }
 
 @media (hover: none), (pointer: coarse), (max-width: 820px), (max-height: 520px) {
-  .boss-health { top: max(56px, calc(env(safe-area-inset-top) + 48px)); width: min(420px, 52vw); }
+  .boss-health { top: max(64px, calc(env(safe-area-inset-top) + 56px)); width: min(420px, 52vw); }
   .boss-health-name { font-size: .78rem; }
   .boss-health-bar { height: 14px; }
   .boss-warning { top: max(82px, calc(env(safe-area-inset-top) + 72px)); padding: 9px 12px; }
