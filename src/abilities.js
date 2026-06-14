@@ -115,13 +115,23 @@ export const ABILITY_DEFINITIONS = {
   shockwaveStomp: {
     id: 'shockwaveStomp',
     name: 'Shockwave Stomp',
-    shortName: 'Stomp',
+    shortName: 'Shockwave',
     unlockName: 'Unlock Shockwave Stomp',
-    unlockDescription: 'Planned: timed shockwave around the player.',
+    unlockDescription: 'Release automatic panic shockwaves that damage and push nearby zombies away.',
     maxLevel: MAX_ABILITY_LEVEL,
-    implemented: false,
-    plannedRole: 'Panic crowd-control that damages and pushes zombies back.',
-    upgrades: {},
+    implemented: true,
+    defaults: { damage: 18, cooldown: 7.2, radius: 3.45, knockback: 1.05, visualLifetime: .36, ringHeight: .08, particleCount: 12 },
+    upgrades: {
+      2: 'Shockwave damage increases.',
+      3: 'Shockwave radius increases.',
+      4: 'Shockwave recharges faster.',
+      5: 'Shockwave pushes zombies farther away.',
+      6: 'Shockwave damage increases.',
+      7: 'Shockwave radius increases.',
+      8: 'Shockwave recharges faster.',
+      9: 'Shockwave pushes zombies farther away.',
+      10: 'Unleash a stronger panic shockwave.',
+    },
   },
   bearTrap: {
     id: 'bearTrap',
@@ -164,6 +174,7 @@ function makeAbilityState() {
     electricZapper: { ...ABILITY_DEFINITIONS.electricZapper.defaults, timer: 1.2, effects: [] },
     fireBottle: { ...ABILITY_DEFINITIONS.fireBottle.defaults, timer: 1.8, bottles: [], patches: [] },
     nailBlaster: { ...ABILITY_DEFINITIONS.nailBlaster.defaults, timer: .45, nails: [] },
+    shockwaveStomp: { ...ABILITY_DEFINITIONS.shockwaveStomp.defaults, timer: 2.4, effects: [] },
   };
 }
 
@@ -175,6 +186,7 @@ export function resetAbilities(scene, state) {
     state.abilities.fireBottle?.bottles?.forEach((bottle) => removeFireBottle(scene, bottle));
     state.abilities.fireBottle?.patches?.forEach((patch) => removeFirePatch(scene, patch));
     state.abilities.nailBlaster?.nails?.forEach((nail) => removeNail(scene, nail));
+    state.abilities.shockwaveStomp?.effects?.forEach((effect) => removeShockwaveEffect(scene, effect));
   }
   state.abilities = makeAbilityState();
 }
@@ -266,6 +278,17 @@ function applyAbilityLevelTuning(state, abilityId, level) {
     if (level === 9) abilities.orbitals.speed += .35;
     if (level === 10) abilities.orbitals.damage += 7;
   }
+  if (abilityId === 'shockwaveStomp') {
+    if (level === 2) abilities.shockwaveStomp.damage += 7;
+    if (level === 3) abilities.shockwaveStomp.radius += .55;
+    if (level === 4) abilities.shockwaveStomp.cooldown = Math.max(4.6, abilities.shockwaveStomp.cooldown * .84);
+    if (level === 5) abilities.shockwaveStomp.knockback += .55;
+    if (level === 6) abilities.shockwaveStomp.damage += 8;
+    if (level === 7) abilities.shockwaveStomp.radius += .65;
+    if (level === 8) abilities.shockwaveStomp.cooldown = Math.max(4.6, abilities.shockwaveStomp.cooldown * .84);
+    if (level === 9) abilities.shockwaveStomp.knockback += .7;
+    if (level === 10) { abilities.shockwaveStomp.damage += 14; abilities.shockwaveStomp.radius += .75; abilities.shockwaveStomp.knockback += .75; }
+  }
 }
 
 export function getAbilityCards(state) {
@@ -295,6 +318,87 @@ export function updateAbilities(scene, state, player, delta, onKilled, onHit) {
   if (isAbilityUnlocked(state, 'electricZapper')) updateElectricZapper(scene, state, player, delta, onKilled, onHit);
   if (isAbilityUnlocked(state, 'fireBottle')) updateFireBottle(scene, state, player, delta, onKilled, onHit);
   if (isAbilityUnlocked(state, 'nailBlaster')) updateNailBlaster(scene, state, player, delta, onKilled, onHit);
+  if (isAbilityUnlocked(state, 'shockwaveStomp')) updateShockwaveStomp(scene, state, player, delta, onKilled, onHit);
+}
+
+function removeShockwaveEffect(scene, effect) {
+  effect.parts?.forEach((part) => {
+    scene.remove(part);
+    part.geometry?.dispose?.();
+    part.material?.dispose?.();
+  });
+}
+
+function createShockwaveRing(radius) {
+  const geometry = new THREE.RingGeometry(.78, 1, 48);
+  const material = new THREE.MeshBasicMaterial({ color: 0xbdefff, transparent: true, opacity: .72, side: THREE.DoubleSide, depthWrite: false });
+  const ring = new THREE.Mesh(geometry, material);
+  ring.rotation.x = -Math.PI / 2;
+  ring.userData.targetRadius = radius;
+  return ring;
+}
+
+function createShockwaveParticle(origin, index, count) {
+  const particle = new THREE.Mesh(
+    new THREE.BoxGeometry(.11, .07, .11),
+    new THREE.MeshBasicMaterial({ color: index % 2 ? 0xfff1a8 : 0xdff7ff, transparent: true, opacity: .85 }),
+  );
+  const angle = (index / count) * Math.PI * 2 + (Math.random() - .5) * .16;
+  const speed = 3.8 + Math.random() * 2.2;
+  particle.position.set(origin.x, .12 + Math.random() * .12, origin.z);
+  particle.userData.velocity = new THREE.Vector3(Math.cos(angle) * speed, .7 + Math.random() * .7, Math.sin(angle) * speed);
+  return particle;
+}
+
+function addShockwaveEffect(scene, stomp, origin) {
+  const parts = [];
+  const ring = createShockwaveRing(stomp.radius);
+  ring.position.set(origin.x, stomp.ringHeight, origin.z);
+  scene.add(ring);
+  parts.push(ring);
+  for (let i = 0; i < stomp.particleCount; i++) {
+    const particle = createShockwaveParticle(origin, i, stomp.particleCount);
+    scene.add(particle);
+    parts.push(particle);
+  }
+  stomp.effects.push({ life: stomp.visualLifetime, maxLife: stomp.visualLifetime, parts });
+}
+
+function fireShockwaveStomp(scene, state, player, onKilled, onHit) {
+  const stomp = state.abilities.shockwaveStomp;
+  const origin = player.position.clone();
+  addShockwaveEffect(scene, stomp, origin);
+  damageZombies(scene, origin, stomp.radius, stomp.damage, onKilled, onHit, stomp.knockback);
+}
+
+function updateShockwaveEffects(scene, stomp, delta) {
+  stomp.effects = stomp.effects.filter((effect) => {
+    effect.life -= delta;
+    const progress = Math.min(1, 1 - Math.max(0, effect.life / effect.maxLife));
+    const fade = Math.max(0, effect.life / effect.maxLife);
+    effect.parts.forEach((part, index) => {
+      if (index === 0) {
+        const radius = part.userData.targetRadius * (.18 + progress * .82);
+        part.scale.set(radius, radius, 1);
+      } else if (part.userData.velocity) {
+        part.position.addScaledVector(part.userData.velocity, delta);
+        part.userData.velocity.y -= 4.5 * delta;
+      }
+      if (part.material) part.material.opacity = fade * (index === 0 ? .72 : .85);
+    });
+    if (effect.life <= 0) { removeShockwaveEffect(scene, effect); return false; }
+    return true;
+  });
+}
+
+function updateShockwaveStomp(scene, state, player, delta, onKilled, onHit) {
+  const stomp = state.abilities.shockwaveStomp;
+  stomp.timer -= delta;
+  updateShockwaveEffects(scene, stomp, delta);
+  if (stomp.timer <= 0) {
+    fireShockwaveStomp(scene, state, player, onKilled, onHit);
+    stomp.timer = stomp.cooldown;
+  }
 }
 
 function removeZapperEffect(scene, effect) {
