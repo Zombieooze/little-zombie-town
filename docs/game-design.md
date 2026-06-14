@@ -20,7 +20,7 @@
 - Automatic bat swing attack with a gold swing arc. The bat is a fixed close-range emergency weapon; damage and cooldown can improve, but range/area does not scale. Knockback Up is removed from the current level-up card pool.
 - Special abilities are the primary ranged/offensive build system.
 - XP gems, medkit health pickups, level-up upgrade cards, coins, pause, win screen, and loss screen.
-- Player damage triggers a quick red screen-edge flash so hits remain readable during busy zombie combat.
+- Player damage triggers a quick red screen-edge/border flash that fades smoothly so hits remain readable during busy zombie combat.
 
 ## Movement and jump
 

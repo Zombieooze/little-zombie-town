@@ -161,6 +161,12 @@ function gainXp(amount) {
   }
 }
 
+function damagePlayer(damage) {
+  if (!Number.isFinite(damage) || damage <= 0 || state.health <= 0) return;
+  state.health = Math.max(0, state.health - damage);
+  showDamageFlash();
+}
+
 function collectPickup(pickup) {
   if (pickup.kind === 'xp') {
     gainXp(pickup.value);
@@ -482,10 +488,7 @@ function tick() {
       spawnWorldMedkit();
       scheduleNextWorldMedkit();
     }
-    updateZombies(scene, player, delta, (damage) => {
-      if (damage > 0) showDamageFlash();
-      state.health = Math.max(0, state.health - damage);
-    });
+    updateZombies(scene, player, delta, damagePlayer);
     updatePickups(scene, player, delta, collectPickup);
     if (pulseTimer <= 0) { doPulse(); pulseTimer = state.pulseCooldown; }
     updateAbilities(scene, state, player, delta, (position, type, typeKey) => {
