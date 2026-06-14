@@ -415,6 +415,155 @@ function createCrusherZombieModel(group, skin, shirt) {
   group.userData.parts = { leftArm, rightArm, leftLeg, rightLeg, head, neck, torso, chestPlate, hips, leftShoulder, rightShoulder };
 }
 
+
+function addBossStud(group, x, y, z, size = .14, depth = .075) {
+  const stud = new THREE.Mesh(new THREE.BoxGeometry(size, size, depth), material(0x8d8f88));
+  stud.position.set(x, y, z);
+  stud.rotation.z = .12;
+  group.add(stud);
+  return stud;
+}
+
+function addBossSpike(group, x, y, z, radius = .18, height = .5, color = 0x666a66, rotationX = 0) {
+  const spike = new THREE.Mesh(new THREE.ConeGeometry(radius, height, 4), material(color));
+  spike.position.set(x, y, z);
+  spike.rotation.set(rotationX, Math.PI / 4, 0);
+  group.add(spike);
+  return spike;
+}
+
+function addBossArm(group, skinColor, handColor, x, y, z, side, armorColor, metalColor) {
+  const arm = new THREE.Group();
+  arm.position.set(x, y, z);
+  arm.rotation.x = .64;
+  arm.rotation.z = side * .08;
+
+  const upper = new THREE.Mesh(new THREE.BoxGeometry(.64, .82, .56), material(skinColor));
+  upper.position.set(0, -.34, 0);
+  upper.rotation.z = side * -.04;
+  const elbowBand = new THREE.Mesh(new THREE.BoxGeometry(.72, .2, .6), material(armorColor));
+  elbowBand.position.set(side * .02, -.78, -.03);
+  const forearm = new THREE.Mesh(new THREE.BoxGeometry(.72, 1.02, .6), material(skinColor));
+  forearm.position.set(side * .05, -1.18, -.04);
+  forearm.rotation.z = side * -.06;
+  const wristBand = new THREE.Mesh(new THREE.BoxGeometry(.9, .34, .68), material(armorColor));
+  wristBand.position.set(side * .07, -1.68, -.06);
+  const fist = new THREE.Mesh(new THREE.BoxGeometry(.9, .58, .72), material(handColor));
+  fist.position.set(side * .14, -2.08, -.08);
+  fist.rotation.z = side * .16;
+
+  [-.25, 0, .25].forEach((offset) => {
+    const stud = new THREE.Mesh(new THREE.BoxGeometry(.14, .14, .075), material(metalColor));
+    stud.position.set(offset, -1.68, -.42);
+    stud.rotation.z = .12;
+    arm.add(stud);
+  });
+
+  arm.add(upper, elbowBand, forearm, wristBand, fist);
+  group.add(arm);
+  return arm;
+}
+
+function addBossLeg(group, pantsColor, pantsDarkColor, bootColor, x, hipY) {
+  const leg = new THREE.Group();
+  leg.position.set(x, hipY, .04);
+
+  const thigh = new THREE.Mesh(new THREE.BoxGeometry(.58, .82, .58), material(pantsColor));
+  thigh.position.set(0, -.4, 0);
+  const knee = new THREE.Mesh(new THREE.BoxGeometry(.62, .18, .62), material(pantsDarkColor));
+  knee.position.set(0, -.88, -.01);
+  const shin = new THREE.Mesh(new THREE.BoxGeometry(.54, .58, .52), material(pantsColor));
+  shin.position.set(0, -1.18, 0);
+  const boot = new THREE.Mesh(new THREE.BoxGeometry(.76, .34, .86), material(bootColor));
+  boot.position.set(0, -1.58, -.14);
+
+  leg.add(thigh, knee, shin, boot);
+  group.add(leg);
+  return leg;
+}
+
+function createBossZombieModel(group, skin, shirt) {
+  const darkSkin = 0x356b24;
+  const shadowSkin = 0x2f5a21;
+  const armor = 0x282828;
+  const armorDark = 0x181818;
+  const metal = 0x83857d;
+  const darkMetal = 0x555852;
+  const rust = 0x7a4b25;
+  const leather = 0x4a2d19;
+  const bone = 0xd7d4c7;
+  const pants = 0x0d2026;
+  const pantsDark = 0x071216;
+  const boots = 0x111110;
+
+  const hips = addBox(group, pants, 0, .72, .03, 1.72, .48, .94);
+  const belt = addBox(group, leather, 0, .98, -.5, 1.82, .22, .14);
+  const torso = addBox(group, armor, 0, 1.62, 0, 1.9, 1.45, .98);
+  torso.rotation.x = .015;
+  const chestPlate = addBox(group, armorDark, 0, 1.68, -.55, 1.62, 1.04, .14);
+  addBox(group, darkMetal, 0, 2.18, -.63, 1.18, .16, .08);
+  addBox(group, darkMetal, -.62, 1.38, -.64, .22, .24, .08);
+  addBox(group, darkMetal, .62, 1.38, -.64, .22, .24, .08);
+
+  const skull = addBox(group, bone, 0, 1.58, -.69, .52, .42, .1);
+  addBox(group, 0x101010, -.12, 1.62, -.75, .1, .11, .04);
+  addBox(group, 0x101010, .12, 1.62, -.75, .1, .11, .04);
+  addBox(group, 0x101010, 0, 1.48, -.75, .08, .08, .04);
+  addBox(group, 0x101010, -.14, 1.38, -.75, .07, .1, .04);
+  addBox(group, 0x101010, 0, 1.37, -.75, .07, .1, .04);
+  addBox(group, 0x101010, .14, 1.38, -.75, .07, .1, .04);
+
+  const leftShoulder = addBox(group, darkMetal, -1.28, 2.18, -.04, .88, .36, 1.02);
+  leftShoulder.rotation.z = -.28;
+  leftShoulder.rotation.x = -.08;
+  const rightShoulder = addBox(group, darkMetal, 1.28, 2.18, -.04, .88, .36, 1.02);
+  rightShoulder.rotation.z = .28;
+  rightShoulder.rotation.x = -.08;
+  addBox(group, rust, -1.04, 1.9, -.02, .32, .62, 1.02).rotation.z = -.1;
+  addBox(group, rust, 1.04, 1.9, -.02, .32, .62, 1.02).rotation.z = .1;
+  [-1.54, -1.25, -.98, .98, 1.25, 1.54].forEach((x, i) => {
+    addBossSpike(group, x, 2.5, -.22 + (i % 3) * .18, .16, .46, darkMetal);
+  });
+  [-.72, -.28, .28, .72].forEach((x) => addBossStud(group, x, 1.98, -.65, .14));
+
+  const neck = addBox(group, darkSkin, 0, 2.28, -.04, .86, .28, .78);
+  const head = addBox(group, skin, 0, 2.94, -.08, 1.42, 1.26, 1.16);
+  addBox(group, shadowSkin, -.78, 2.92, -.08, .16, .52, .52);
+  addBox(group, shadowSkin, .78, 2.92, -.08, .16, .52, .52);
+  const crown = addBox(group, darkMetal, 0, 3.62, -.09, 1.58, .2, 1.18);
+  addBox(group, armorDark, 0, 3.48, -.68, 1.7, .18, .16);
+  [-.58, 0, .58].forEach((x, i) => addBossSpike(group, x, 4.0 + (i === 1 ? .08 : 0), -.12, .18, .58, darkMetal));
+  addBossSpike(group, -.86, 3.84, -.08, .14, .46, darkMetal);
+  addBossSpike(group, .86, 3.84, -.08, .14, .46, darkMetal);
+
+  addBox(group, 0x120303, -.34, 3.08, -.69, .34, .3, .06);
+  addBox(group, 0x120303, .34, 3.08, -.69, .34, .3, .06);
+  addBox(group, 0xff1818, -.34, 3.08, -.735, .16, .14, .035);
+  addBox(group, 0xff1818, .34, 3.08, -.735, .16, .14, .035);
+  addBox(group, shadowSkin, -.34, 3.34, -.735, .44, .075, .05).rotation.z = -.28;
+  addBox(group, shadowSkin, .34, 3.33, -.735, .44, .075, .05).rotation.z = .28;
+  addBox(group, darkSkin, 0, 2.82, -.74, .26, .18, .16);
+  addBox(group, 0x030303, 0, 2.48, -.73, .84, .42, .07);
+  addBox(group, bone, -.3, 2.64, -.79, .12, .17, .045);
+  addBox(group, bone, .3, 2.64, -.79, .12, .17, .045);
+  addBox(group, bone, -.22, 2.32, -.79, .12, .15, .045);
+  addBox(group, bone, .32, 2.32, -.79, .12, .15, .045);
+  addBox(group, 0x7b1e19, .04, 2.27, -.79, .34, .09, .04);
+  addBox(group, darkSkin, 0, 2.14, -.62, .86, .16, .18);
+
+  const rightArm = addBossArm(group, skin, darkSkin, 1.38, 1.82, -.16, 1, armorDark, metal);
+  const leftArm = addBossArm(group, skin, darkSkin, -1.38, 1.82, -.16, -1, armorDark, metal);
+  const leftLeg = addBossLeg(group, pants, pantsDark, boots, -.5, .82);
+  const rightLeg = addBossLeg(group, pants, pantsDark, boots, .5, .82);
+
+  group.userData.parts = {
+    leftArm, rightArm, leftLeg, rightLeg, head, neck, torso, chestPlate, hips, belt,
+    skull, crown, leftShoulder, rightShoulder,
+  };
+  group.userData.displayName = 'Gravebreaker';
+  group.userData.futureSlamOrigin = new THREE.Vector3(0, .08, -.82);
+}
+
 function addBruteArm(group, skinColor, handColor, x, y, z, side) {
   const arm = new THREE.Group();
   arm.position.set(x, y, z);
@@ -561,25 +710,17 @@ function zombieMesh(typeKey = 'walker', progress = {}) {
     createSpitterZombieModel(g, skin, shirt);
   } else if (typeKey === 'crusher') {
     createCrusherZombieModel(g, skin, shirt);
+  } else if (typeKey === 'boss') {
+    createBossZombieModel(g, skin, shirt);
   } else {
     const body = new THREE.Mesh(new THREE.BoxGeometry(.9, 1.1, .55), material(shirt)); body.position.y = 1;
     const headSize = typeKey === 'spitter' ? .82 : .72;
     const head = new THREE.Mesh(new THREE.BoxGeometry(headSize, headSize, headSize), material(skin)); head.position.y = 1.9;
     g.add(body, head);
 
-    const heavyArms = typeKey === 'brute' || typeKey === 'crusher' || typeKey === 'boss';
+    const heavyArms = typeKey === 'brute' || typeKey === 'crusher';
     addLimb(g, skin, .65, 1.15, -.2, heavyArms ? .34 : .25, .8, .25);
     addLimb(g, skin, -.65, 1.15, -.2, heavyArms ? .34 : .25, .8, .25);
-  }
-
-  if (typeKey === 'boss') {
-    const belly = new THREE.Mesh(new THREE.BoxGeometry(1.08, .72, .68), material(shirt));
-    belly.position.y = .78; g.add(belly);
-  }
-  if (typeKey === 'boss') {
-    addSpike(g, -.28, 2.55, 0); addSpike(g, 0, 2.65, 0); addSpike(g, .28, 2.55, 0);
-    addLimb(g, skin, .92, 1.03, -.18, .42, 1.05, .34);
-    addLimb(g, skin, -.92, 1.03, -.18, .42, 1.05, .34);
   }
 
   g.scale.setScalar(type.scale);
