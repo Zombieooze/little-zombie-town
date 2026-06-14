@@ -133,16 +133,26 @@ export const ABILITY_DEFINITIONS = {
       10: 'Unleash a stronger panic shockwave.',
     },
   },
-  bearTrap: {
-    id: 'bearTrap',
+  bearTrapToss: {
+    id: 'bearTrapToss',
     name: 'Bear Trap Toss',
-    shortName: 'Traps',
+    shortName: 'Bear Trap',
     unlockName: 'Unlock Bear Trap Toss',
-    unlockDescription: 'Planned: drop traps that punish zombies stepping on them.',
+    unlockDescription: 'Drop scrap traps that snap shut on zombies stepping into them.',
     maxLevel: MAX_ABILITY_LEVEL,
-    implemented: false,
-    plannedRole: 'Area control with later slow effects.',
-    upgrades: {},
+    implemented: true,
+    defaults: { damage: 30, cooldown: 6.2, lifetime: 10, triggerRadius: 1.15, tossRange: 7.5, maxTraps: 2, burstDamage: 0, burstRadius: 0, visualLifetime: .32 },
+    upgrades: {
+      2: 'Trap damage increases.',
+      3: 'Traps last longer.',
+      4: 'Drop traps more often.',
+      5: 'Trap trigger radius increases.',
+      6: 'Trap damage increases.',
+      7: 'More traps can be active.',
+      8: 'Trap trigger radius increases.',
+      9: 'Traps last longer and hit harder.',
+      10: 'Traps burst into scrap when triggered.',
+    },
   },
   turret: {
     id: 'turret',
@@ -175,6 +185,7 @@ function makeAbilityState() {
     fireBottle: { ...ABILITY_DEFINITIONS.fireBottle.defaults, timer: 1.8, bottles: [], patches: [] },
     nailBlaster: { ...ABILITY_DEFINITIONS.nailBlaster.defaults, timer: .45, nails: [] },
     shockwaveStomp: { ...ABILITY_DEFINITIONS.shockwaveStomp.defaults, timer: 2.4, effects: [] },
+    bearTrapToss: { ...ABILITY_DEFINITIONS.bearTrapToss.defaults, timer: 1.5, traps: [], effects: [] },
   };
 }
 
@@ -187,6 +198,8 @@ export function resetAbilities(scene, state) {
     state.abilities.fireBottle?.patches?.forEach((patch) => removeFirePatch(scene, patch));
     state.abilities.nailBlaster?.nails?.forEach((nail) => removeNail(scene, nail));
     state.abilities.shockwaveStomp?.effects?.forEach((effect) => removeShockwaveEffect(scene, effect));
+    state.abilities.bearTrapToss?.traps?.forEach((trap) => removeBearTrap(scene, trap));
+    state.abilities.bearTrapToss?.effects?.forEach((effect) => removeBearTrapEffect(scene, effect));
   }
   state.abilities = makeAbilityState();
 }
@@ -278,6 +291,17 @@ function applyAbilityLevelTuning(state, abilityId, level) {
     if (level === 9) abilities.orbitals.speed += .35;
     if (level === 10) abilities.orbitals.damage += 7;
   }
+  if (abilityId === 'bearTrapToss') {
+    if (level === 2) abilities.bearTrapToss.damage += 10;
+    if (level === 3) abilities.bearTrapToss.lifetime += 2.5;
+    if (level === 4) abilities.bearTrapToss.cooldown = Math.max(3.8, abilities.bearTrapToss.cooldown * .82);
+    if (level === 5) abilities.bearTrapToss.triggerRadius += .25;
+    if (level === 6) abilities.bearTrapToss.damage += 12;
+    if (level === 7) abilities.bearTrapToss.maxTraps = Math.min(4, abilities.bearTrapToss.maxTraps + 1);
+    if (level === 8) abilities.bearTrapToss.triggerRadius += .3;
+    if (level === 9) { abilities.bearTrapToss.lifetime += 3; abilities.bearTrapToss.damage += 8; }
+    if (level === 10) { abilities.bearTrapToss.burstDamage = 24; abilities.bearTrapToss.burstRadius = 2.15; }
+  }
   if (abilityId === 'shockwaveStomp') {
     if (level === 2) abilities.shockwaveStomp.damage += 7;
     if (level === 3) abilities.shockwaveStomp.radius += .55;
@@ -319,6 +343,150 @@ export function updateAbilities(scene, state, player, delta, onKilled, onHit) {
   if (isAbilityUnlocked(state, 'fireBottle')) updateFireBottle(scene, state, player, delta, onKilled, onHit);
   if (isAbilityUnlocked(state, 'nailBlaster')) updateNailBlaster(scene, state, player, delta, onKilled, onHit);
   if (isAbilityUnlocked(state, 'shockwaveStomp')) updateShockwaveStomp(scene, state, player, delta, onKilled, onHit);
+  if (isAbilityUnlocked(state, 'bearTrapToss')) updateBearTrapToss(scene, state, player, delta, onKilled, onHit);
+}
+
+function disposeObjectTree(object) {
+  object.traverse?.((part) => {
+    part.geometry?.dispose?.();
+    if (Array.isArray(part.material)) part.material.forEach((material) => material.dispose?.());
+    else part.material?.dispose?.();
+  });
+}
+
+function createBearTrapMesh(radius) {
+  const group = new THREE.Group();
+  const metal = new THREE.MeshStandardMaterial({ color: 0x343a40, metalness: .35, roughness: .58 });
+  const edge = new THREE.MeshStandardMaterial({ color: 0x9ca3af, metalness: .28, roughness: .5 });
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(.48, .52, .08, 10), metal);
+  base.position.y = .04;
+  group.add(base);
+  for (const side of [-1, 1]) {
+    const jaw = new THREE.Mesh(new THREE.BoxGeometry(.82, .1, .16), edge);
+    jaw.position.set(side * .24, .13, 0);
+    jaw.rotation.y = side * .42;
+    group.add(jaw);
+    for (let i = 0; i < 4; i++) {
+      const tooth = new THREE.Mesh(new THREE.ConeGeometry(.045, .16, 4), edge);
+      tooth.position.set(side * (.05 + i * .11), .24, side * .16);
+      tooth.rotation.x = Math.PI;
+      group.add(tooth);
+    }
+  }
+  const hint = new THREE.Mesh(
+    new THREE.RingGeometry(Math.max(.2, radius * .82), radius, 20),
+    new THREE.MeshBasicMaterial({ color: 0xfacc15, transparent: true, opacity: .16, side: THREE.DoubleSide, depthWrite: false }),
+  );
+  hint.rotation.x = -Math.PI / 2;
+  hint.position.y = .025;
+  group.add(hint);
+  return group;
+}
+
+function removeBearTrap(scene, trap) {
+  scene.remove(trap.mesh);
+  disposeObjectTree(trap.mesh);
+}
+
+function removeBearTrapEffect(scene, effect) {
+  effect.parts?.forEach((part) => {
+    scene.remove(part);
+    disposeObjectTree(part);
+  });
+}
+
+function addBearTrapEffect(scene, bearTrap, position, burstRadius = 0) {
+  const parts = [];
+  const ringRadius = Math.max(.75, burstRadius || bearTrap.triggerRadius);
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(.25, ringRadius, 22),
+    new THREE.MeshBasicMaterial({ color: burstRadius ? 0xf97316 : 0xfacc15, transparent: true, opacity: .7, side: THREE.DoubleSide, depthWrite: false }),
+  );
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.set(position.x, .08, position.z);
+  scene.add(ring);
+  parts.push(ring);
+  const scrapCount = burstRadius ? 10 : 5;
+  for (let i = 0; i < scrapCount; i++) {
+    const scrap = new THREE.Mesh(
+      new THREE.BoxGeometry(.12, .07, .18),
+      new THREE.MeshBasicMaterial({ color: i % 2 ? 0xcbd5e1 : 0x6b7280, transparent: true, opacity: .9 }),
+    );
+    const angle = (i / scrapCount) * Math.PI * 2;
+    scrap.position.set(position.x, .18, position.z);
+    scrap.userData.velocity = new THREE.Vector3(Math.cos(angle) * (2.3 + Math.random() * 1.7), .8 + Math.random() * .9, Math.sin(angle) * (2.3 + Math.random() * 1.7));
+    scene.add(scrap);
+    parts.push(scrap);
+  }
+  bearTrap.effects.push({ life: bearTrap.visualLifetime, maxLife: bearTrap.visualLifetime, parts });
+}
+
+function placeBearTrap(scene, state, player) {
+  const bearTrap = state.abilities.bearTrapToss;
+  while (bearTrap.traps.length >= bearTrap.maxTraps) removeBearTrap(scene, bearTrap.traps.shift());
+  const target = getNearestZombieInRange(player.position, bearTrap.tossRange);
+  const angle = target ? Math.atan2(target.position.x - player.position.x, target.position.z - player.position.z) : player.rotation.y;
+  const distance = target ? Math.min(3.8, Math.max(1.6, Math.hypot(target.position.x - player.position.x, target.position.z - player.position.z) * .72)) : 2.4;
+  const position = new THREE.Vector3(player.position.x + Math.sin(angle) * distance, 0, player.position.z + Math.cos(angle) * distance);
+  const mesh = createBearTrapMesh(bearTrap.triggerRadius);
+  mesh.position.copy(position);
+  mesh.rotation.y = angle;
+  scene.add(mesh);
+  bearTrap.traps.push({ mesh, life: bearTrap.lifetime, snapTimer: 0 });
+}
+
+function triggerBearTrap(scene, bearTrap, trap, zombie, onKilled, onHit) {
+  const position = trap.mesh.position.clone();
+  damageZombie(scene, zombie, position, bearTrap.damage, onKilled, onHit);
+  if (bearTrap.burstDamage > 0 && bearTrap.burstRadius > 0) {
+    damageZombies(scene, position, bearTrap.burstRadius, bearTrap.burstDamage, onKilled, onHit);
+  }
+  addBearTrapEffect(scene, bearTrap, position, bearTrap.burstRadius);
+  removeBearTrap(scene, trap);
+}
+
+function updateBearTrapEffects(scene, bearTrap, delta) {
+  bearTrap.effects = bearTrap.effects.filter((effect) => {
+    effect.life -= delta;
+    const fade = Math.max(0, effect.life / effect.maxLife);
+    effect.parts.forEach((part, index) => {
+      if (part.material) part.material.opacity = fade * (index === 0 ? .7 : .9);
+      if (index === 0) part.scale.setScalar(1 + (1 - fade) * .35);
+      if (part.userData.velocity) {
+        part.position.addScaledVector(part.userData.velocity, delta);
+        part.userData.velocity.y -= 4.8 * delta;
+        part.rotation.x += delta * 8;
+        part.rotation.y += delta * 5;
+      }
+    });
+    if (effect.life <= 0) { removeBearTrapEffect(scene, effect); return false; }
+    return true;
+  });
+}
+
+function updateBearTrapToss(scene, state, player, delta, onKilled, onHit) {
+  const bearTrap = state.abilities.bearTrapToss;
+  bearTrap.timer -= delta;
+  updateBearTrapEffects(scene, bearTrap, delta);
+  if (bearTrap.timer <= 0) {
+    placeBearTrap(scene, state, player);
+    bearTrap.timer = bearTrap.cooldown;
+  }
+  bearTrap.traps = bearTrap.traps.filter((trap) => {
+    trap.life -= delta;
+    trap.mesh.rotation.y += Math.sin(state.elapsed * 4) * delta * .08;
+    for (const zombie of [...getZombies()]) {
+      const type = CONFIG.zombie.types[zombie.userData.typeKey] ?? CONFIG.zombie.types.walker;
+      const hitRange = bearTrap.triggerRadius + type.radius;
+      const dist = Math.hypot(trap.mesh.position.x - zombie.position.x, trap.mesh.position.z - zombie.position.z);
+      if (dist <= hitRange) {
+        triggerBearTrap(scene, bearTrap, trap, zombie, onKilled, onHit);
+        return false;
+      }
+    }
+    if (trap.life <= 0) { removeBearTrap(scene, trap); return false; }
+    return true;
+  });
 }
 
 function removeShockwaveEffect(scene, effect) {
