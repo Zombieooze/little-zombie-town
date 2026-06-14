@@ -21,6 +21,11 @@
     <div id="game-root">
       <canvas id="game-canvas" aria-label="Little Zombie Town game canvas"></canvas>
       <div id="damage-flash" aria-hidden="true"></div>
+      <div id="boss-warning" class="boss-warning hidden" aria-live="polite"></div>
+      <div id="boss-health" class="boss-health hidden" aria-live="polite">
+        <div id="boss-health-name" class="boss-health-name">Gravebreaker</div>
+        <div class="boss-health-bar"><span id="boss-health-fill"></span></div>
+      </div>
 
       <section id="menu-screen" class="screen active">
         <div class="panel hero-panel">

@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
 import { initInput, consumePress, resetTouchMovement, updateGamepadInput, getGamepadLookVector, consumeGamepadPress, setControllerStatusCallback, isGamepadDown } from './input.js';
-import { initUI, updateHUD, showScreen, hideOverlays, showUpgrades, showEnd, setMuted, updateMenuCoins, setGameActionsVisible, setPauseButtonVisible, setFullscreenActive, showControllerMessage, moveUpgradeSelection, getSelectedUpgradeId, moveMenuSelection, activateMenuSelection, showDamageFlash } from './ui.js';
+import { initUI, updateHUD, showScreen, hideOverlays, showUpgrades, showEnd, setMuted, updateMenuCoins, setGameActionsVisible, setPauseButtonVisible, setFullscreenActive, showControllerMessage, moveUpgradeSelection, getSelectedUpgradeId, moveMenuSelection, activateMenuSelection, showDamageFlash, showBossWarning, updateBossHealthBar } from './ui.js';
 import { addCoins } from './save.js';
 import { createWorld } from './world.js';
 import { createPlayer, updatePlayer } from './player.js';
-import { spawnZombie, updateZombies, damageZombies, resetZombies, getSpawnDelay } from './zombies.js';
+import { spawnZombie, spawnBossZombie, getActiveBoss, updateZombies, damageZombies, resetZombies, getSpawnDelay } from './zombies.js';
 import { dropXp, dropMedkit, updatePickups, resetPickups, countWorldMedkits } from './pickups.js';
 import { getUpgradeChoices, applyUpgrade } from './upgrades.js';
 import { resetAbilities, updateAbilities, unlockAbility, applyAbilityUpgrade, isAbilityCard } from './abilities.js';
@@ -60,7 +60,7 @@ const cameraLimits = {
 const state = {
   elapsed: 0, health: 100, maxHealth: 100, level: 1, xp: 0, nextXp: CONFIG.level.baseXp,
   coins: 0, kills: 0, pulseCooldown: CONFIG.pulse.cooldown, pulseRange: CONFIG.pulse.range,
-  pulseDamage: CONFIG.pulse.damage, speedMultiplier: 1, bossSpawnCount: 0, batKnockback: 0,
+  pulseDamage: CONFIG.pulse.damage, speedMultiplier: 1, bossSpawnCount: 0, bossEventsTriggered: [], batKnockback: 0,
 };
 
 setControllerStatusCallback(showControllerMessage);
@@ -73,7 +73,7 @@ showScreen('menu-screen');
 function resetState() {
   Object.assign(state, { elapsed: 0, health: CONFIG.player.maxHealth, maxHealth: CONFIG.player.maxHealth, level: 1, xp: 0,
     nextXp: CONFIG.level.baseXp, coins: 0, kills: 0, pulseCooldown: CONFIG.pulse.cooldown, pulseRange: CONFIG.pulse.range,
-    pulseDamage: CONFIG.pulse.damage, speedMultiplier: 1, bossSpawnCount: 0, batKnockback: 0 });
+    pulseDamage: CONFIG.pulse.damage, speedMultiplier: 1, bossSpawnCount: 0, bossEventsTriggered: [], batKnockback: 0 });
   resetAbilities(scene, state);
   spawnTimer = 0; worldMedkitTimer = CONFIG.medkit.worldFirstSpawn; pulseTimer = 0; pendingChoices = [];
 }
@@ -87,6 +87,7 @@ function startGame() {
   hitParticles.forEach((p) => scene.remove(p)); hitParticles = [];
   healFloaters.forEach((p) => scene.remove(p)); healFloaters = [];
   attackVisualTimer = 0; cameraShake = 0;
+  updateBossHealthBar(null);
   player = createPlayer(scene);
   hideOverlays(); document.getElementById('menu-screen').classList.add('hidden');
   document.getElementById('hud').classList.remove('hidden');
@@ -94,7 +95,7 @@ function startGame() {
   mode = 'playing';
 }
 
-function returnToMenu() { mode = 'menu'; setGameActionsVisible(false); document.body.classList.remove('paused'); showScreen('menu-screen'); updateMenuCoins(); }
+function returnToMenu() { mode = 'menu'; setGameActionsVisible(false); updateBossHealthBar(null); document.body.classList.remove('paused'); showScreen('menu-screen'); updateMenuCoins(); }
 
 function pauseGame() {
   if (mode !== 'playing') return;
@@ -210,6 +211,20 @@ function scheduleNextWorldMedkit() {
   worldMedkitTimer = worldSpawnMin + Math.random() * (worldSpawnMax - worldSpawnMin);
 }
 
+function trySpawnBossEvents(previousElapsed) {
+  for (const spawnTime of CONFIG.boss.spawnTimes) {
+    if (state.bossEventsTriggered.includes(spawnTime)) continue;
+    if (previousElapsed < spawnTime && state.elapsed >= spawnTime) {
+      state.bossEventsTriggered.push(spawnTime);
+      const spawned = spawnBossZombie(scene, { elapsed: state.elapsed, level: state.level });
+      if (spawned) {
+        state.bossSpawnCount += 1;
+        showBossWarning('GRAVEBREAKER HAS AWAKENED!');
+      }
+    }
+  }
+}
+
 function spawnWorldMedkit() {
   if (countWorldMedkits() >= CONFIG.medkit.maxWorldActive) return;
   const angle = Math.random() * Math.PI * 2;
@@ -250,6 +265,7 @@ function doPulse() {
 
 function endRun(won) {
   mode = 'ended'; setGameActionsVisible(false); document.body.classList.remove('paused'); addCoins(state.coins);
+  updateBossHealthBar(null);
   showEnd({ won, time: state.elapsed, kills: state.kills, level: state.level, coins: state.coins });
 }
 
@@ -471,6 +487,7 @@ function tick() {
   handleControllerMenus(delta);
 
   if (mode === 'playing') {
+    const previousElapsed = state.elapsed;
     state.elapsed += delta;
     const savedSpeed = CONFIG.player.speed;
     CONFIG.player.speed = savedSpeed * state.speedMultiplier;
@@ -479,9 +496,9 @@ function tick() {
     updatePlayer(player, delta, attackVisualTimer, cameraControls.yaw);
     CONFIG.player.speed = savedSpeed;
     spawnTimer -= delta; pulseTimer -= delta; worldMedkitTimer -= delta;
+    trySpawnBossEvents(previousElapsed);
     if (spawnTimer <= 0) {
-      const spawned = spawnZombie(scene, { elapsed: state.elapsed, level: state.level, bossSpawnCount: state.bossSpawnCount });
-      if (spawned?.userData.typeKey === 'boss') state.bossSpawnCount += 1;
+      spawnZombie(scene, { elapsed: state.elapsed, level: state.level });
       spawnTimer = getSpawnDelay(state.elapsed);
     }
     if (worldMedkitTimer <= 0) {
@@ -497,7 +514,7 @@ function tick() {
     }, createHitParticles);
     if (state.health <= 0) endRun(false);
     if (state.elapsed >= CONFIG.runDuration) endRun(true);
-    updateHUD(state); updateCamera(delta);
+    updateHUD(state); updateBossHealthBar(getActiveBoss()); updateCamera(delta);
   }
 
   if (mode === 'playing') {

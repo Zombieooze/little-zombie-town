@@ -118,6 +118,32 @@ export function setPauseButtonVisible(visible) { $('pause-button').classList.tog
 export function updateMenuCoins() { $('menu-total-coins').textContent = getTotalCoins(); }
 export function setMuted(muted) { $('hud-muted').classList.toggle('hidden', !muted); }
 
+export function showBossWarning(message = 'GRAVEBREAKER HAS AWAKENED!') {
+  const warning = $('boss-warning');
+  if (!warning) return;
+  warning.textContent = message;
+  warning.classList.remove('hidden');
+  warning.classList.remove('active');
+  void warning.offsetWidth;
+  warning.classList.add('active');
+  setTimeout(() => warning.classList.add('hidden'), 3600);
+}
+
+export function updateBossHealthBar(boss) {
+  const bar = $('boss-health');
+  if (!bar) return;
+  if (!boss?.userData || boss.userData.health <= 0) {
+    bar.classList.add('hidden');
+    return;
+  }
+  const name = boss.userData.displayName || 'Gravebreaker';
+  const maxHealth = boss.userData.maxHealth || boss.userData.health || 1;
+  const percent = Math.max(0, Math.min(100, (boss.userData.health / maxHealth) * 100));
+  $('boss-health-name').textContent = name;
+  $('boss-health-fill').style.width = `${percent}%`;
+  bar.classList.remove('hidden');
+}
+
 export function updateHUD(state) {
   const minutes = Math.floor(state.elapsed / 60);
   const seconds = Math.floor(state.elapsed % 60).toString().padStart(2, '0');
