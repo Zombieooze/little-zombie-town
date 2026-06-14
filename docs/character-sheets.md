@@ -38,7 +38,9 @@ A large, chunky zombie with green skin, a square blocky head, angry white eyes w
 
 ## Spitter Zombie
 
-A medium zombie with toxic green accents and a slightly different silhouette, such as a bigger head or rounded throat/belly shape. In the current foundation pass, Spitters do not shoot projectiles; they chase like other zombies while staying visually distinct and rewarding more XP. They begin appearing around level 6 or 4:00 into the run.
+A medium toxic zombie with green skin, a square blocky head, angry white eyes with dark pupils, a large open mouth with chunky teeth, a single purple head spike, a ragged purple shirt/tunic, dark pants, dark boots, toxic green slime patches, and a swollen throat/chest/belly area that suggests it stores slime. The Spitter Zombie has been remodeled to match the reference sheet while keeping the same low-poly procedural shape language as the other zombies. Its mouth and throat area are intentionally clear and readable so a future slime projectile origin can attach near the mouth.
+
+In the current visual remodel pass, Spitters do not shoot projectiles; they still chase like other zombies while staying visually distinct and rewarding more XP. Future planned behavior includes ranged slime projectiles fired from the mouth, keep-away movement, and a dedicated spit animation. They begin appearing around level 6 or 4:00 into the run.
 
 ## Crusher Zombie
 
