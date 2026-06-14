@@ -38,9 +38,9 @@ A large, chunky zombie with green skin, a square blocky head, angry white eyes w
 
 ## Spitter Zombie
 
-A medium toxic zombie with green skin, a square blocky head, angry white eyes with dark pupils, a large open mouth with chunky teeth, a single purple head spike, a ragged purple shirt/tunic, dark pants, dark boots, toxic green slime patches, and a swollen throat/chest/belly area that suggests it stores slime. The Spitter Zombie has been remodeled to match the reference sheet while keeping the same low-poly procedural shape language as the other zombies. Its mouth and throat area are intentionally clear and readable so a future slime projectile origin can attach near the mouth.
+A medium toxic zombie with green skin, a square blocky head, angry white eyes with dark pupils, a large open mouth with chunky teeth, a single purple head spike, a ragged purple shirt/tunic, dark pants, dark boots, toxic green slime patches, and a swollen throat/chest/belly area that suggests it stores slime. The Spitter Zombie has been remodeled to match the reference sheet while keeping the same low-poly procedural shape language as the other zombies. Its mouth and throat area are intentionally clear and readable so a future slime projectile origin can attach near the mouth. The Spitter now has its own medium-paced toxic shamble animation with modest leg swings, slight arm motion, a light bob, and a small side-to-side sway so it feels distinct from both the frantic Runner and the heavy Brute.
 
-In the current visual remodel pass, Spitters do not shoot projectiles; they still chase like other zombies while staying visually distinct and rewarding more XP. Future planned behavior includes ranged slime projectiles fired from the mouth, keep-away movement, and a dedicated spit animation. They begin appearing around level 6 or 4:00 into the run.
+Spitters also periodically play a visual-only spit wind-up animation while chasing: the body braces and leans forward, the arms open outward, and the head moves with the body so it stays attached and readable around the mouth/throat source area. Spitters still do not shoot projectiles or deal ranged damage; future planned behavior includes ranged slime projectiles fired from the mouth and keep-away movement. They begin appearing around level 6 or 4:00 into the run.
 
 ## Crusher Zombie
 
