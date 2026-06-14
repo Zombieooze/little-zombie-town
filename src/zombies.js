@@ -9,12 +9,13 @@ const ZOMBIE_VISUAL_FACING_OFFSET = Math.PI;
 const hitFlashColor = new THREE.Color(0xfff1a8);
 
 const GRAVEBREAKER_SLAM = {
-  duration: 2.9,
-  impactTime: 2.45,
-  cooldownMin: 8,
-  cooldownMax: 12,
-  triggerRange: 10.5,
-  warningRadius: 4.6,
+  duration: CONFIG.boss.slamWindup,
+  impactTime: CONFIG.boss.slamImpactTime,
+  cooldownMin: CONFIG.boss.slamCooldownMin,
+  cooldownMax: CONFIG.boss.slamCooldownMax,
+  triggerRange: CONFIG.boss.slamTriggerRange,
+  warningRadius: CONFIG.boss.slamRadius,
+  damage: CONFIG.boss.slamDamage,
 };
 
 function material(color) { return new THREE.MeshStandardMaterial({ color, roughness: 0.85 }); }
@@ -772,14 +773,16 @@ function zombieMesh(typeKey = 'walker', progress = {}) {
       : 0,
     isSlamWindingUp: false,
     slamHasImpactedVisual: false,
+    slamHasDealtDamage: false,
+    maxHealth: type.health * scaling.health,
   };
   captureZombieAnimationRestPose(g);
   return g;
 }
 
-function unlockedTypes({ elapsed = 0, level = 1, bossSpawnCount = 0 } = {}) {
+function unlockedTypes({ elapsed = 0, level = 1 } = {}) {
   return Object.entries(ZOMBIE_TYPES).filter(([key, type]) => {
-    if (key === 'boss' && bossSpawnCount >= 2) return false;
+    if (key === 'boss') return false;
     return elapsed >= type.unlockTime || level >= type.unlockLevel;
   });
 }
@@ -810,6 +813,18 @@ export function resetZombies(scene) {
   slimeProjectiles.splice(0).forEach((shot) => { if (scene && shot?.mesh) scene.remove(shot.mesh); });
 }
 export function getZombies() { return zombies; }
+
+export function getActiveBoss() {
+  return zombies.find((z) => z?.userData?.typeKey === 'boss') ?? null;
+}
+
+export function spawnBossZombie(scene, progress = {}) {
+  if (!scene || getActiveBoss()) return null;
+  const z = zombieMesh('boss', progress);
+  const edge = Math.floor(Math.random() * 4), half = CONFIG.arenaSize / 2 + 2, roll = (Math.random() - .5) * CONFIG.arenaSize;
+  z.position.set(edge < 2 ? (edge === 0 ? -half : half) : roll, 0, edge >= 2 ? (edge === 2 ? -half : half) : roll);
+  zombies.push(z); scene.add(z); return z;
+}
 
 export function spawnZombie(scene, progress = {}) {
   if (zombies.length >= getMaxAlive(progress.elapsed)) return null;
@@ -930,6 +945,7 @@ function updateGravebreakerSlamAnimation(zombie, delta, distanceToPlayer) {
       zombie.userData.slamCooldown = THREE.MathUtils.randFloat(GRAVEBREAKER_SLAM.cooldownMin, GRAVEBREAKER_SLAM.cooldownMax);
       zombie.userData.isSlamWindingUp = true;
       zombie.userData.slamHasImpactedVisual = false;
+      zombie.userData.slamHasDealtDamage = false;
       if (ring) ring.visible = true;
     } else {
       zombie.userData.isSlamWindingUp = false;
@@ -989,6 +1005,7 @@ function updateGravebreakerSlamAnimation(zombie, delta, distanceToPlayer) {
   if (zombie.userData.slamTimer <= 0) {
     zombie.userData.isSlamWindingUp = false;
     zombie.userData.slamHasImpactedVisual = false;
+    zombie.userData.slamHasDealtDamage = false;
     if (ring) {
       ring.visible = false;
       ring.material.opacity = 0;
@@ -1131,6 +1148,15 @@ export function updateZombies(scene, player, delta, onDamage) {
     z.rotation.y = Math.atan2(dx, dz) + ZOMBIE_VISUAL_FACING_OFFSET;
     updateZombieMovementAnimation(z, delta, isMoving);
     updateGravebreakerSlamAnimation(z, delta, dist);
+    if (z.userData.typeKey === 'boss'
+      && (z.userData.slamTimer ?? 0) > 0
+      && !z.userData.slamHasDealtDamage
+      && (GRAVEBREAKER_SLAM.duration - z.userData.slamTimer) >= GRAVEBREAKER_SLAM.impactTime) {
+      z.userData.slamHasDealtDamage = true;
+      if (dist <= GRAVEBREAKER_SLAM.warningRadius + CONFIG.player.radius) {
+        damagePlayer(GRAVEBREAKER_SLAM.damage);
+      }
+    }
     z.userData.hitTimer = Math.max(0, (z.userData.hitTimer ?? 0) - delta);
     z.userData.hitFlash = Math.max(0, (z.userData.hitFlash ?? 0) - delta);
     const flash = z.userData.hitFlash / .12;
