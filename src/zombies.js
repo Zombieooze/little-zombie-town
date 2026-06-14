@@ -40,16 +40,16 @@ function createWalkerZombieModel(group, skin, shirt) {
   addBox(group, darkSkin, 0, 2.29, -.05, .82, .1, .76);
 
   const leftSpike = new THREE.Mesh(new THREE.ConeGeometry(.13, .38, 4), material(darkSkin));
-  leftSpike.position.set(-.24, 2.56, -.08); leftSpike.rotation.x = Math.PI; group.add(leftSpike);
+  leftSpike.position.set(-.24, 2.56, -.08); group.add(leftSpike);
   const rightSpike = new THREE.Mesh(new THREE.ConeGeometry(.13, .38, 4), material(darkSkin));
-  rightSpike.position.set(.24, 2.55, -.06); rightSpike.rotation.x = Math.PI; group.add(rightSpike);
+  rightSpike.position.set(.24, 2.55, -.06); group.add(rightSpike);
 
   addBox(group, 0xf3f3e8, -.18, 1.94, -.44, .2, .24, .04);
   addBox(group, 0xf3f3e8, .2, 1.94, -.44, .2, .24, .04);
   addBox(group, 0x191919, -.18, 1.94, -.47, .08, .1, .035);
   addBox(group, 0x191919, .2, 1.94, -.47, .08, .1, .035);
-  addBox(group, 0x486c2d, -.18, 2.11, -.46, .24, .04, .04).rotation.z = .16;
-  addBox(group, 0x486c2d, .2, 2.1, -.46, .24, .04, .04).rotation.z = -.16;
+  addBox(group, 0x486c2d, -.18, 2.11, -.46, .24, .04, .04).rotation.z = -.18;
+  addBox(group, 0x486c2d, .2, 2.1, -.46, .24, .04, .04).rotation.z = .18;
   addBox(group, 0x6f8d35, .02, 1.78, -.47, .16, .12, .12);
 
   addBox(group, 0x050505, 0, 1.58, -.46, .48, .26, .05);
@@ -60,15 +60,28 @@ function createWalkerZombieModel(group, skin, shirt) {
   addBox(group, 0x8b1f1f, .04, 1.44, -.5, .2, .06, .035);
   addBox(group, darkSkin, 0, 1.38, -.43, .5, .1, .12);
 
-  addLimb(group, skin, .68, 1.08, -.2, .28, .82, .26);
-  addLimb(group, skin, -.68, 1.08, -.2, .28, .82, .26);
-  addBox(group, darkSkin, .8, .65, -.46, .25, .2, .25).rotation.x = .7;
-  addBox(group, darkSkin, -.8, .65, -.46, .25, .2, .25).rotation.x = .7;
+  addWalkerArm(group, skin, darkSkin, .68, 1.08, -.2, 1);
+  addWalkerArm(group, skin, darkSkin, -.68, 1.08, -.2, -1);
 
   addBox(group, pants, -.22, .4, 0, .28, .78, .34);
   addBox(group, pants, .22, .4, 0, .28, .78, .34);
   addBox(group, boots, -.22, .02, -.08, .34, .18, .42);
   addBox(group, boots, .22, .02, -.08, .34, .18, .42);
+}
+
+function addWalkerArm(group, skinColor, handColor, x, y, z, side) {
+  const arm = new THREE.Group();
+  arm.position.set(x, y, z);
+  arm.rotation.x = 1.1;
+
+  const forearm = new THREE.Mesh(new THREE.BoxGeometry(.28, .82, .26), material(skinColor));
+  const hand = new THREE.Mesh(new THREE.BoxGeometry(.25, .22, .25), material(handColor));
+  hand.position.set(side * .05, -.53, -.01);
+  hand.rotation.z = side * .18;
+
+  arm.add(forearm, hand);
+  group.add(arm);
+  return arm;
 }
 
 function addLimb(group, color, x, y, z, sx = .25, sy = .8, sz = .25) {
