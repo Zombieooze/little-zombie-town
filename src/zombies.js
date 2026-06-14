@@ -9,6 +9,68 @@ const hitFlashColor = new THREE.Color(0xfff1a8);
 
 function material(color) { return new THREE.MeshStandardMaterial({ color, roughness: 0.85 }); }
 
+
+function addBox(group, color, x, y, z, sx, sy, sz) {
+  const box = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), material(color));
+  box.position.set(x, y, z); group.add(box); return box;
+}
+
+function createWalkerZombieModel(group, skin, shirt) {
+  const darkSkin = 0x5f8f35;
+  const shirtShadow = 0x24465f;
+  const pants = 0x111d25;
+  const boots = 0x171715;
+
+  const body = addBox(group, shirt, 0, .98, 0, .92, 1.04, .56);
+  body.rotation.x = .03;
+  addBox(group, shirtShadow, 0, .48, -.01, .96, .14, .58);
+  [-.34, -.12, .12, .34].forEach((x, index) => {
+    const tear = new THREE.Mesh(new THREE.ConeGeometry(.14, .28, 3), material(shirt));
+    tear.position.set(x, .32, -.02);
+    tear.rotation.set(0, 0, Math.PI + (index % 2 ? .18 : -.18));
+    group.add(tear);
+  });
+  addBox(group, shirt, -.56, 1.42, -.03, .28, .28, .5).rotation.z = -.34;
+  addBox(group, shirt, .56, 1.42, -.03, .28, .28, .5).rotation.z = .34;
+
+  const head = addBox(group, skin, 0, 1.88, -.03, .84, .78, .78);
+  head.rotation.y = .03;
+  addBox(group, darkSkin, -.47, 1.88, -.03, .12, .36, .36);
+  addBox(group, darkSkin, .47, 1.88, -.03, .12, .36, .36);
+  addBox(group, darkSkin, 0, 2.29, -.05, .82, .1, .76);
+
+  const leftSpike = new THREE.Mesh(new THREE.ConeGeometry(.13, .38, 4), material(darkSkin));
+  leftSpike.position.set(-.24, 2.56, -.08); leftSpike.rotation.x = Math.PI; group.add(leftSpike);
+  const rightSpike = new THREE.Mesh(new THREE.ConeGeometry(.13, .38, 4), material(darkSkin));
+  rightSpike.position.set(.24, 2.55, -.06); rightSpike.rotation.x = Math.PI; group.add(rightSpike);
+
+  addBox(group, 0xf3f3e8, -.18, 1.94, -.44, .2, .24, .04);
+  addBox(group, 0xf3f3e8, .2, 1.94, -.44, .2, .24, .04);
+  addBox(group, 0x191919, -.18, 1.94, -.47, .08, .1, .035);
+  addBox(group, 0x191919, .2, 1.94, -.47, .08, .1, .035);
+  addBox(group, 0x486c2d, -.18, 2.11, -.46, .24, .04, .04).rotation.z = .16;
+  addBox(group, 0x486c2d, .2, 2.1, -.46, .24, .04, .04).rotation.z = -.16;
+  addBox(group, 0x6f8d35, .02, 1.78, -.47, .16, .12, .12);
+
+  addBox(group, 0x050505, 0, 1.58, -.46, .48, .26, .05);
+  addBox(group, 0xf3f3df, -.16, 1.68, -.5, .08, .11, .04);
+  addBox(group, 0xf3f3df, .17, 1.68, -.5, .08, .11, .04);
+  addBox(group, 0xf3f3df, -.14, 1.47, -.5, .08, .1, .04);
+  addBox(group, 0xf3f3df, .2, 1.47, -.5, .08, .1, .04);
+  addBox(group, 0x8b1f1f, .04, 1.44, -.5, .2, .06, .035);
+  addBox(group, darkSkin, 0, 1.38, -.43, .5, .1, .12);
+
+  addLimb(group, skin, .68, 1.08, -.2, .28, .82, .26);
+  addLimb(group, skin, -.68, 1.08, -.2, .28, .82, .26);
+  addBox(group, darkSkin, .8, .65, -.46, .25, .2, .25).rotation.x = .7;
+  addBox(group, darkSkin, -.8, .65, -.46, .25, .2, .25).rotation.x = .7;
+
+  addBox(group, pants, -.22, .4, 0, .28, .78, .34);
+  addBox(group, pants, .22, .4, 0, .28, .78, .34);
+  addBox(group, boots, -.22, .02, -.08, .34, .18, .42);
+  addBox(group, boots, .22, .02, -.08, .34, .18, .42);
+}
+
 function addLimb(group, color, x, y, z, sx = .25, sy = .8, sz = .25) {
   const limb = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), material(color));
   limb.position.set(x, y, z); limb.rotation.x = 1.1; group.add(limb); return limb;
@@ -44,14 +106,18 @@ function zombieMesh(typeKey = 'walker', progress = {}) {
   const skin = type.skin;
   const shirt = type.shirt;
 
-  const body = new THREE.Mesh(new THREE.BoxGeometry(.9, 1.1, .55), material(shirt)); body.position.y = 1;
-  const headSize = typeKey === 'spitter' ? .82 : .72;
-  const head = new THREE.Mesh(new THREE.BoxGeometry(headSize, headSize, headSize), material(skin)); head.position.y = typeKey === 'runner' ? 1.82 : 1.9;
-  g.add(body, head);
+  if (typeKey === 'walker') {
+    createWalkerZombieModel(g, skin, shirt);
+  } else {
+    const body = new THREE.Mesh(new THREE.BoxGeometry(.9, 1.1, .55), material(shirt)); body.position.y = 1;
+    const headSize = typeKey === 'spitter' ? .82 : .72;
+    const head = new THREE.Mesh(new THREE.BoxGeometry(headSize, headSize, headSize), material(skin)); head.position.y = typeKey === 'runner' ? 1.82 : 1.9;
+    g.add(body, head);
 
-  const heavyArms = typeKey === 'brute' || typeKey === 'crusher' || typeKey === 'boss';
-  addLimb(g, skin, .65, 1.15, -.2, heavyArms ? .34 : .25, .8, .25);
-  addLimb(g, skin, -.65, 1.15, -.2, heavyArms ? .34 : .25, .8, .25);
+    const heavyArms = typeKey === 'brute' || typeKey === 'crusher' || typeKey === 'boss';
+    addLimb(g, skin, .65, 1.15, -.2, heavyArms ? .34 : .25, .8, .25);
+    addLimb(g, skin, -.65, 1.15, -.2, heavyArms ? .34 : .25, .8, .25);
+  }
 
   if (typeKey === 'runner') {
     const tuft = new THREE.Mesh(new THREE.ConeGeometry(.18, .34, 5), material(0x5a258f));
