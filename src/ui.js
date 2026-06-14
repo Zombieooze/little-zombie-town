@@ -4,6 +4,9 @@ import { getAbilityDisplayName, MAX_ABILITY_LEVEL } from './abilities.js';
 const $ = (id) => document.getElementById(id);
 const screens = ['menu-screen', 'pause-screen', 'upgrade-screen', 'end-screen'];
 
+let selectedUpgradeIndex = 0;
+let toastTimer = null;
+
 export function initUI({ onStart, onUpgrade, onMenu, onPause, onResume, onFullscreen }) {
   $('start-button').addEventListener('click', onStart);
   $('again-button').addEventListener('click', onStart);
@@ -16,7 +19,41 @@ export function initUI({ onStart, onUpgrade, onMenu, onPause, onResume, onFullsc
     const button = event.target.closest('[data-upgrade]');
     if (button) onUpgrade(button.dataset.upgrade);
   });
+  document.addEventListener('fullscreenchange', () => setFullscreenActive(!!document.fullscreenElement));
   updateMenuCoins();
+  setFullscreenActive(!!document.fullscreenElement);
+}
+
+export function setFullscreenActive(active) {
+  const label = active ? 'Exit Fullscreen' : 'Fullscreen';
+  const icon = active ? '↙' : '⛶';
+  $('menu-fullscreen-button').textContent = label;
+  $('game-fullscreen-button').textContent = icon;
+  $('game-fullscreen-button').setAttribute('aria-label', label);
+}
+
+export function showControllerMessage(message) {
+  const toast = $('controller-toast');
+  toast.textContent = message;
+  toast.classList.remove('hidden');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.add('hidden'), 1800);
+}
+
+export function moveUpgradeSelection(direction) {
+  const cards = [...$('upgrade-cards').querySelectorAll('[data-upgrade]')];
+  if (!cards.length) return;
+  selectedUpgradeIndex = (selectedUpgradeIndex + direction + cards.length) % cards.length;
+  updateUpgradeSelection();
+}
+
+export function getSelectedUpgradeId() {
+  return $('upgrade-cards').querySelector('.controller-selected')?.dataset.upgrade || $('upgrade-cards').querySelector('[data-upgrade]')?.dataset.upgrade;
+}
+
+function updateUpgradeSelection() {
+  const cards = [...$('upgrade-cards').querySelectorAll('[data-upgrade]')];
+  cards.forEach((card, index) => card.classList.toggle('controller-selected', index === selectedUpgradeIndex));
 }
 
 export function showScreen(name) {
@@ -45,11 +82,13 @@ export function updateHUD(state) {
 }
 
 export function showUpgrades(options) {
+  selectedUpgradeIndex = 0;
   $('upgrade-cards').innerHTML = options.map((upgrade) => `
     <button class="upgrade-card" data-upgrade="${upgrade.id}">
       <h3>${upgrade.name}</h3><p>${upgrade.description}</p>
     </button>`).join('');
   showScreen('upgrade-screen');
+  updateUpgradeSelection();
 }
 
 export function showEnd({ won, time, kills, level, coins }) {

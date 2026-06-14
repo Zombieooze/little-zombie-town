@@ -29,4 +29,5 @@ export const CONFIG = {
   level: { baseXp: 60, growth: 1.35, lateGrowth: 1.22, lateGrowthStartLevel: 10 },
   rewards: { xpMultiplierStartTime: 300, xpMultiplierPerMinute: 0.12, maxXpMultiplier: 1.55 },
   camera: { offset: { x: 0, y: 22, z: 19 }, lookAhead: 2.5, minDistance: 9.5, maxDistance: 24 },
+  gamepad: { deadzone: 0.2, cameraSensitivity: 2.8 },
 };
