@@ -284,6 +284,137 @@ function createSpitterZombieModel(group, skin, shirt) {
   group.userData.futureMouthOrigin = new THREE.Vector3(0, 1.56, -.62);
 }
 
+function addCrusherStud(group, x, y, z, size = .1) {
+  const stud = new THREE.Mesh(new THREE.BoxGeometry(size, size, size * .42), material(0x8a8a82));
+  stud.position.set(x, y, z);
+  stud.rotation.z = .12;
+  group.add(stud);
+  return stud;
+}
+
+function addCrusherSpike(group, x, y, z, radius = .13, height = .34, color = 0x8c8f88) {
+  const spike = new THREE.Mesh(new THREE.ConeGeometry(radius, height, 4), material(color));
+  spike.position.set(x, y, z);
+  spike.rotation.y = Math.PI / 4;
+  group.add(spike);
+  return spike;
+}
+
+function addCrusherArm(group, skinColor, darkSkinColor, x, y, z, side, armorColor, metalColor) {
+  const arm = new THREE.Group();
+  arm.position.set(x, y, z);
+  arm.rotation.x = .72;
+  arm.rotation.z = side * .1;
+
+  const upper = new THREE.Mesh(new THREE.BoxGeometry(.44, .56, .4), material(skinColor));
+  upper.position.set(0, -.22, 0);
+  upper.rotation.z = side * -.04;
+  const forearm = new THREE.Mesh(new THREE.BoxGeometry(.5, .76, .42), material(skinColor));
+  forearm.position.set(side * .03, -.75, -.03);
+  forearm.rotation.z = side * -.07;
+  const wristBand = new THREE.Mesh(new THREE.BoxGeometry(.62, .22, .5), material(armorColor));
+  wristBand.position.set(side * .03, -.97, -.04);
+  const fist = new THREE.Mesh(new THREE.BoxGeometry(.58, .36, .48), material(darkSkinColor));
+  fist.position.set(side * .08, -1.25, -.06);
+  fist.rotation.z = side * .16;
+
+  [-.18, 0, .18].forEach((offset) => {
+    const stud = new THREE.Mesh(new THREE.BoxGeometry(.1, .1, .055), material(metalColor));
+    stud.position.set(offset, -.98, -.3);
+    arm.add(stud);
+  });
+
+  arm.add(upper, forearm, wristBand, fist);
+  group.add(arm);
+  return arm;
+}
+
+function addCrusherLeg(group, pantsColor, pantsDarkColor, bootColor, x, hipY) {
+  const leg = new THREE.Group();
+  leg.position.set(x, hipY, .02);
+
+  const thigh = new THREE.Mesh(new THREE.BoxGeometry(.4, .62, .42), material(pantsColor));
+  thigh.position.set(0, -.31, 0);
+  const cuff = new THREE.Mesh(new THREE.BoxGeometry(.42, .18, .44), material(pantsDarkColor));
+  cuff.position.set(0, -.7, -.01);
+  const boot = new THREE.Mesh(new THREE.BoxGeometry(.54, .24, .58), material(bootColor));
+  boot.position.set(0, -.91, -.11);
+
+  leg.add(thigh, cuff, boot);
+  group.add(leg);
+  return leg;
+}
+
+function createCrusherZombieModel(group, skin, shirt) {
+  const darkSkin = 0x4f7d2b;
+  const shadowSkin = 0x3d6424;
+  const armor = 0x343230;
+  const armorDark = 0x252422;
+  const rust = 0x7b4a24;
+  const rustDark = 0x4e321d;
+  const metal = 0x85877f;
+  const darkMetal = 0x5d5f5a;
+  const pants = 0x101e24;
+  const pantsDark = 0x0a1318;
+  const boots = 0x161513;
+
+  const hips = addBox(group, pants, 0, .56, .02, 1.18, .34, .7);
+  const torso = addBox(group, armor, 0, 1.13, 0, 1.36, 1.12, .78);
+  torso.rotation.x = .02;
+  const chestPlate = addBox(group, armorDark, 0, 1.24, -.43, 1.18, .86, .1);
+  addBox(group, rust, 0, .74, -.44, 1.36, .2, .12);
+  addBox(group, rustDark, 0, .73, -.51, 1.08, .08, .055);
+  addBox(group, metal, 0, .76, -.55, .36, .34, .08);
+  addBox(group, darkMetal, 0, .76, -.61, .25, .24, .045);
+  [-.48, .48].forEach((x) => {
+    addCrusherStud(group, x, 1.5, -.51, .12);
+    addCrusherStud(group, x, 1.05, -.51, .11);
+    addCrusherStud(group, x, .75, -.57, .13);
+  });
+
+  const leftShoulder = addBox(group, rust, -.88, 1.55, -.04, .58, .3, .82);
+  leftShoulder.rotation.z = -.28;
+  leftShoulder.rotation.x = -.08;
+  const rightShoulder = addBox(group, rust, .88, 1.55, -.04, .58, .3, .82);
+  rightShoulder.rotation.z = .28;
+  rightShoulder.rotation.x = -.08;
+  addBox(group, armorDark, -.68, 1.38, -.02, .24, .42, .82);
+  addBox(group, armorDark, .68, 1.38, -.02, .24, .42, .82);
+  [-1.03, -.85, .85, 1.03].forEach((x, i) => addCrusherSpike(group, x, 1.82, -.18 + (i % 2) * .16, .12, .34, darkMetal));
+  [-.96, -.78, .78, .96].forEach((x) => addCrusherStud(group, x, 1.53, -.48, .09));
+
+  const neck = addBox(group, darkSkin, 0, 1.68, -.03, .62, .2, .62);
+  const head = addBox(group, skin, 0, 2.14, -.05, 1.0, .92, .9);
+  head.rotation.y = .02;
+  addBox(group, darkSkin, 0, 2.62, -.06, .98, .12, .86);
+  addBox(group, shadowSkin, -.55, 2.12, -.05, .12, .42, .4);
+  addBox(group, shadowSkin, .55, 2.12, -.05, .12, .42, .4);
+  addBox(group, darkSkin, 0, 1.67, -.06, .76, .16, .82);
+  [-.34, 0, .34].forEach((x, i) => addCrusherSpike(group, x, 2.94 + (i === 1 ? .06 : 0), -.08, .13, .38, darkMetal));
+
+  addBox(group, 0x160606, -.24, 2.2, -.56, .24, .24, .05);
+  addBox(group, 0x160606, .24, 2.2, -.56, .24, .24, .05);
+  addBox(group, 0xff1515, -.23, 2.2, -.6, .12, .12, .035);
+  addBox(group, 0xff1515, .25, 2.2, -.6, .12, .12, .035);
+  addBox(group, shadowSkin, -.24, 2.41, -.6, .34, .06, .045).rotation.z = -.24;
+  addBox(group, shadowSkin, .24, 2.4, -.6, .34, .06, .045).rotation.z = .24;
+  addBox(group, rustDark, .02, 2.02, -.61, .22, .15, .13);
+  addBox(group, 0x050505, 0, 1.8, -.59, .64, .36, .065);
+  addBox(group, 0xf2efdc, -.22, 1.93, -.64, .09, .15, .045);
+  addBox(group, 0xf2efdc, .22, 1.93, -.64, .09, .15, .045);
+  addBox(group, 0xf2efdc, -.18, 1.66, -.64, .1, .13, .045);
+  addBox(group, 0xf2efdc, .25, 1.66, -.64, .1, .13, .045);
+  addBox(group, 0x7b1e19, .03, 1.63, -.64, .27, .08, .04);
+  addBox(group, darkSkin, 0, 1.53, -.52, .66, .12, .15);
+
+  const rightArm = addCrusherArm(group, skin, darkSkin, .94, 1.32, -.13, 1, armorDark, metal);
+  const leftArm = addCrusherArm(group, skin, darkSkin, -.94, 1.32, -.13, -1, armorDark, metal);
+  const leftLeg = addCrusherLeg(group, pants, pantsDark, boots, -.34, .58);
+  const rightLeg = addCrusherLeg(group, pants, pantsDark, boots, .34, .58);
+
+  group.userData.parts = { leftArm, rightArm, leftLeg, rightLeg, head, neck, torso, chestPlate, hips, leftShoulder, rightShoulder };
+}
+
 function addBruteArm(group, skinColor, handColor, x, y, z, side) {
   const arm = new THREE.Group();
   arm.position.set(x, y, z);
@@ -428,6 +559,8 @@ function zombieMesh(typeKey = 'walker', progress = {}) {
     createBruteZombieModel(g, skin, shirt);
   } else if (typeKey === 'spitter') {
     createSpitterZombieModel(g, skin, shirt);
+  } else if (typeKey === 'crusher') {
+    createCrusherZombieModel(g, skin, shirt);
   } else {
     const body = new THREE.Mesh(new THREE.BoxGeometry(.9, 1.1, .55), material(shirt)); body.position.y = 1;
     const headSize = typeKey === 'spitter' ? .82 : .72;
@@ -439,14 +572,9 @@ function zombieMesh(typeKey = 'walker', progress = {}) {
     addLimb(g, skin, -.65, 1.15, -.2, heavyArms ? .34 : .25, .8, .25);
   }
 
-  if (typeKey === 'crusher' || typeKey === 'boss') {
-    const bellyWidth = typeKey === 'crusher' ? 1.24 : 1.08;
-    const belly = new THREE.Mesh(new THREE.BoxGeometry(bellyWidth, .72, .68), material(shirt));
+  if (typeKey === 'boss') {
+    const belly = new THREE.Mesh(new THREE.BoxGeometry(1.08, .72, .68), material(shirt));
     belly.position.y = .78; g.add(belly);
-  }
-  if (typeKey === 'crusher') {
-    const shoulder = new THREE.Mesh(new THREE.BoxGeometry(1.42, .34, .7), material(0x4b4038));
-    shoulder.position.y = 1.42; g.add(shoulder);
   }
   if (typeKey === 'boss') {
     addSpike(g, -.28, 2.55, 0); addSpike(g, 0, 2.65, 0); addSpike(g, .28, 2.55, 0);

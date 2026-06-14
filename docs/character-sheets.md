@@ -44,7 +44,7 @@ Spitters use keep-away ranged behavior instead of acting like pure melee chasers
 
 ## Crusher Zombie
 
-A late-game heavy zombie that bridges the gap between Brutes and the Mini Boss. The Crusher is bigger than a Brute but smaller than a Boss, with a rusty brown or dark gray torso, wide blocky shoulders, chunky arms, and a heavy silhouette built only from simple procedural low-poly primitives. It is a simple chaser for now: no projectiles, no area attacks, and no special attack behavior.
+A late-game heavy zombie that bridges the gap between Brutes and the Mini Boss. The Crusher Zombie has been remodeled to match the reference sheet: green skin, a large square angry head, intense red eyes, an open mouth with chunky teeth, a dark gray armored torso, rusty shoulder plates, simple spikes and metal studs, oversized arms, heavy wrist bands, large fists, dark pants, and dark boots. It is bigger and more armored than the Brute but still smaller than the Boss, with a wide late-game silhouette built only from simple procedural low-poly primitives. It remains a simple chaser for now: no projectiles, no area attacks, and no special attack behavior.
 
 ## Boss / Mini Boss Zombie
 
