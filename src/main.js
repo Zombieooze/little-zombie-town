@@ -482,7 +482,7 @@ function tick() {
       spawnWorldMedkit();
       scheduleNextWorldMedkit();
     }
-    updateZombies(player, delta, (damage) => { state.health = Math.max(0, state.health - damage); });
+    updateZombies(scene, player, delta, (damage) => { state.health = Math.max(0, state.health - damage); });
     updatePickups(scene, player, delta, collectPickup);
     if (pulseTimer <= 0) { doPulse(); pulseTimer = state.pulseCooldown; }
     updateAbilities(scene, state, player, delta, (position, type, typeKey) => {
