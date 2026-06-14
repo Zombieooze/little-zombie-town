@@ -21,7 +21,7 @@ export const CONFIG = {
       brute: { name: 'Brute Zombie', health: 150, speed: 1.82, damage: 18, radius: 1.05, xp: 75, coins: 4, scale: 1.35, weight: 18, unlockTime: 180, unlockLevel: 5, medkitChance: 0.09, skin: 0x5f9f45, shirt: 0x5a3a22 },
       spitter: { name: 'Spitter Zombie', health: 80, speed: 2.26, damage: 12, radius: 0.8, xp: 60, coins: 3, scale: 1.02, weight: 16, unlockTime: 300, unlockLevel: 6, medkitChance: 0.06, skin: 0x9be55a, shirt: 0x2ccf6b, ranged: { preferredRange: 12, tooCloseRange: 6, maxRange: 16, backAwaySpeedMultiplier: 0.42, cooldown: 3.8, windupDuration: 0.72, fireTime: 0.36, projectileSpeed: 12.5, projectileRange: 18, projectileDamage: 10, projectileRadius: 0.34 } },
       crusher: { name: 'Crusher Zombie', health: 300, speed: 1.49, damage: 24, radius: 1.35, xp: 120, coins: 8, scale: 1.7, weight: 7, unlockTime: 360, unlockLevel: 9, medkitChance: 0.14, skin: 0x6f7f64, shirt: 0x6b4632 },
-      boss: { name: 'Mini Boss Zombie', health: 520, speed: 1.38, damage: 28, radius: 1.75, xp: 260, coins: 18, scale: 2.15, weight: 2, unlockTime: 450, unlockLevel: 11, medkitChance: 0.75, skin: 0x4d8d39, shirt: 0x25222c },
+      boss: { name: 'Gravebreaker', health: 520, speed: 1.38, damage: 28, radius: 1.75, xp: 260, coins: 18, scale: 2.15, weight: 2, unlockTime: 450, unlockLevel: 11, medkitChance: 0.75, skin: 0x4d8d39, shirt: 0x25222c },
     },
   },
   xp: { pickupRadius: 1.5, magnetRadius: 5.5, speed: 10 },
