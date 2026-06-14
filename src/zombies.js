@@ -390,7 +390,7 @@ function createCrusherZombieModel(group, skin, shirt) {
   addBox(group, shadowSkin, -.55, 2.12, -.05, .12, .42, .4);
   addBox(group, shadowSkin, .55, 2.12, -.05, .12, .42, .4);
   addBox(group, darkSkin, 0, 1.67, -.06, .76, .16, .82);
-  [-.34, 0, .34].forEach((x, i) => addCrusherSpike(group, x, 2.94 + (i === 1 ? .06 : 0), -.08, .13, .38, darkMetal));
+  [-.34, 0, .34].forEach((x, i) => addCrusherSpike(group, x, 2.86 + (i === 1 ? .04 : 0), -.08, .13, .38, darkMetal));
 
   addBox(group, 0x160606, -.24, 2.2, -.56, .24, .24, .05);
   addBox(group, 0x160606, .24, 2.2, -.56, .24, .24, .05);
@@ -645,8 +645,8 @@ export function spawnZombie(scene, progress = {}) {
 }
 
 function captureZombieAnimationRestPose(zombie) {
-  if (!['walker', 'runner', 'brute', 'spitter'].includes(zombie.userData.typeKey) || !zombie.userData.parts) return;
-  const { leftArm, rightArm, leftLeg, rightLeg } = zombie.userData.parts;
+  if (!['walker', 'runner', 'brute', 'spitter', 'crusher'].includes(zombie.userData.typeKey) || !zombie.userData.parts) return;
+  const { leftArm, rightArm, leftLeg, rightLeg, torso, chestPlate, leftShoulder, rightShoulder } = zombie.userData.parts;
   zombie.userData.walkRestPose = {
     rootY: zombie.position.y,
     rootRotX: zombie.rotation.x,
@@ -657,6 +657,12 @@ function captureZombieAnimationRestPose(zombie) {
     rightArmZ: rightArm.rotation.z,
     leftLegX: leftLeg.rotation.x,
     rightLegX: rightLeg.rotation.x,
+    torsoRotX: torso?.rotation.x ?? 0,
+    chestPlateRotX: chestPlate?.rotation.x ?? 0,
+    leftShoulderY: leftShoulder?.position.y ?? 0,
+    rightShoulderY: rightShoulder?.position.y ?? 0,
+    leftShoulderRotZ: leftShoulder?.rotation.z ?? 0,
+    rightShoulderRotZ: rightShoulder?.rotation.z ?? 0,
   };
 }
 
@@ -664,6 +670,10 @@ const ZOMBIE_ANIMATION_PRESETS = {
   walker: { cycleSpeed: 3.8, activityDamp: 8, armSwing: .18, legSwing: .13, bob: .035, sway: .035 },
   runner: { cycleSpeed: 8.7, activityDamp: 12, armSwing: .32, legSwing: .25, bob: .045, sway: .045 },
   brute: { cycleSpeed: 2.45, activityDamp: 6, armSwing: .34, legSwing: .23, bob: .048, sway: .055, stomp: true },
+  crusher: {
+    cycleSpeed: 1.75, activityDamp: 5, armSwing: .46, legSwing: .28, bob: .055, sway: .045,
+    stomp: true, torsoRoll: .035, shoulderLift: .045, shoulderRoll: .035,
+  },
   spitter: {
     cycleSpeed: 3.15, activityDamp: 7, armSwing: .16, legSwing: .12, bob: .03, sway: .028,
     spitInterval: 4.2, spitDuration: .72, spitLean: -.16, spitArmOpen: .34,
@@ -674,7 +684,7 @@ function updateZombieMovementAnimation(zombie, delta, isMoving) {
   const preset = ZOMBIE_ANIMATION_PRESETS[zombie.userData.typeKey];
   if (!preset || !zombie.userData.parts || !zombie.userData.walkRestPose) return;
 
-  const { leftArm, rightArm, leftLeg, rightLeg } = zombie.userData.parts;
+  const { leftArm, rightArm, leftLeg, rightLeg, torso, chestPlate, leftShoulder, rightShoulder } = zombie.userData.parts;
   const rest = zombie.userData.walkRestPose;
   const activityTarget = isMoving ? 1 : 0;
   zombie.userData.walkActivity = THREE.MathUtils.damp(zombie.userData.walkActivity ?? 0, activityTarget, preset.activityDamp, delta);
@@ -705,6 +715,17 @@ function updateZombieMovementAnimation(zombie, delta, isMoving) {
   zombie.position.y = rest.rootY + lift * preset.bob * activity;
   zombie.rotation.x = rest.rootRotX + (preset.spitLean ?? 0) * spit;
   zombie.rotation.z = rest.rootRotZ + Math.sin(zombie.userData.walkTime * 2) * preset.sway * activity;
+
+  if (torso) torso.rotation.x = rest.torsoRotX + Math.sin(zombie.userData.walkTime * 2) * (preset.torsoRoll ?? 0) * activity;
+  if (chestPlate) chestPlate.rotation.x = rest.chestPlateRotX + Math.sin(zombie.userData.walkTime * 2) * (preset.torsoRoll ?? 0) * activity;
+  if (leftShoulder) {
+    leftShoulder.position.y = rest.leftShoulderY + Math.max(0, counterStride) * (preset.shoulderLift ?? 0) * activity;
+    leftShoulder.rotation.z = rest.leftShoulderRotZ - stride * (preset.shoulderRoll ?? 0) * activity;
+  }
+  if (rightShoulder) {
+    rightShoulder.position.y = rest.rightShoulderY + Math.max(0, stride) * (preset.shoulderLift ?? 0) * activity;
+    rightShoulder.rotation.z = rest.rightShoulderRotZ - counterStride * (preset.shoulderRoll ?? 0) * activity;
+  }
 }
 
 function getSpitterRangedConfig(type = ZOMBIE_TYPES.spitter) {
