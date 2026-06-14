@@ -60,13 +60,28 @@ function createWalkerZombieModel(group, skin, shirt) {
   addBox(group, 0x8b1f1f, .04, 1.44, -.5, .2, .06, .035);
   addBox(group, darkSkin, 0, 1.38, -.43, .5, .1, .12);
 
-  addWalkerArm(group, skin, darkSkin, .68, 1.08, -.2, 1);
-  addWalkerArm(group, skin, darkSkin, -.68, 1.08, -.2, -1);
+  const rightArm = addWalkerArm(group, skin, darkSkin, .68, 1.08, -.2, 1);
+  const leftArm = addWalkerArm(group, skin, darkSkin, -.68, 1.08, -.2, -1);
 
-  addBox(group, pants, -.22, .4, 0, .28, .78, .34);
-  addBox(group, pants, .22, .4, 0, .28, .78, .34);
-  addBox(group, boots, -.22, .02, -.08, .34, .18, .42);
-  addBox(group, boots, .22, .02, -.08, .34, .18, .42);
+  const leftLeg = addWalkerLeg(group, pants, boots, -.22, .78);
+  const rightLeg = addWalkerLeg(group, pants, boots, .22, .78);
+
+  group.userData.parts = { leftArm, rightArm, leftLeg, rightLeg };
+}
+
+function addWalkerLeg(group, pantsColor, bootColor, x, hipY) {
+  const leg = new THREE.Group();
+  leg.position.set(x, hipY, 0);
+
+  const pants = new THREE.Mesh(new THREE.BoxGeometry(.28, .78, .34), material(pantsColor));
+  pants.position.set(0, -.38, 0);
+
+  const boot = new THREE.Mesh(new THREE.BoxGeometry(.34, .18, .42), material(bootColor));
+  boot.position.set(0, -.76, -.08);
+
+  leg.add(pants, boot);
+  group.add(leg);
+  return leg;
 }
 
 function addWalkerArm(group, skinColor, handColor, x, y, z, side) {
@@ -159,7 +174,18 @@ function zombieMesh(typeKey = 'walker', progress = {}) {
   g.traverse((part) => {
     if (part.isMesh) part.userData.baseColor = part.material.color.clone();
   });
-  g.userData = { typeKey, health: type.health * scaling.health, damageMultiplier: scaling.damage, hitTimer: 0, hitFlash: 0, bossSpawned: false };
+  g.userData = {
+    ...g.userData,
+    typeKey,
+    health: type.health * scaling.health,
+    damageMultiplier: scaling.damage,
+    hitTimer: 0,
+    hitFlash: 0,
+    bossSpawned: false,
+    walkTime: 0,
+    baseY: g.position.y,
+  };
+  captureWalkerAnimationRestPose(g);
   return g;
 }
 
@@ -203,6 +229,41 @@ export function spawnZombie(scene, progress = {}) {
   zombies.push(z); scene.add(z); return z;
 }
 
+function captureWalkerAnimationRestPose(zombie) {
+  if (zombie.userData.typeKey !== 'walker' || !zombie.userData.parts) return;
+  const { leftArm, rightArm, leftLeg, rightLeg } = zombie.userData.parts;
+  zombie.userData.walkRestPose = {
+    rootY: zombie.position.y,
+    rootRotZ: zombie.rotation.z,
+    leftArmX: leftArm.rotation.x,
+    rightArmX: rightArm.rotation.x,
+    leftLegX: leftLeg.rotation.x,
+    rightLegX: rightLeg.rotation.x,
+  };
+}
+
+function updateWalkerWalkAnimation(zombie, delta, isMoving) {
+  if (zombie.userData.typeKey !== 'walker' || !zombie.userData.parts || !zombie.userData.walkRestPose) return;
+
+  const { leftArm, rightArm, leftLeg, rightLeg } = zombie.userData.parts;
+  const rest = zombie.userData.walkRestPose;
+  const activityTarget = isMoving ? 1 : 0;
+  zombie.userData.walkActivity = THREE.MathUtils.damp(zombie.userData.walkActivity ?? 0, activityTarget, 8, delta);
+  zombie.userData.walkTime = (zombie.userData.walkTime ?? 0) + delta * 3.8 * zombie.userData.walkActivity;
+
+  const activity = zombie.userData.walkActivity;
+  const stride = Math.sin(zombie.userData.walkTime);
+  const counterStride = Math.sin(zombie.userData.walkTime + Math.PI);
+  const lift = Math.abs(Math.sin(zombie.userData.walkTime * 2));
+
+  leftArm.rotation.x = rest.leftArmX + stride * .18 * activity;
+  rightArm.rotation.x = rest.rightArmX + counterStride * .18 * activity;
+  leftLeg.rotation.x = rest.leftLegX + counterStride * .13 * activity;
+  rightLeg.rotation.x = rest.rightLegX + stride * .13 * activity;
+  zombie.position.y = rest.rootY + lift * .035 * activity;
+  zombie.rotation.z = rest.rootRotZ + Math.sin(zombie.userData.walkTime * 2) * .035 * activity;
+}
+
 export function updateZombies(player, delta, onDamage) {
   for (const z of zombies) {
     const type = ZOMBIE_TYPES[z.userData.typeKey] ?? ZOMBIE_TYPES.walker;
@@ -211,6 +272,7 @@ export function updateZombies(player, delta, onDamage) {
     z.position.x += (dx / dist) * type.speed * delta;
     z.position.z += (dz / dist) * type.speed * delta;
     z.rotation.y = Math.atan2(dx, dz) + ZOMBIE_VISUAL_FACING_OFFSET;
+    updateWalkerWalkAnimation(z, delta, dist > CONFIG.player.radius + type.radius * .5);
     z.userData.hitTimer = Math.max(0, z.userData.hitTimer - delta);
     z.userData.hitFlash = Math.max(0, z.userData.hitFlash - delta);
     const flash = z.userData.hitFlash / .12;

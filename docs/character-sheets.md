@@ -26,7 +26,7 @@ The main attack identity is a baseball bat swing. The current game can keep usin
 
 ## Walker Zombie
 
-A medium green, cute-spooky blocky zombie wearing a dull blue ragged shirt/tunic. The Walker Zombie has been remodeled to match the reference sheet: a square head, simple white eyes with dark pupils, a small blocky nose, an open square mouth with chunky teeth, small horn-like head spikes, chunky green arms, dark pants, and dark boots. Walkers are normal-sized, slow-to-medium chasers with baseline health, contact damage, XP, and coin rewards. Their job is to crowd the player from the start without becoming frightening or realistic.
+A medium green, cute-spooky blocky zombie wearing a dull blue ragged shirt/tunic. The Walker Zombie has been remodeled to match the reference sheet: a square head, simple white eyes with dark pupils, a small blocky nose, an open square mouth with chunky teeth, small horn-like head spikes, chunky green arms, dark pants, and dark boots. Walkers are normal-sized, slow-to-medium chasers with baseline health, contact damage, XP, and coin rewards. Their job is to crowd the player from the start without becoming frightening or realistic. The Walker Zombie now has a simple shamble/walk animation foundation: subtle opposing arm-and-leg swings, a tiny body bob, and a light side-to-side sway while moving.
 
 ## Little / Runner Zombie
 
