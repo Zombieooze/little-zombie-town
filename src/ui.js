@@ -5,6 +5,12 @@ const $ = (id) => document.getElementById(id);
 const screens = ['menu-screen', 'pause-screen', 'upgrade-screen', 'end-screen'];
 
 let selectedUpgradeIndex = 0;
+let selectedMenuIndex = 0;
+const menuGroups = {
+  menu: { root: 'menu-screen', selector: '#start-button, #menu-fullscreen-button:not(.hidden)' },
+  paused: { root: 'pause-screen', selector: '#resume-button' },
+  ended: { root: 'end-screen', selector: '#again-button, #menu-button' },
+};
 let toastTimer = null;
 
 export function initUI({ onStart, onUpgrade, onMenu, onPause, onResume, onFullscreen }) {
@@ -40,6 +46,33 @@ export function showControllerMessage(message) {
   toastTimer = setTimeout(() => toast.classList.add('hidden'), 1800);
 }
 
+function getMenuButtons(context) {
+  const group = menuGroups[context];
+  if (!group) return [];
+  return [...$(group.root).querySelectorAll(group.selector)].filter((button) => button.offsetParent !== null);
+}
+
+export function moveMenuSelection(context, direction) {
+  const buttons = getMenuButtons(context);
+  if (!buttons.length) return;
+  selectedMenuIndex = (selectedMenuIndex + direction + buttons.length) % buttons.length;
+  updateMenuSelection(context);
+}
+
+export function activateMenuSelection(context) {
+  const buttons = getMenuButtons(context);
+  const button = buttons[selectedMenuIndex] || buttons[0];
+  if (button) button.click();
+}
+
+function updateMenuSelection(context) {
+  Object.keys(menuGroups).forEach((key) => getMenuButtons(key).forEach((button) => button.classList.remove('controller-selected')));
+  const buttons = getMenuButtons(context);
+  if (!buttons.length) return;
+  selectedMenuIndex = Math.min(selectedMenuIndex, buttons.length - 1);
+  buttons[selectedMenuIndex].classList.add('controller-selected');
+}
+
 export function moveUpgradeSelection(direction) {
   const cards = [...$('upgrade-cards').querySelectorAll('[data-upgrade]')];
   if (!cards.length) return;
@@ -57,11 +90,14 @@ function updateUpgradeSelection() {
 }
 
 export function showScreen(name) {
+  selectedMenuIndex = 0;
   screens.forEach((id) => {
     $(id).classList.toggle('hidden', id !== name);
     $(id).classList.toggle('active', id === name);
   });
   $('hud').classList.toggle('hidden', name === 'menu-screen' || name === 'end-screen');
+  const context = name === 'menu-screen' ? 'menu' : name === 'pause-screen' ? 'paused' : name === 'end-screen' ? 'ended' : null;
+  if (context) updateMenuSelection(context);
 }
 
 export function hideOverlays() { screens.filter((id) => id !== 'menu-screen').forEach((id) => { $(id).classList.add('hidden'); $(id).classList.remove('active'); }); }
@@ -88,6 +124,7 @@ export function showUpgrades(options) {
       <h3>${upgrade.name}</h3><p>${upgrade.description}</p>
     </button>`).join('');
   showScreen('upgrade-screen');
+  selectedUpgradeIndex = options.length === 3 ? 1 : 0;
   updateUpgradeSelection();
 }
 

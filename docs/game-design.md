@@ -148,10 +148,12 @@ Spawn pressure increases over the run: spawn delays shrink gradually, the active
 - Browser Gamepad API support targets standard Xbox-style controllers first, including Xbox 360-style desktop testing where the browser exposes a compatible mapping.
 - **Left stick** moves the survivor using the same camera-relative movement system as keyboard WASD and the mobile joystick, with a deadzone to prevent drift and normalized diagonal movement.
 - **Right stick** rotates camera yaw and adjusts pitch using the same clamp limits as mouse/touch camera controls.
-- **A / button 0** jumps during gameplay and selects the highlighted level-up card when cards are open.
+- **A / button 0** jumps during gameplay, selects highlighted menu buttons, and selects the highlighted level-up card when cards are open.
+- **B / button 1** cancels or backs out where safe, including resuming from the simple pause menu.
 - **Start/Menu / button 9** pauses and resumes the current run when mapped by the browser/controller.
-- **D-pad left/right** or left-stick left/right moves the controller highlight across level-up cards. Mouse and touch card selection remain supported.
-- Controller mappings can vary by browser and hardware; if no gamepad is connected, keyboard, mouse, and touch input continue unchanged.
+- **LB/RB / buttons 4 and 5** smoothly zoom the camera out/in through the same clamped camera distance used by mouse wheel and mobile pinch zoom. LT/RT may also mirror zoom on controllers/browsers that expose them consistently.
+- **D-pad or left stick** moves through start, pause, game-over/victory, and level-up card selections with a short repeat delay so held input does not skip too quickly. Level-up cards default to the middle card when three choices appear.
+- Controller mappings can vary slightly by browser and hardware; Xbox-style controllers are the main target, and if no gamepad is connected, keyboard, mouse, and touch input continue unchanged.
 
 Desktop controls remain keyboard and mouse:
 
