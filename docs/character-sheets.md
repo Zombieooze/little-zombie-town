@@ -34,7 +34,7 @@ A smaller, faster zombie with green skin and a purple ragged shirt/tunic. The Ru
 
 ## Brute Zombie
 
-A large, chunky zombie with green skin, a square blocky head, angry white eyes with dark pupils, an open mouth with chunky teeth, thick arms, heavy fists, a bulky dark brown/rusty ragged vest, dark pants, and dark boots. The Brute Zombie has been remodeled to match the reference sheet with a wider torso, square metal vest patches, and a heavier silhouette so it reads as tougher and slower than the Walker and Runner. Brutes move slower than walkers, have much more health, deal stronger contact damage, and drop a larger XP and coin reward. They begin appearing around level 5 or 3:00 into the run.
+A large, chunky zombie with green skin, a square blocky head, angry white eyes with dark pupils, an open mouth with chunky teeth, thick arms, heavy fists, a bulky dark brown/rusty ragged vest, dark pants, and dark boots. The Brute Zombie has been remodeled to match the reference sheet with a wider torso, square metal vest patches, and a heavier silhouette so it reads as tougher and slower than the Walker and Runner. Brutes move slower than walkers, have much more health, deal stronger contact damage, and drop a larger XP and coin reward. The Brute Zombie now has corrected shoulder/upper-torso arm attachment for its two-part arms, keeping the upper arms, lower arms, and heavy fists connected from gameplay angles. Brutes also use a slow heavy lumbering walk animation with longer strides, weighted arm swings, a controlled stomp bob, and a subtle side-to-side weight shift so they read as heavy without changing gameplay balance. They begin appearing around level 5 or 3:00 into the run.
 
 ## Spitter Zombie
 
