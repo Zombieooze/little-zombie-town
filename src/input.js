@@ -3,7 +3,7 @@ import { CONFIG } from './config.js';
 const keys = new Set();
 const pressed = new Set();
 const touchMove = { x: 0, z: 0 };
-const gamepadMove = { x: 0, z: 0 };
+const gamepadMove = { x: 0, y: 0, z: 0 };
 const gamepadLook = { x: 0, y: 0 };
 const gamepadButtons = new Set();
 const previousGamepadButtons = new Set();
@@ -59,7 +59,7 @@ function setActiveGamepad(gamepad, connectedMessage = false) {
 
 function clearGamepadState(message) {
   activeGamepadIndex = null;
-  gamepadMove.x = 0; gamepadMove.z = 0;
+  gamepadMove.x = 0; gamepadMove.y = 0; gamepadMove.z = 0;
   gamepadLook.x = 0; gamepadLook.y = 0;
   gamepadButtons.clear(); previousGamepadButtons.clear(); gamepadButtonPressed.clear();
   if (message && controllerStatusCallback) controllerStatusCallback(message);
@@ -75,12 +75,22 @@ function refreshGamepadButtons(gamepad) {
   gamepadButtons.forEach((button) => previousGamepadButtons.add(button));
   gamepadButtons.clear();
 
-  // Xbox-style defaults: button 0 = A / jump/select; button 9 = Start/Menu / pause.
+  // Xbox-style defaults: button 0 = A, 1 = B, 4/5 = LB/RB, 9 = Start/Menu.
   if (readButton(gamepad, 0)) gamepadButtons.add('a');
+  if (readButton(gamepad, 1)) gamepadButtons.add('b');
+  if (readButton(gamepad, 4)) gamepadButtons.add('lb');
+  if (readButton(gamepad, 5)) gamepadButtons.add('rb');
+  // Some browser/controller pairs expose triggers as buttons; let them mirror bumper zoom safely.
+  if (readButton(gamepad, 6)) gamepadButtons.add('lt');
+  if (readButton(gamepad, 7)) gamepadButtons.add('rt');
   const fallbackStartPressed = gamepad.mapping !== 'standard' && (readButton(gamepad, 7) || readButton(gamepad, 8));
   if (readButton(gamepad, 9) || fallbackStartPressed) gamepadButtons.add('start');
+  if (readButton(gamepad, 12)) gamepadButtons.add('dpad-up');
+  if (readButton(gamepad, 13)) gamepadButtons.add('dpad-down');
   if (readButton(gamepad, 14)) gamepadButtons.add('dpad-left');
   if (readButton(gamepad, 15)) gamepadButtons.add('dpad-right');
+  if (gamepadMove.y < -0.7) gamepadButtons.add('stick-up');
+  if (gamepadMove.y > 0.7) gamepadButtons.add('stick-down');
   if (gamepadMove.x < -0.7) gamepadButtons.add('stick-left');
   if (gamepadMove.x > 0.7) gamepadButtons.add('stick-right');
 
@@ -107,6 +117,7 @@ export function updateGamepadInput() {
   const left = normalizeStick(applyDeadzone(axes[0] || 0), applyDeadzone(axes[1] || 0));
   const right = normalizeStick(applyDeadzone(axes[2] || 0), applyDeadzone(axes[3] || 0));
   gamepadMove.x = left.x;
+  gamepadMove.y = left.y;
   gamepadMove.z = left.y;
   gamepadLook.x = right.x;
   gamepadLook.y = right.y;

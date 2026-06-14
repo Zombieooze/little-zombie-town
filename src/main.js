@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
-import { initInput, consumePress, resetTouchMovement, updateGamepadInput, getGamepadLookVector, consumeGamepadPress, setControllerStatusCallback } from './input.js';
-import { initUI, updateHUD, showScreen, hideOverlays, showUpgrades, showEnd, setMuted, updateMenuCoins, setGameActionsVisible, setPauseButtonVisible, setFullscreenActive, showControllerMessage, moveUpgradeSelection, getSelectedUpgradeId } from './ui.js';
+import { initInput, consumePress, resetTouchMovement, updateGamepadInput, getGamepadLookVector, consumeGamepadPress, setControllerStatusCallback, isGamepadDown } from './input.js';
+import { initUI, updateHUD, showScreen, hideOverlays, showUpgrades, showEnd, setMuted, updateMenuCoins, setGameActionsVisible, setPauseButtonVisible, setFullscreenActive, showControllerMessage, moveUpgradeSelection, getSelectedUpgradeId, moveMenuSelection, activateMenuSelection } from './ui.js';
 import { addCoins } from './save.js';
 import { createWorld } from './world.js';
 import { createPlayer, updatePlayer } from './player.js';
@@ -28,6 +28,7 @@ let healFloaters = [];
 let attackVisualTimer = 0;
 let cameraShake = 0;
 let pendingChoices = [];
+let controllerNavCooldown = 0;
 const cameraControls = {
   yaw: Math.atan2(CONFIG.camera.offset.x, CONFIG.camera.offset.z),
   pitch: Math.atan2(CONFIG.camera.offset.y, Math.hypot(CONFIG.camera.offset.x, CONFIG.camera.offset.z)),
@@ -53,6 +54,7 @@ const cameraLimits = {
   touchYawSpeed: 0.0042,
   touchPitchSpeed: 0.0034,
   zoomSpeed: 0.0025,
+  gamepadZoomSpeed: 13,
 };
 
 const state = {
@@ -378,6 +380,16 @@ function updateCamera(delta) {
     cameraLimits.minPitch,
     cameraLimits.maxPitch,
   );
+  const zoomOut = isGamepadDown('lb') || isGamepadDown('lt');
+  const zoomIn = isGamepadDown('rb') || isGamepadDown('rt');
+  if (zoomOut || zoomIn) {
+    const zoomDirection = (zoomOut ? 1 : 0) + (zoomIn ? -1 : 0);
+    cameraControls.targetDistance = THREE.MathUtils.clamp(
+      cameraControls.targetDistance + zoomDirection * cameraLimits.gamepadZoomSpeed * delta,
+      cameraLimits.minDistance,
+      cameraLimits.maxDistance,
+    );
+  }
   cameraControls.distance = THREE.MathUtils.lerp(cameraControls.distance, cameraControls.targetDistance, 1 - Math.exp(-14 * delta));
   const target = new THREE.Vector3(player.position.x, 0.8, player.position.z);
   const horizontalDistance = Math.cos(cameraControls.pitch) * cameraControls.distance;
@@ -399,6 +411,50 @@ function resize() {
   }
 }
 
+
+function consumeControllerNav(negativeButtons, positiveButtons) {
+  if (controllerNavCooldown > 0) return 0;
+  const negative = negativeButtons.some((button) => isGamepadDown(button));
+  const positive = positiveButtons.some((button) => isGamepadDown(button));
+  if (negative === positive) return 0;
+  controllerNavCooldown = 0.22;
+  return negative ? -1 : 1;
+}
+
+function handleControllerMenus(delta) {
+  controllerNavCooldown = Math.max(0, controllerNavCooldown - delta);
+  const vertical = consumeControllerNav(['dpad-up', 'stick-up'], ['dpad-down', 'stick-down']);
+  const horizontal = consumeControllerNav(['dpad-left', 'stick-left'], ['dpad-right', 'stick-right']);
+
+  if (mode === 'menu') {
+    if (vertical || horizontal) moveMenuSelection('menu', vertical || horizontal);
+    if (consumeGamepadPress('a')) activateMenuSelection('menu');
+    return;
+  }
+
+  if (mode === 'paused') {
+    if (vertical || horizontal) moveMenuSelection('paused', vertical || horizontal);
+    if (consumeGamepadPress('a')) activateMenuSelection('paused');
+    if (consumeGamepadPress('b')) resumeGame();
+    return;
+  }
+
+  if (mode === 'ended') {
+    if (vertical || horizontal) moveMenuSelection('ended', vertical || horizontal);
+    if (consumeGamepadPress('a')) activateMenuSelection('ended');
+    return;
+  }
+
+  if (mode === 'upgrade') {
+    const direction = horizontal || consumeControllerNav(['dpad-left', 'stick-left'], ['dpad-right', 'stick-right']);
+    if (direction) moveUpgradeSelection(direction);
+    if (consumeGamepadPress('a')) {
+      const selectedUpgradeId = getSelectedUpgradeId();
+      if (selectedUpgradeId) chooseUpgrade(selectedUpgradeId);
+    }
+  }
+}
+
 function tick() {
   requestAnimationFrame(tick);
   const delta = Math.min(clock.getDelta(), 0.05);
@@ -406,17 +462,7 @@ function tick() {
   updateGamepadInput();
   if (consumePress('m')) { muted = !muted; setMuted(muted); }
   if ((consumePress('p') || consumePress('escape') || consumeGamepadPress('start')) && (mode === 'playing' || mode === 'paused')) { mode === 'playing' ? pauseGame() : resumeGame(); }
-
-  if (mode === 'upgrade') {
-    if (consumeGamepadPress('dpad-left')) moveUpgradeSelection(-1);
-    if (consumeGamepadPress('dpad-right')) moveUpgradeSelection(1);
-    if (consumeGamepadPress('stick-left')) moveUpgradeSelection(-1);
-    if (consumeGamepadPress('stick-right')) moveUpgradeSelection(1);
-    if (consumeGamepadPress('a')) {
-      const selectedUpgradeId = getSelectedUpgradeId();
-      if (selectedUpgradeId) chooseUpgrade(selectedUpgradeId);
-    }
-  }
+  handleControllerMenus(delta);
 
   if (mode === 'playing') {
     state.elapsed += delta;
