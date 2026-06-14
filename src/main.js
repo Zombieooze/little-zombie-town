@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
-import { initInput, consumePress, resetTouchMovement } from './input.js';
-import { initUI, updateHUD, showScreen, hideOverlays, showUpgrades, showEnd, setMuted, updateMenuCoins, setGameActionsVisible, setPauseButtonVisible } from './ui.js';
+import { initInput, consumePress, resetTouchMovement, updateGamepadInput, getGamepadLookVector, consumeGamepadPress, setControllerStatusCallback } from './input.js';
+import { initUI, updateHUD, showScreen, hideOverlays, showUpgrades, showEnd, setMuted, updateMenuCoins, setGameActionsVisible, setPauseButtonVisible, setFullscreenActive, showControllerMessage, moveUpgradeSelection, getSelectedUpgradeId } from './ui.js';
 import { addCoins } from './save.js';
 import { createWorld } from './world.js';
 import { createPlayer, updatePlayer } from './player.js';
@@ -61,6 +61,7 @@ const state = {
   pulseDamage: CONFIG.pulse.damage, speedMultiplier: 1, bossSpawnCount: 0, batKnockback: 0,
 };
 
+setControllerStatusCallback(showControllerMessage);
 initInput();
 initCameraControls();
 createWorld(scene);
@@ -113,10 +114,16 @@ function resumeGame() {
 async function requestGameFullscreen() {
   const root = document.getElementById('game-root');
   try {
-    if (!document.fullscreenElement && root?.requestFullscreen) await root.requestFullscreen();
-    if (screen.orientation?.lock) await screen.orientation.lock('landscape').catch(() => {});
+    if (document.fullscreenElement) {
+      if (document.exitFullscreen) await document.exitFullscreen();
+    } else if (root?.requestFullscreen) {
+      await root.requestFullscreen();
+      if (screen.orientation?.lock) await screen.orientation.lock('landscape').catch(() => {});
+    }
   } catch (_) {
     // Fullscreen and orientation lock support varies across mobile browsers. Playing remains optional.
+  } finally {
+    setFullscreenActive(!!document.fullscreenElement);
   }
 }
 
@@ -364,6 +371,13 @@ function stopCameraTouchControls() {
 }
 
 function updateCamera(delta) {
+  const gamepadLook = getGamepadLookVector();
+  cameraControls.yaw -= gamepadLook.x * CONFIG.gamepad.cameraSensitivity * delta;
+  cameraControls.pitch = THREE.MathUtils.clamp(
+    cameraControls.pitch + gamepadLook.y * CONFIG.gamepad.cameraSensitivity * delta,
+    cameraLimits.minPitch,
+    cameraLimits.maxPitch,
+  );
   cameraControls.distance = THREE.MathUtils.lerp(cameraControls.distance, cameraControls.targetDistance, 1 - Math.exp(-14 * delta));
   const target = new THREE.Vector3(player.position.x, 0.8, player.position.z);
   const horizontalDistance = Math.cos(cameraControls.pitch) * cameraControls.distance;
@@ -389,8 +403,20 @@ function tick() {
   requestAnimationFrame(tick);
   const delta = Math.min(clock.getDelta(), 0.05);
   resize();
+  updateGamepadInput();
   if (consumePress('m')) { muted = !muted; setMuted(muted); }
-  if ((consumePress('p') || consumePress('escape')) && (mode === 'playing' || mode === 'paused')) { mode === 'playing' ? pauseGame() : resumeGame(); }
+  if ((consumePress('p') || consumePress('escape') || consumeGamepadPress('start')) && (mode === 'playing' || mode === 'paused')) { mode === 'playing' ? pauseGame() : resumeGame(); }
+
+  if (mode === 'upgrade') {
+    if (consumeGamepadPress('dpad-left')) moveUpgradeSelection(-1);
+    if (consumeGamepadPress('dpad-right')) moveUpgradeSelection(1);
+    if (consumeGamepadPress('stick-left')) moveUpgradeSelection(-1);
+    if (consumeGamepadPress('stick-right')) moveUpgradeSelection(1);
+    if (consumeGamepadPress('a')) {
+      const selectedUpgradeId = getSelectedUpgradeId();
+      if (selectedUpgradeId) chooseUpgrade(selectedUpgradeId);
+    }
+  }
 
   if (mode === 'playing') {
     state.elapsed += delta;

@@ -1,9 +1,18 @@
+import { CONFIG } from './config.js';
+
 const keys = new Set();
 const pressed = new Set();
 const touchMove = { x: 0, z: 0 };
+const gamepadMove = { x: 0, z: 0 };
+const gamepadLook = { x: 0, y: 0 };
+const gamepadButtons = new Set();
+const previousGamepadButtons = new Set();
+const gamepadButtonPressed = new Set();
 const MOBILE_QUERY = '(hover: none), (pointer: coarse), (max-width: 820px), (max-height: 520px)';
 const SMALL_SCREEN_QUERY = '(max-width: 820px), (max-height: 520px)';
 let mobileControlsReady = false;
+let activeGamepadIndex = null;
+let controllerStatusCallback = null;
 
 function setMobileClass() {
   const isTouchDevice = navigator.maxTouchPoints > 0;
@@ -22,6 +31,86 @@ function pressKey(key) {
 
 function releaseKey(key) {
   keys.delete(key.toLowerCase());
+}
+
+function applyDeadzone(value, deadzone = CONFIG.gamepad.deadzone) {
+  if (Math.abs(value) < deadzone) return 0;
+  const scaled = (Math.abs(value) - deadzone) / (1 - deadzone);
+  return Math.sign(value) * Math.min(1, scaled);
+}
+
+function normalizeStick(x, y) {
+  const length = Math.hypot(x, y);
+  if (length <= 1) return { x, y };
+  return { x: x / length, y: y / length };
+}
+
+function findFirstGamepad() {
+  const pads = navigator.getGamepads ? [...navigator.getGamepads()] : [];
+  return pads.find((pad) => pad?.connected) || null;
+}
+
+function setActiveGamepad(gamepad, connectedMessage = false) {
+  if (!gamepad) return;
+  const changed = activeGamepadIndex !== gamepad.index;
+  activeGamepadIndex = gamepad.index;
+  if ((changed || connectedMessage) && controllerStatusCallback) controllerStatusCallback('Controller connected');
+}
+
+function clearGamepadState(message) {
+  activeGamepadIndex = null;
+  gamepadMove.x = 0; gamepadMove.z = 0;
+  gamepadLook.x = 0; gamepadLook.y = 0;
+  gamepadButtons.clear(); previousGamepadButtons.clear(); gamepadButtonPressed.clear();
+  if (message && controllerStatusCallback) controllerStatusCallback(message);
+}
+
+function readButton(gamepad, index) {
+  const button = gamepad?.buttons?.[index];
+  return !!button && (button.pressed || button.value > 0.5);
+}
+
+function refreshGamepadButtons(gamepad) {
+  previousGamepadButtons.clear();
+  gamepadButtons.forEach((button) => previousGamepadButtons.add(button));
+  gamepadButtons.clear();
+
+  // Xbox-style defaults: button 0 = A / jump/select; button 9 = Start/Menu / pause.
+  if (readButton(gamepad, 0)) gamepadButtons.add('a');
+  const fallbackStartPressed = gamepad.mapping !== 'standard' && (readButton(gamepad, 7) || readButton(gamepad, 8));
+  if (readButton(gamepad, 9) || fallbackStartPressed) gamepadButtons.add('start');
+  if (readButton(gamepad, 14)) gamepadButtons.add('dpad-left');
+  if (readButton(gamepad, 15)) gamepadButtons.add('dpad-right');
+  if (gamepadMove.x < -0.7) gamepadButtons.add('stick-left');
+  if (gamepadMove.x > 0.7) gamepadButtons.add('stick-right');
+
+  gamepadButtonPressed.clear();
+  gamepadButtons.forEach((button) => {
+    if (!previousGamepadButtons.has(button)) gamepadButtonPressed.add(button);
+  });
+}
+
+export function setControllerStatusCallback(callback) {
+  controllerStatusCallback = callback;
+}
+
+export function updateGamepadInput() {
+  if (!navigator.getGamepads) return;
+  let gamepad = activeGamepadIndex === null ? null : navigator.getGamepads()[activeGamepadIndex];
+  if (!gamepad?.connected) {
+    gamepad = findFirstGamepad();
+    if (gamepad) setActiveGamepad(gamepad);
+    else { clearGamepadState(); return; }
+  }
+
+  const axes = gamepad.axes || [];
+  const left = normalizeStick(applyDeadzone(axes[0] || 0), applyDeadzone(axes[1] || 0));
+  const right = normalizeStick(applyDeadzone(axes[2] || 0), applyDeadzone(axes[3] || 0));
+  gamepadMove.x = left.x;
+  gamepadMove.z = left.y;
+  gamepadLook.x = right.x;
+  gamepadLook.y = right.y;
+  refreshGamepadButtons(gamepad);
 }
 
 function initMobileControls() {
@@ -97,6 +186,10 @@ export function initInput() {
   else mobileMedia.addListener(setMobileClass);
   window.addEventListener('resize', setMobileClass);
   window.addEventListener('orientationchange', setMobileClass);
+  window.addEventListener('gamepadconnected', (event) => setActiveGamepad(event.gamepad, true));
+  window.addEventListener('gamepaddisconnected', (event) => {
+    if (activeGamepadIndex === event.gamepad.index) clearGamepadState('Controller disconnected');
+  });
   window.addEventListener('keydown', (event) => {
     const key = event.key.toLowerCase();
     if (!keys.has(key)) pressed.add(key);
@@ -112,8 +205,8 @@ export function resetTouchMovement() {
 }
 
 export function getMoveVector() {
-  let x = touchMove.x;
-  let z = touchMove.z;
+  let x = touchMove.x + gamepadMove.x;
+  let z = touchMove.z + gamepadMove.z;
   if (keys.has('a')) x -= 1;
   if (keys.has('d')) x += 1;
   if (keys.has('w')) z -= 1;
@@ -122,6 +215,13 @@ export function getMoveVector() {
   return { x: x / length, z: z / length };
 }
 
+export function getGamepadLookVector() { return { ...gamepadLook }; }
+export function isGamepadDown(button) { return gamepadButtons.has(button); }
+export function consumeGamepadPress(button) {
+  const had = gamepadButtonPressed.has(button);
+  gamepadButtonPressed.delete(button);
+  return had;
+}
 export function isDown(key) { return keys.has(key.toLowerCase()); }
 export function consumePress(key) {
   key = key.toLowerCase();

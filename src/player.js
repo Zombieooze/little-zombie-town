@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
-import { consumePress, getMoveVector, isDown } from './input.js';
+import { consumePress, consumeGamepadPress, getMoveVector, isDown } from './input.js';
 
 const makeMat = (color) => new THREE.MeshStandardMaterial({ color, roughness: 0.82 });
 // Character art faces local -Z; movement rotation math points local +Z, so keep visuals flipped once here.
@@ -101,7 +101,7 @@ export function createPlayer(scene) {
 }
 
 export function updatePlayer(player, delta, attackTimer = 0, cameraYaw = 0) {
-  if (consumePress(' ') && player.userData.grounded) {
+  if ((consumePress(' ') || consumeGamepadPress('a')) && player.userData.grounded) {
     player.userData.jumpVelocity = CONFIG.player.jumpVelocity;
     player.userData.grounded = false;
   }

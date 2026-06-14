@@ -14,7 +14,7 @@
 
 - Static browser game with no build system or backend.
 - Procedural low-poly town using basic Three.js geometry.
-- One readable procedural survivor character with WASD movement, sprinting, touch joystick support, and a quick arcade jump.
+- One readable procedural survivor character with WASD movement, sprinting, touch joystick support, Xbox-style controller support, and a quick arcade jump.
 - Survivor visual direction: red shirt or jacket, dark undershirt, blue pants, dark shoes, white/red/black cap, simple brown backpack, and wooden baseball bat. The survivor rises as a whole when jumping, tucks the legs slightly while airborne, and uses a small landing dip when returning to the ground.
 - Multiple simple procedural zombie types that all chase the player directly.
 - Automatic bat swing attack with a gold swing arc. The bat is a fixed close-range emergency weapon; damage and cooldown can improve, but range/area does not scale. Knockback Up is removed from the current level-up card pool.
@@ -24,7 +24,7 @@
 ## Movement and jump
 
 - Base player and zombie movement speeds are tuned about **10% faster** than the previous stable feel so the town pace is slightly snappier without changing the 10-minute run clock, spawn cadence, cooldowns, XP curve, medkit timers, or damage tick timers.
-- **Spacebar** starts a quick, modest arcade jump only while grounded. Holding Spacebar does not repeat jumps in midair.
+- **Spacebar** or an Xbox-style controller **A** button starts a quick, modest arcade jump only while grounded. Holding the jump input does not repeat jumps in midair.
 - The player keeps camera-relative steering while airborne, so pressing a new WASD direction during a jump changes the movement direction instead of locking the original takeoff direction.
 - Jumping is currently a movement-feel feature only: it does not grant invincibility, stomp damage, dodge frames, or special combat rules. Bat swings and special abilities can still operate while jumping.
 - Cars, buildings, and other town props still do not block movement in this pass. Obstacle collision remains planned for a later dedicated pass.
@@ -143,6 +143,16 @@ Spawn pressure increases over the run: spawn delays shrink gradually, the active
 
 ## Controls
 
+## Controller support
+
+- Browser Gamepad API support targets standard Xbox-style controllers first, including Xbox 360-style desktop testing where the browser exposes a compatible mapping.
+- **Left stick** moves the survivor using the same camera-relative movement system as keyboard WASD and the mobile joystick, with a deadzone to prevent drift and normalized diagonal movement.
+- **Right stick** rotates camera yaw and adjusts pitch using the same clamp limits as mouse/touch camera controls.
+- **A / button 0** jumps during gameplay and selects the highlighted level-up card when cards are open.
+- **Start/Menu / button 9** pauses and resumes the current run when mapped by the browser/controller.
+- **D-pad left/right** or left-stick left/right moves the controller highlight across level-up cards. Mouse and touch card selection remain supported.
+- Controller mappings can vary by browser and hardware; if no gamepad is connected, keyboard, mouse, and touch input continue unchanged.
+
 Desktop controls remain keyboard and mouse:
 
 - **WASD**: Move camera-relative.
@@ -150,7 +160,7 @@ Desktop controls remain keyboard and mouse:
 - **Space**: Jump/hop.
 - **Right mouse drag**: Orbit the camera.
 - **Scroll**: Zoom the camera in or out.
-- **P** or **Escape**: Pause or unpause. The on-screen pause button also pauses and resumes the current run without resetting timer progress, coins, zombies, pickups, or abilities.
+- **P**, **Escape**, or an Xbox-style controller **Start/Menu** button: Pause or unpause. The on-screen pause button also pauses and resumes the current run without resetting timer progress, coins, zombies, pickups, or abilities.
 - **M**: Toggle mute placeholder.
 
 Mobile/touch controls are hidden on normal desktop/laptop screens and appear only for coarse-pointer touch layouts or small viewports:
@@ -160,7 +170,7 @@ Mobile/touch controls are hidden on normal desktop/laptop screens and appear onl
 - **Two-finger pinch on the game canvas**: Smoothly zooms the camera closer or farther from the player, clamped to safe minimum and maximum distances and not saved permanently.
 - **Lower-right JUMP button**: Triggers the same grounded jump as Spacebar and can be tapped while moving.
 - **Level-up cards**: Large touch-safe card buttons; while the level-up overlay is open, touch controls do not move the player or rotate the camera.
-- **Fullscreen buttons**: Mobile menu/gameplay buttons request browser fullscreen and landscape orientation where supported. Fullscreen is optional because mobile browsers cannot always hide the address bar; mobile web app meta tags and fullscreen requests simply help reduce browser chrome when available.
+- **Fullscreen buttons**: Mobile menu/gameplay buttons toggle browser fullscreen on and off and request landscape orientation where supported. Fullscreen is optional because mobile browsers cannot always hide the address bar; mobile web app meta tags and fullscreen requests simply help reduce browser chrome when available.
 - **Pause button**: Pauses the run, timer, zombies, pickups, special abilities, fire patches/timed effects, player input, and camera touch controls until Resume/P/Escape is used.
 - **Small phone portrait screens**: Show a rotate-phone overlay requiring landscape play. The overlay is a CSS/JS fallback and desktop controls remain unaffected.
 
