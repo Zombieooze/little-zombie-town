@@ -8,7 +8,32 @@ const ZOMBIE_TYPES = CONFIG.zombie.types;
 const ZOMBIE_VISUAL_FACING_OFFSET = Math.PI;
 const hitFlashColor = new THREE.Color(0xfff1a8);
 
+const GRAVEBREAKER_SLAM = {
+  duration: 2.9,
+  impactTime: 2.45,
+  cooldownMin: 8,
+  cooldownMax: 12,
+  triggerRange: 10.5,
+  warningRadius: 4.6,
+};
+
 function material(color) { return new THREE.MeshStandardMaterial({ color, roughness: 0.85 }); }
+
+function createGravebreakerSlamWarningRing() {
+  const ringMaterial = new THREE.MeshBasicMaterial({
+    color: 0xff3a18,
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+  const ring = new THREE.Mesh(new THREE.RingGeometry(.92, 1, 72), ringMaterial);
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.y = .035;
+  ring.visible = false;
+  ring.userData.baseRadius = GRAVEBREAKER_SLAM.warningRadius;
+  return ring;
+}
 
 function createSlimeProjectileMesh() {
   const group = new THREE.Group();
@@ -560,8 +585,12 @@ function createBossZombieModel(group, skin, shirt) {
     leftArm, rightArm, leftLeg, rightLeg, head, neck, torso, chestPlate, hips, belt,
     skull, crown, leftShoulder, rightShoulder,
   };
+  const slamWarningRing = createGravebreakerSlamWarningRing();
+  group.add(slamWarningRing);
+
   group.userData.displayName = 'Gravebreaker';
   group.userData.futureSlamOrigin = new THREE.Vector3(0, .08, -.82);
+  group.userData.slamWarningRing = slamWarningRing;
 }
 
 function addBruteArm(group, skinColor, handColor, x, y, z, side) {
@@ -737,6 +766,12 @@ function zombieMesh(typeKey = 'walker', progress = {}) {
     bossSpawned: false,
     walkTime: 0,
     baseY: g.position.y,
+    slamTimer: 0,
+    slamCooldown: typeKey === 'boss'
+      ? THREE.MathUtils.randFloat(GRAVEBREAKER_SLAM.cooldownMin * .65, GRAVEBREAKER_SLAM.cooldownMax)
+      : 0,
+    isSlamWindingUp: false,
+    slamHasImpactedVisual: false,
   };
   captureZombieAnimationRestPose(g);
   return g;
@@ -786,8 +821,8 @@ export function spawnZombie(scene, progress = {}) {
 }
 
 function captureZombieAnimationRestPose(zombie) {
-  if (!['walker', 'runner', 'brute', 'spitter', 'crusher'].includes(zombie.userData.typeKey) || !zombie.userData.parts) return;
-  const { leftArm, rightArm, leftLeg, rightLeg, torso, chestPlate, leftShoulder, rightShoulder } = zombie.userData.parts;
+  if (!['walker', 'runner', 'brute', 'spitter', 'crusher', 'boss'].includes(zombie.userData.typeKey) || !zombie.userData.parts) return;
+  const { leftArm, rightArm, leftLeg, rightLeg, torso, chestPlate, hips, head, neck, crown, skull, leftShoulder, rightShoulder } = zombie.userData.parts;
   zombie.userData.walkRestPose = {
     rootY: zombie.position.y,
     rootRotX: zombie.rotation.x,
@@ -800,6 +835,11 @@ function captureZombieAnimationRestPose(zombie) {
     rightLegX: rightLeg.rotation.x,
     torsoRotX: torso?.rotation.x ?? 0,
     chestPlateRotX: chestPlate?.rotation.x ?? 0,
+    hipsRotZ: hips?.rotation.z ?? 0,
+    headRotX: head?.rotation.x ?? 0,
+    neckRotX: neck?.rotation.x ?? 0,
+    crownRotX: crown?.rotation.x ?? 0,
+    skullRotX: skull?.rotation.x ?? 0,
     leftShoulderY: leftShoulder?.position.y ?? 0,
     rightShoulderY: rightShoulder?.position.y ?? 0,
     leftShoulderRotZ: leftShoulder?.rotation.z ?? 0,
@@ -815,6 +855,10 @@ const ZOMBIE_ANIMATION_PRESETS = {
     cycleSpeed: 1.75, activityDamp: 5, armSwing: .46, legSwing: .28, bob: .055, sway: .045,
     stomp: true, torsoRoll: .035, shoulderLift: .045, shoulderRoll: .035,
   },
+  boss: {
+    cycleSpeed: 1.18, activityDamp: 4.2, armSwing: .64, legSwing: .34, bob: .07, sway: .052,
+    stomp: true, torsoRoll: .055, shoulderLift: .075, shoulderRoll: .052, hipRoll: .025, headCounter: .025,
+  },
   spitter: {
     cycleSpeed: 3.15, activityDamp: 7, armSwing: .16, legSwing: .12, bob: .03, sway: .028,
     spitInterval: 4.2, spitDuration: .72, spitLean: -.16, spitArmOpen: .34,
@@ -825,7 +869,7 @@ function updateZombieMovementAnimation(zombie, delta, isMoving) {
   const preset = ZOMBIE_ANIMATION_PRESETS[zombie.userData.typeKey];
   if (!preset || !zombie.userData.parts || !zombie.userData.walkRestPose) return;
 
-  const { leftArm, rightArm, leftLeg, rightLeg, torso, chestPlate, leftShoulder, rightShoulder } = zombie.userData.parts;
+  const { leftArm, rightArm, leftLeg, rightLeg, torso, chestPlate, hips, head, neck, crown, skull, leftShoulder, rightShoulder } = zombie.userData.parts;
   const rest = zombie.userData.walkRestPose;
   const activityTarget = isMoving ? 1 : 0;
   zombie.userData.walkActivity = THREE.MathUtils.damp(zombie.userData.walkActivity ?? 0, activityTarget, preset.activityDamp, delta);
@@ -859,6 +903,11 @@ function updateZombieMovementAnimation(zombie, delta, isMoving) {
 
   if (torso) torso.rotation.x = rest.torsoRotX + Math.sin(zombie.userData.walkTime * 2) * (preset.torsoRoll ?? 0) * activity;
   if (chestPlate) chestPlate.rotation.x = rest.chestPlateRotX + Math.sin(zombie.userData.walkTime * 2) * (preset.torsoRoll ?? 0) * activity;
+  if (hips) hips.rotation.z = rest.hipsRotZ + Math.sin(zombie.userData.walkTime * 2 + Math.PI) * (preset.hipRoll ?? 0) * activity;
+  if (head) head.rotation.x = rest.headRotX + Math.sin(zombie.userData.walkTime * 2 + Math.PI) * (preset.headCounter ?? 0) * activity;
+  if (neck) neck.rotation.x = rest.neckRotX + Math.sin(zombie.userData.walkTime * 2 + Math.PI) * (preset.headCounter ?? 0) * activity;
+  if (crown) crown.rotation.x = rest.crownRotX + Math.sin(zombie.userData.walkTime * 2 + Math.PI) * (preset.headCounter ?? 0) * activity;
+  if (skull) skull.rotation.x = rest.skullRotX + Math.sin(zombie.userData.walkTime * 2) * (preset.torsoRoll ?? 0) * activity;
   if (leftShoulder) {
     leftShoulder.position.y = rest.leftShoulderY + Math.max(0, counterStride) * (preset.shoulderLift ?? 0) * activity;
     leftShoulder.rotation.z = rest.leftShoulderRotZ - stride * (preset.shoulderRoll ?? 0) * activity;
@@ -867,6 +916,85 @@ function updateZombieMovementAnimation(zombie, delta, isMoving) {
     rightShoulder.position.y = rest.rightShoulderY + Math.max(0, stride) * (preset.shoulderLift ?? 0) * activity;
     rightShoulder.rotation.z = rest.rightShoulderRotZ - counterStride * (preset.shoulderRoll ?? 0) * activity;
   }
+}
+
+
+function updateGravebreakerSlamAnimation(zombie, delta, distanceToPlayer) {
+  if (zombie.userData.typeKey !== 'boss' || !zombie.userData.parts || !zombie.userData.walkRestPose) return false;
+
+  const ring = zombie.userData.slamWarningRing;
+  if ((zombie.userData.slamTimer ?? 0) <= 0) {
+    zombie.userData.slamCooldown = Math.max(0, (zombie.userData.slamCooldown ?? GRAVEBREAKER_SLAM.cooldownMax) - delta);
+    if (distanceToPlayer <= GRAVEBREAKER_SLAM.triggerRange && zombie.userData.slamCooldown <= 0) {
+      zombie.userData.slamTimer = GRAVEBREAKER_SLAM.duration;
+      zombie.userData.slamCooldown = THREE.MathUtils.randFloat(GRAVEBREAKER_SLAM.cooldownMin, GRAVEBREAKER_SLAM.cooldownMax);
+      zombie.userData.isSlamWindingUp = true;
+      zombie.userData.slamHasImpactedVisual = false;
+      if (ring) ring.visible = true;
+    } else {
+      zombie.userData.isSlamWindingUp = false;
+      if (ring) {
+        ring.visible = false;
+        ring.material.opacity = 0;
+      }
+      return false;
+    }
+  }
+
+  zombie.userData.slamTimer = Math.max(0, zombie.userData.slamTimer - delta);
+  const elapsed = GRAVEBREAKER_SLAM.duration - zombie.userData.slamTimer;
+  const progress = THREE.MathUtils.clamp(elapsed / GRAVEBREAKER_SLAM.duration, 0, 1);
+  const impactProgress = THREE.MathUtils.clamp(elapsed / GRAVEBREAKER_SLAM.impactTime, 0, 1);
+  const impactFlash = elapsed >= GRAVEBREAKER_SLAM.impactTime && elapsed <= GRAVEBREAKER_SLAM.impactTime + .22 ? 1 : 0;
+  const raise = THREE.MathUtils.smoothstep(impactProgress, 0, .42);
+  const hold = 1 - THREE.MathUtils.smoothstep(impactProgress, .55, .78);
+  const raisedPose = raise * hold;
+  const smash = THREE.MathUtils.smoothstep(impactProgress, .72, 1);
+  const recovery = THREE.MathUtils.smoothstep(progress, .86, 1);
+  const pose = raisedPose * (1 - recovery);
+  const slamDown = smash * (1 - recovery);
+
+  const { leftArm, rightArm, torso, chestPlate, hips, head, neck, crown, skull, leftShoulder, rightShoulder } = zombie.userData.parts;
+  const rest = zombie.userData.walkRestPose;
+  leftArm.rotation.x = rest.leftArmX - 1.78 * pose + .92 * slamDown;
+  rightArm.rotation.x = rest.rightArmX - 1.78 * pose + .92 * slamDown;
+  leftArm.rotation.z = rest.leftArmZ - .18 * pose - .08 * slamDown;
+  rightArm.rotation.z = rest.rightArmZ + .18 * pose + .08 * slamDown;
+  zombie.rotation.x = rest.rootRotX - .16 * pose + .2 * slamDown - .08 * impactFlash;
+  zombie.position.y = rest.rootY - .1 * impactFlash + .025 * pose;
+  if (torso) torso.rotation.x = rest.torsoRotX - .18 * pose + .22 * slamDown;
+  if (chestPlate) chestPlate.rotation.x = rest.chestPlateRotX - .18 * pose + .22 * slamDown;
+  if (hips) hips.rotation.z = rest.hipsRotZ;
+  if (head) head.rotation.x = rest.headRotX + .08 * pose - .12 * slamDown;
+  if (neck) neck.rotation.x = rest.neckRotX + .08 * pose - .12 * slamDown;
+  if (crown) crown.rotation.x = rest.crownRotX + .08 * pose - .12 * slamDown;
+  if (skull) skull.rotation.x = rest.skullRotX - .18 * pose + .22 * slamDown;
+  if (leftShoulder) {
+    leftShoulder.position.y = rest.leftShoulderY + .1 * pose - .04 * impactFlash;
+    leftShoulder.rotation.z = rest.leftShoulderRotZ - .12 * pose;
+  }
+  if (rightShoulder) {
+    rightShoulder.position.y = rest.rightShoulderY + .1 * pose - .04 * impactFlash;
+    rightShoulder.rotation.z = rest.rightShoulderRotZ + .12 * pose;
+  }
+
+  if (ring) {
+    const pulse = .88 + .18 * progress + Math.sin(progress * Math.PI * 8) * .025;
+    ring.scale.setScalar((ring.userData.baseRadius ?? GRAVEBREAKER_SLAM.warningRadius) * pulse);
+    ring.material.opacity = THREE.MathUtils.clamp(.18 + progress * .32 + impactFlash * .28, 0, .78) * (1 - recovery);
+    ring.visible = zombie.userData.slamTimer > 0 && !recovery;
+  }
+
+  if (elapsed >= GRAVEBREAKER_SLAM.impactTime) zombie.userData.slamHasImpactedVisual = true;
+  if (zombie.userData.slamTimer <= 0) {
+    zombie.userData.isSlamWindingUp = false;
+    zombie.userData.slamHasImpactedVisual = false;
+    if (ring) {
+      ring.visible = false;
+      ring.material.opacity = 0;
+    }
+  }
+  return zombie.userData.slamTimer > 0;
 }
 
 function getSpitterRangedConfig(type = ZOMBIE_TYPES.spitter) {
@@ -962,6 +1090,11 @@ export function updateZombies(scene, player, delta, onDamage) {
     let moveSign = 1;
     let isMoving = dist > CONFIG.player.radius + (type.radius ?? ZOMBIE_TYPES.walker.radius) * .5;
 
+    if (z.userData.typeKey === 'boss' && (z.userData.slamTimer ?? 0) > 0) {
+      moveSpeed = 0;
+      isMoving = false;
+    }
+
     if (z.userData.typeKey === 'spitter') {
       const ranged = getSpitterRangedConfig(type);
       if (ranged) {
@@ -997,6 +1130,7 @@ export function updateZombies(scene, player, delta, onDamage) {
     z.position.z += (dz / dist) * moveSpeed * moveSign * delta;
     z.rotation.y = Math.atan2(dx, dz) + ZOMBIE_VISUAL_FACING_OFFSET;
     updateZombieMovementAnimation(z, delta, isMoving);
+    updateGravebreakerSlamAnimation(z, delta, dist);
     z.userData.hitTimer = Math.max(0, (z.userData.hitTimer ?? 0) - delta);
     z.userData.hitFlash = Math.max(0, (z.userData.hitFlash ?? 0) - delta);
     const flash = z.userData.hitFlash / .12;
