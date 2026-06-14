@@ -179,8 +179,8 @@ function createBruteZombieModel(group, skin, shirt) {
   addBox(group, 0x8b2a1d, .03, 1.57, -.565, .24, .07, .035);
   addBox(group, darkSkin, 0, 1.48, -.48, .58, .11, .14);
 
-  const rightArm = addBruteArm(group, skin, darkSkin, .82, 1.18, -.16, 1);
-  const leftArm = addBruteArm(group, skin, darkSkin, -.82, 1.18, -.16, -1);
+  const rightArm = addBruteArm(group, skin, darkSkin, .72, 1.28, -.12, 1);
+  const leftArm = addBruteArm(group, skin, darkSkin, -.72, 1.28, -.12, -1);
   const leftLeg = addBruteLeg(group, pants, pantsDark, boots, -.28, .66);
   const rightLeg = addBruteLeg(group, pants, pantsDark, boots, .28, .66);
 
@@ -419,7 +419,7 @@ export function spawnZombie(scene, progress = {}) {
 }
 
 function captureZombieAnimationRestPose(zombie) {
-  if (!['walker', 'runner'].includes(zombie.userData.typeKey) || !zombie.userData.parts) return;
+  if (!['walker', 'runner', 'brute'].includes(zombie.userData.typeKey) || !zombie.userData.parts) return;
   const { leftArm, rightArm, leftLeg, rightLeg } = zombie.userData.parts;
   zombie.userData.walkRestPose = {
     rootY: zombie.position.y,
@@ -434,6 +434,7 @@ function captureZombieAnimationRestPose(zombie) {
 const ZOMBIE_ANIMATION_PRESETS = {
   walker: { cycleSpeed: 3.8, activityDamp: 8, armSwing: .18, legSwing: .13, bob: .035, sway: .035 },
   runner: { cycleSpeed: 8.7, activityDamp: 12, armSwing: .32, legSwing: .25, bob: .045, sway: .045 },
+  brute: { cycleSpeed: 2.45, activityDamp: 6, armSwing: .34, legSwing: .23, bob: .048, sway: .055, stomp: true },
 };
 
 function updateZombieMovementAnimation(zombie, delta, isMoving) {
@@ -449,7 +450,9 @@ function updateZombieMovementAnimation(zombie, delta, isMoving) {
   const activity = zombie.userData.walkActivity;
   const stride = Math.sin(zombie.userData.walkTime);
   const counterStride = Math.sin(zombie.userData.walkTime + Math.PI);
-  const lift = Math.abs(Math.sin(zombie.userData.walkTime * 2));
+  const lift = preset.stomp
+    ? Math.pow(Math.abs(Math.sin(zombie.userData.walkTime)), 1.8)
+    : Math.abs(Math.sin(zombie.userData.walkTime * 2));
 
   leftArm.rotation.x = rest.leftArmX + stride * preset.armSwing * activity;
   rightArm.rotation.x = rest.rightArmX + counterStride * preset.armSwing * activity;
