@@ -2,12 +2,33 @@ import * as THREE from 'three';
 import { CONFIG } from './config.js';
 
 const zombies = [];
+const slimeProjectiles = [];
 const ZOMBIE_TYPES = CONFIG.zombie.types;
 // Zombie art faces local -Z; chase rotation math points local +Z toward the player.
 const ZOMBIE_VISUAL_FACING_OFFSET = Math.PI;
 const hitFlashColor = new THREE.Color(0xfff1a8);
 
 function material(color) { return new THREE.MeshStandardMaterial({ color, roughness: 0.85 }); }
+
+function createSlimeProjectileMesh() {
+  const group = new THREE.Group();
+  const slimeMaterial = new THREE.MeshStandardMaterial({ color: 0x8cff1a, emissive: 0x245f05, emissiveIntensity: .35, roughness: .68 });
+  const core = new THREE.Mesh(new THREE.SphereGeometry(.34, 8, 6), slimeMaterial);
+  core.scale.set(1.18, .82, 1);
+  group.add(core);
+
+  const trailMaterial = new THREE.MeshStandardMaterial({ color: 0xb6ff35, emissive: 0x1f5f05, emissiveIntensity: .22, roughness: .72 });
+  [
+    { x: -.22, y: .05, z: .38, s: .15 },
+    { x: .18, y: -.07, z: .58, s: .11 },
+    { x: .04, y: .13, z: .76, s: .09 },
+  ].forEach((blob) => {
+    const drop = new THREE.Mesh(new THREE.SphereGeometry(blob.s, 6, 4), trailMaterial);
+    drop.position.set(blob.x, blob.y, blob.z);
+    group.add(drop);
+  });
+  return group;
+}
 
 
 function addBox(group, color, x, y, z, sx, sy, sz) {
@@ -480,7 +501,10 @@ function getTypeWeight(key, type, elapsedMinutes) {
   return type.weight * latePressure * heavyPressure;
 }
 
-export function resetZombies(scene) { zombies.splice(0).forEach((z) => scene.remove(z)); }
+export function resetZombies(scene) {
+  zombies.splice(0).forEach((z) => scene.remove(z));
+  slimeProjectiles.splice(0).forEach((shot) => scene.remove(shot.mesh));
+}
 export function getZombies() { return zombies; }
 
 export function spawnZombie(scene, progress = {}) {
@@ -536,11 +560,10 @@ function updateZombieMovementAnimation(zombie, delta, isMoving) {
     : Math.abs(Math.sin(zombie.userData.walkTime * 2));
 
   let spit = 0;
-  if (zombie.userData.typeKey === 'spitter') {
-    zombie.userData.spitVisualTimer = ((zombie.userData.spitVisualTimer ?? 0) + delta) % preset.spitInterval;
-    const spitWindow = Math.min(zombie.userData.spitVisualTimer, preset.spitDuration);
-    const spitProgress = zombie.userData.spitVisualTimer <= preset.spitDuration ? spitWindow / preset.spitDuration : 0;
-    spit = Math.sin(spitProgress * Math.PI);
+  if (zombie.userData.typeKey === 'spitter' && zombie.userData.spitAttackTimer > 0) {
+    const ranged = ZOMBIE_TYPES.spitter.ranged;
+    const spitProgress = 1 - (zombie.userData.spitAttackTimer / ranged.windupDuration);
+    spit = Math.sin(THREE.MathUtils.clamp(spitProgress, 0, 1) * Math.PI);
   }
 
   leftArm.rotation.x = rest.leftArmX + stride * preset.armSwing * activity;
@@ -554,15 +577,90 @@ function updateZombieMovementAnimation(zombie, delta, isMoving) {
   zombie.rotation.z = rest.rootRotZ + Math.sin(zombie.userData.walkTime * 2) * preset.sway * activity;
 }
 
-export function updateZombies(player, delta, onDamage) {
+function fireSpitterSlime(scene, zombie, player) {
+  const ranged = ZOMBIE_TYPES.spitter.ranged;
+  const mouthOrigin = zombie.userData.futureMouthOrigin ?? new THREE.Vector3(0, 1.56, -.62);
+  const start = mouthOrigin.clone();
+  zombie.localToWorld(start);
+
+  const target = player.position.clone();
+  target.y = CONFIG.player.radius;
+  const direction = target.sub(start);
+  direction.y *= .35;
+  if (direction.lengthSq() < .0001) direction.set(0, 0, -1);
+  direction.normalize();
+
+  const mesh = createSlimeProjectileMesh();
+  mesh.position.copy(start);
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), direction);
+  mesh.userData.spawn = start.clone();
+  scene.add(mesh);
+  slimeProjectiles.push({ mesh, direction, traveled: 0, radius: ranged.projectileRadius, damage: ranged.projectileDamage });
+}
+
+function updateSlimeProjectiles(scene, player, delta, onDamage) {
+  const ranged = ZOMBIE_TYPES.spitter.ranged;
+  for (let i = slimeProjectiles.length - 1; i >= 0; i--) {
+    const shot = slimeProjectiles[i];
+    const step = ranged.projectileSpeed * delta;
+    shot.mesh.position.addScaledVector(shot.direction, step);
+    shot.traveled += step;
+    shot.mesh.rotation.x += delta * 7;
+    shot.mesh.rotation.z += delta * 5;
+
+    const hitDistance = Math.hypot(player.position.x - shot.mesh.position.x, player.position.z - shot.mesh.position.z);
+    const hitHeight = Math.abs((player.position.y + CONFIG.player.radius) - shot.mesh.position.y);
+    const hitPlayer = hitDistance <= CONFIG.player.radius + shot.radius && hitHeight <= 1.4;
+    if (hitPlayer) onDamage(shot.damage);
+    if (hitPlayer || shot.traveled >= ranged.projectileRange) {
+      scene.remove(shot.mesh);
+      slimeProjectiles.splice(i, 1);
+    }
+  }
+}
+
+export function updateZombies(scene, player, delta, onDamage) {
   for (const z of zombies) {
     const type = ZOMBIE_TYPES[z.userData.typeKey] ?? ZOMBIE_TYPES.walker;
     const dx = player.position.x - z.position.x, dz = player.position.z - z.position.z;
     const dist = Math.hypot(dx, dz) || 1;
-    z.position.x += (dx / dist) * type.speed * delta;
-    z.position.z += (dz / dist) * type.speed * delta;
+    let moveSpeed = type.speed;
+    let moveSign = 1;
+    let isMoving = dist > CONFIG.player.radius + type.radius * .5;
+
+    if (z.userData.typeKey === 'spitter') {
+      const ranged = type.ranged;
+      z.userData.spitCooldown = Math.max(0, z.userData.spitCooldown ?? ranged.cooldown * .55);
+      if (z.userData.spitAttackTimer > 0) {
+        z.userData.spitAttackTimer = Math.max(0, z.userData.spitAttackTimer - delta);
+        if (!z.userData.spitHasFired && z.userData.spitAttackTimer <= ranged.windupDuration - ranged.fireTime) {
+          z.userData.spitHasFired = true;
+          fireSpitterSlime(scene, z, player);
+        }
+        moveSpeed = 0;
+        isMoving = false;
+      } else {
+        z.userData.spitCooldown = Math.max(0, z.userData.spitCooldown - delta);
+        if (dist <= ranged.maxRange && dist >= ranged.tooCloseRange && z.userData.spitCooldown <= 0) {
+          z.userData.spitAttackTimer = ranged.windupDuration;
+          z.userData.spitHasFired = false;
+          z.userData.spitCooldown = ranged.cooldown;
+          moveSpeed = 0;
+          isMoving = false;
+        } else if (dist < ranged.tooCloseRange) {
+          moveSign = -1;
+          moveSpeed = type.speed * ranged.backAwaySpeedMultiplier;
+        } else if (dist <= ranged.preferredRange) {
+          moveSpeed = 0;
+          isMoving = false;
+        }
+      }
+    }
+
+    z.position.x += (dx / dist) * moveSpeed * moveSign * delta;
+    z.position.z += (dz / dist) * moveSpeed * moveSign * delta;
     z.rotation.y = Math.atan2(dx, dz) + ZOMBIE_VISUAL_FACING_OFFSET;
-    updateZombieMovementAnimation(z, delta, dist > CONFIG.player.radius + type.radius * .5);
+    updateZombieMovementAnimation(z, delta, isMoving);
     z.userData.hitTimer = Math.max(0, z.userData.hitTimer - delta);
     z.userData.hitFlash = Math.max(0, z.userData.hitFlash - delta);
     const flash = z.userData.hitFlash / .12;
@@ -574,6 +672,7 @@ export function updateZombies(player, delta, onDamage) {
       onDamage(type.damage * (z.userData.damageMultiplier ?? 1));
     }
   }
+  updateSlimeProjectiles(scene, player, delta, onDamage);
 }
 
 export function damageZombie(scene, zombie, origin, damage, onKilled, onHit = () => {}, knockback = 0) {
