@@ -259,7 +259,7 @@ function createSpitterZombieModel(group, skin, shirt) {
   addBox(group, pantsDark, -.23, .34, -.01, .3, .12, .36);
   addBox(group, pantsDark, .23, .34, -.01, .3, .12, .36);
 
-  group.userData.parts = { leftArm, rightArm, leftLeg, rightLeg };
+  group.userData.parts = { leftArm, rightArm, leftLeg, rightLeg, head, throat, belly, torso };
   group.userData.futureMouthOrigin = new THREE.Vector3(0, 1.56, -.62);
 }
 
@@ -493,13 +493,16 @@ export function spawnZombie(scene, progress = {}) {
 }
 
 function captureZombieAnimationRestPose(zombie) {
-  if (!['walker', 'runner', 'brute'].includes(zombie.userData.typeKey) || !zombie.userData.parts) return;
+  if (!['walker', 'runner', 'brute', 'spitter'].includes(zombie.userData.typeKey) || !zombie.userData.parts) return;
   const { leftArm, rightArm, leftLeg, rightLeg } = zombie.userData.parts;
   zombie.userData.walkRestPose = {
     rootY: zombie.position.y,
+    rootRotX: zombie.rotation.x,
     rootRotZ: zombie.rotation.z,
     leftArmX: leftArm.rotation.x,
+    leftArmZ: leftArm.rotation.z,
     rightArmX: rightArm.rotation.x,
+    rightArmZ: rightArm.rotation.z,
     leftLegX: leftLeg.rotation.x,
     rightLegX: rightLeg.rotation.x,
   };
@@ -509,6 +512,10 @@ const ZOMBIE_ANIMATION_PRESETS = {
   walker: { cycleSpeed: 3.8, activityDamp: 8, armSwing: .18, legSwing: .13, bob: .035, sway: .035 },
   runner: { cycleSpeed: 8.7, activityDamp: 12, armSwing: .32, legSwing: .25, bob: .045, sway: .045 },
   brute: { cycleSpeed: 2.45, activityDamp: 6, armSwing: .34, legSwing: .23, bob: .048, sway: .055, stomp: true },
+  spitter: {
+    cycleSpeed: 3.15, activityDamp: 7, armSwing: .16, legSwing: .12, bob: .03, sway: .028,
+    spitInterval: 4.2, spitDuration: .72, spitLean: -.16, spitArmOpen: .34,
+  },
 };
 
 function updateZombieMovementAnimation(zombie, delta, isMoving) {
@@ -528,11 +535,22 @@ function updateZombieMovementAnimation(zombie, delta, isMoving) {
     ? Math.pow(Math.abs(Math.sin(zombie.userData.walkTime)), 1.8)
     : Math.abs(Math.sin(zombie.userData.walkTime * 2));
 
+  let spit = 0;
+  if (zombie.userData.typeKey === 'spitter') {
+    zombie.userData.spitVisualTimer = ((zombie.userData.spitVisualTimer ?? 0) + delta) % preset.spitInterval;
+    const spitWindow = Math.min(zombie.userData.spitVisualTimer, preset.spitDuration);
+    const spitProgress = zombie.userData.spitVisualTimer <= preset.spitDuration ? spitWindow / preset.spitDuration : 0;
+    spit = Math.sin(spitProgress * Math.PI);
+  }
+
   leftArm.rotation.x = rest.leftArmX + stride * preset.armSwing * activity;
   rightArm.rotation.x = rest.rightArmX + counterStride * preset.armSwing * activity;
+  leftArm.rotation.z = rest.leftArmZ - (preset.spitArmOpen ?? 0) * spit;
+  rightArm.rotation.z = rest.rightArmZ + (preset.spitArmOpen ?? 0) * spit;
   leftLeg.rotation.x = rest.leftLegX + counterStride * preset.legSwing * activity;
   rightLeg.rotation.x = rest.rightLegX + stride * preset.legSwing * activity;
   zombie.position.y = rest.rootY + lift * preset.bob * activity;
+  zombie.rotation.x = rest.rootRotX + (preset.spitLean ?? 0) * spit;
   zombie.rotation.z = rest.rootRotZ + Math.sin(zombie.userData.walkTime * 2) * preset.sway * activity;
 }
 
