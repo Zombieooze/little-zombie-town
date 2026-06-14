@@ -128,6 +128,101 @@ function createRunnerZombieModel(group, skin, shirt) {
   group.userData.parts = { leftArm, rightArm, leftLeg, rightLeg };
 }
 
+
+function createBruteZombieModel(group, skin, shirt) {
+  const darkSkin = 0x4f7f2f;
+  const shadowSkin = 0x3f6829;
+  const vestDark = 0x2b1f18;
+  const vestRust = 0x6f4325;
+  const undershirt = 0x5b4b25;
+  const pants = 0x142033;
+  const pantsDark = 0x0d1724;
+  const boots = 0x171717;
+  const metal = 0x777a76;
+
+  const belly = addBox(group, undershirt, 0, .74, .02, 1.16, .72, .66);
+  belly.rotation.x = -.02;
+  const torso = addBox(group, shirt, 0, 1.14, 0, 1.2, .96, .72);
+  torso.rotation.x = .03;
+  addBox(group, vestDark, 0, 1.15, -.38, 1.04, .88, .08);
+  addBox(group, vestRust, -.53, 1.45, -.02, .36, .3, .74).rotation.z = -.34;
+  addBox(group, vestRust, .53, 1.45, -.02, .36, .3, .74).rotation.z = .34;
+  addBox(group, metal, -.28, 1.16, -.44, .18, .2, .055);
+  addBox(group, metal, .34, 1.18, -.44, .18, .2, .055);
+  [-.42, -.16, .08, .34].forEach((x, index) => {
+    const tear = new THREE.Mesh(new THREE.ConeGeometry(.15, .3, 3), material(shirt));
+    tear.position.set(x, .54, -.04);
+    tear.rotation.set(0, 0, Math.PI + (index % 2 ? .2 : -.18));
+    group.add(tear);
+  });
+
+  const head = addBox(group, skin, 0, 2.02, -.04, .92, .86, .86);
+  head.rotation.y = .02;
+  addBox(group, darkSkin, 0, 2.45, -.05, .88, .1, .82);
+  addBox(group, shadowSkin, -.5, 2.01, -.04, .1, .38, .38);
+  addBox(group, shadowSkin, .5, 2.01, -.04, .1, .38, .38);
+  addBox(group, darkSkin, 0, 1.56, -.05, .72, .14, .78);
+
+  addBox(group, 0xf4f4ea, -.22, 2.1, -.5, .22, .25, .045);
+  addBox(group, 0xf4f4ea, .22, 2.1, -.5, .22, .25, .045);
+  addBox(group, 0x101010, -.2, 2.09, -.53, .085, .105, .035);
+  addBox(group, 0x101010, .24, 2.09, -.53, .085, .105, .035);
+  addBox(group, shadowSkin, -.22, 2.29, -.53, .3, .06, .05).rotation.z = -.22;
+  addBox(group, shadowSkin, .23, 2.28, -.53, .3, .06, .05).rotation.z = .22;
+  addBox(group, darkSkin, 0, 1.93, -.54, .18, .15, .13);
+
+  addBox(group, 0x030303, 0, 1.72, -.52, .56, .32, .06);
+  addBox(group, 0xf2efdc, -.2, 1.84, -.565, .09, .12, .04);
+  addBox(group, 0xf2efdc, .2, 1.84, -.565, .09, .12, .04);
+  addBox(group, 0xf2efdc, -.18, 1.6, -.565, .09, .11, .04);
+  addBox(group, 0xf2efdc, .22, 1.6, -.565, .09, .11, .04);
+  addBox(group, 0x8b2a1d, .03, 1.57, -.565, .24, .07, .035);
+  addBox(group, darkSkin, 0, 1.48, -.48, .58, .11, .14);
+
+  const rightArm = addBruteArm(group, skin, darkSkin, .82, 1.18, -.16, 1);
+  const leftArm = addBruteArm(group, skin, darkSkin, -.82, 1.18, -.16, -1);
+  const leftLeg = addBruteLeg(group, pants, pantsDark, boots, -.28, .66);
+  const rightLeg = addBruteLeg(group, pants, pantsDark, boots, .28, .66);
+
+  group.userData.parts = { leftArm, rightArm, leftLeg, rightLeg };
+}
+
+function addBruteArm(group, skinColor, handColor, x, y, z, side) {
+  const arm = new THREE.Group();
+  arm.position.set(x, y, z);
+  arm.rotation.x = .8;
+  arm.rotation.z = side * .13;
+
+  const upper = new THREE.Mesh(new THREE.BoxGeometry(.38, .48, .34), material(skinColor));
+  upper.position.set(0, -.18, 0);
+  const forearm = new THREE.Mesh(new THREE.BoxGeometry(.42, .68, .36), material(skinColor));
+  forearm.position.set(side * .02, -.66, -.02);
+  forearm.rotation.z = side * -.08;
+  const fist = new THREE.Mesh(new THREE.BoxGeometry(.42, .28, .38), material(handColor));
+  fist.position.set(side * .06, -1.07, -.04);
+  fist.rotation.z = side * .2;
+
+  arm.add(upper, forearm, fist);
+  group.add(arm);
+  return arm;
+}
+
+function addBruteLeg(group, pantsColor, pantsDarkColor, bootColor, x, hipY) {
+  const leg = new THREE.Group();
+  leg.position.set(x, hipY, .02);
+
+  const thigh = new THREE.Mesh(new THREE.BoxGeometry(.34, .56, .38), material(pantsColor));
+  thigh.position.set(0, -.28, 0);
+  const cuff = new THREE.Mesh(new THREE.BoxGeometry(.36, .16, .4), material(pantsDarkColor));
+  cuff.position.set(0, -.62, -.01);
+  const boot = new THREE.Mesh(new THREE.BoxGeometry(.42, .22, .48), material(bootColor));
+  boot.position.set(0, -.82, -.1);
+
+  leg.add(thigh, cuff, boot);
+  group.add(leg);
+  return leg;
+}
+
 function addRunnerLeg(group, pantsColor, bootColor, patchColor, x, hipY, strideRotation) {
   const leg = new THREE.Group();
   leg.position.set(x, hipY, .02);
@@ -232,6 +327,8 @@ function zombieMesh(typeKey = 'walker', progress = {}) {
     createWalkerZombieModel(g, skin, shirt);
   } else if (typeKey === 'runner') {
     createRunnerZombieModel(g, skin, shirt);
+  } else if (typeKey === 'brute') {
+    createBruteZombieModel(g, skin, shirt);
   } else {
     const body = new THREE.Mesh(new THREE.BoxGeometry(.9, 1.1, .55), material(shirt)); body.position.y = 1;
     const headSize = typeKey === 'spitter' ? .82 : .72;
@@ -243,7 +340,7 @@ function zombieMesh(typeKey = 'walker', progress = {}) {
     addLimb(g, skin, -.65, 1.15, -.2, heavyArms ? .34 : .25, .8, .25);
   }
 
-  if (typeKey === 'brute' || typeKey === 'crusher' || typeKey === 'boss') {
+  if (typeKey === 'crusher' || typeKey === 'boss') {
     const bellyWidth = typeKey === 'crusher' ? 1.24 : 1.08;
     const belly = new THREE.Mesh(new THREE.BoxGeometry(bellyWidth, .72, .68), material(shirt));
     belly.position.y = .78; g.add(belly);
