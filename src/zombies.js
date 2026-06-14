@@ -996,7 +996,9 @@ function updateGravebreakerSlamAnimation(zombie, delta, distanceToPlayer) {
 
   if (ring) {
     const pulse = .88 + .18 * progress + Math.sin(progress * Math.PI * 8) * .025;
-    ring.scale.setScalar((ring.userData.baseRadius ?? GRAVEBREAKER_SLAM.warningRadius) * pulse);
+    const visibleRadius = (ring.userData.baseRadius ?? GRAVEBREAKER_SLAM.warningRadius) * pulse;
+    ring.scale.setScalar(visibleRadius);
+    ring.userData.currentWarningRadius = visibleRadius;
     ring.material.opacity = THREE.MathUtils.clamp(.18 + progress * .32 + impactFlash * .28, 0, .78) * (1 - recovery);
     ring.visible = zombie.userData.slamTimer > 0 && !recovery;
   }
@@ -1153,7 +1155,9 @@ export function updateZombies(scene, player, delta, onDamage) {
       && !z.userData.slamHasDealtDamage
       && (GRAVEBREAKER_SLAM.duration - z.userData.slamTimer) >= GRAVEBREAKER_SLAM.impactTime) {
       z.userData.slamHasDealtDamage = true;
-      if (dist <= GRAVEBREAKER_SLAM.warningRadius + CONFIG.player.radius) {
+      const impactDistance = Math.hypot(player.position.x - z.position.x, player.position.z - z.position.z);
+      const visibleImpactRadius = z.userData.slamWarningRing?.userData?.currentWarningRadius ?? GRAVEBREAKER_SLAM.warningRadius;
+      if (impactDistance <= visibleImpactRadius) {
         damagePlayer(GRAVEBREAKER_SLAM.damage);
       }
     }
