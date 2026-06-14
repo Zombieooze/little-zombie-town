@@ -56,12 +56,12 @@ Only these abilities should currently appear in the level-up card pool:
 4. **Fire Bottle:** An automatic thrown area-damage special ability. It throws a small bottle toward the nearest zombie in range, or forward if no target is available, then creates a cartoon fire patch on the ground. Zombies in the patch take damage over time through the normal zombie damage/death/reward path. Fire Bottle counts toward the 4 special ability limit and upgrades from Level 1 to Level 10 through damage, duration, cooldown, radius, and extra-bottle improvements.
 5. **Nail Blaster:** An automatic fast ranged projectile special ability. It fires small gray nail/bolt projectiles at nearby zombies, counts toward the 4 special ability limit, and upgrades from Level 1 to Level 10 through damage, fire-rate, extra-projectile, spread, and piercing improvements. Nail Blaster uses the normal zombie damage/death/reward path so projectile kills still award XP and coins.
 6. **Shockwave Stomp:** An automatic circular crowd-control special ability that releases a short-lived shockwave around the player on cooldown. It damages nearby zombies, pushes them away from the player, counts toward the 4 special ability limit, and upgrades from Level 1 to Level 10 through damage, radius, recharge, knockback, and a final stronger panic-shockwave upgrade. Shockwave Stomp uses the normal zombie damage/death/reward path so kills still award XP and coins. With six implemented special abilities now available, the 4-ability cap is directly testable: players can unlock only four of the six in one run while already chosen abilities and passive upgrades keep appearing normally.
+7. **Bear Trap Toss:** An automatic ground-control special ability that drops low-poly scrap traps near the player or toward nearby zombies on cooldown. Traps sit on the ground for a limited lifetime, damage zombies that step into their trigger radius, and use the normal zombie damage/death/reward path so trap kills still award XP and coins. Bear Trap Toss counts toward the 4 special ability limit and upgrades from Level 1 to Level 10 through damage, lifetime, recharge, active-trap count, trigger radius, and a final scrap-burst explosion when triggered.
 
 ### Planned special abilities not available yet
 
 These are roadmap entries only. They must not appear in gameplay or level-up cards until implemented later.
 
-7. **Bear Trap Toss:** Drops traps on the ground. Zombies that step on traps take damage and later can be slowed. Good for area control.
 8. **Junkyard Turret:** Deploys a small scrap turret that shoots nearby zombies. Good for holding an area.
 
 ## Passive run upgrades
