@@ -30,7 +30,7 @@ A medium green, cute-spooky blocky zombie wearing a dull blue ragged shirt/tunic
 
 ## Little / Runner Zombie
 
-A smaller, faster zombie with green skin and a purple shirt or purple accent. Runners have lower health than walkers, but they close distance quickly and drop slightly more XP. They appear after the early warm-up, around level 3 or 1:30 into the run.
+A smaller, faster zombie with green skin and a purple ragged shirt/tunic. The Runner Zombie has been remodeled to match the reference sheet: a leaner square-headed zombie with white eyes and dark pupils, aggressive eyebrows, an open mouth with chunky teeth, upward head spikes, forward-reaching blocky arms, dark pants, and dark boots. Runners have lower health than walkers, but they close distance quickly and drop slightly more XP. They appear after the early warm-up, around level 3 or 1:30 into the run.
 
 ## Brute Zombie
 
