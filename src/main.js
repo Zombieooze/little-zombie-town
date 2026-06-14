@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
 import { initInput, consumePress, resetTouchMovement, updateGamepadInput, getGamepadLookVector, consumeGamepadPress, setControllerStatusCallback, isGamepadDown } from './input.js';
-import { initUI, updateHUD, showScreen, hideOverlays, showUpgrades, showEnd, setMuted, updateMenuCoins, setGameActionsVisible, setPauseButtonVisible, setFullscreenActive, showControllerMessage, moveUpgradeSelection, getSelectedUpgradeId, moveMenuSelection, activateMenuSelection } from './ui.js';
+import { initUI, updateHUD, showScreen, hideOverlays, showUpgrades, showEnd, setMuted, updateMenuCoins, setGameActionsVisible, setPauseButtonVisible, setFullscreenActive, showControllerMessage, moveUpgradeSelection, getSelectedUpgradeId, moveMenuSelection, activateMenuSelection, showDamageFlash } from './ui.js';
 import { addCoins } from './save.js';
 import { createWorld } from './world.js';
 import { createPlayer, updatePlayer } from './player.js';
@@ -482,7 +482,10 @@ function tick() {
       spawnWorldMedkit();
       scheduleNextWorldMedkit();
     }
-    updateZombies(scene, player, delta, (damage) => { state.health = Math.max(0, state.health - damage); });
+    updateZombies(scene, player, delta, (damage) => {
+      if (damage > 0) showDamageFlash();
+      state.health = Math.max(0, state.health - damage);
+    });
     updatePickups(scene, player, delta, collectPickup);
     if (pulseTimer <= 0) { doPulse(); pulseTimer = state.pulseCooldown; }
     updateAbilities(scene, state, player, delta, (position, type, typeKey) => {
