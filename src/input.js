@@ -2,11 +2,14 @@ const keys = new Set();
 const pressed = new Set();
 const touchMove = { x: 0, z: 0 };
 const MOBILE_QUERY = '(hover: none), (pointer: coarse), (max-width: 820px), (max-height: 520px)';
+const SMALL_SCREEN_QUERY = '(max-width: 820px), (max-height: 520px)';
 let mobileControlsReady = false;
 
 function setMobileClass() {
   const isTouchDevice = navigator.maxTouchPoints > 0;
-  const isMobileLayout = window.matchMedia(MOBILE_QUERY).matches || isTouchDevice;
+  const isCoarsePointer = window.matchMedia('(hover: none), (pointer: coarse)').matches;
+  const isSmallScreen = window.matchMedia(SMALL_SCREEN_QUERY).matches;
+  const isMobileLayout = isCoarsePointer || isSmallScreen;
   document.body.classList.toggle('mobile-controls-enabled', isMobileLayout);
   document.body.classList.toggle('mobile-touch-device', isTouchDevice);
 }
@@ -101,6 +104,11 @@ export function initInput() {
     if (['w', 'a', 's', 'd', ' ', 'shift'].includes(key)) event.preventDefault();
   });
   window.addEventListener('keyup', (event) => keys.delete(event.key.toLowerCase()));
+}
+
+export function resetTouchMovement() {
+  touchMove.x = 0;
+  touchMove.z = 0;
 }
 
 export function getMoveVector() {

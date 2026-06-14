@@ -4,10 +4,14 @@ import { getAbilityDisplayName, MAX_ABILITY_LEVEL } from './abilities.js';
 const $ = (id) => document.getElementById(id);
 const screens = ['menu-screen', 'pause-screen', 'upgrade-screen', 'end-screen'];
 
-export function initUI({ onStart, onUpgrade, onMenu }) {
+export function initUI({ onStart, onUpgrade, onMenu, onPause, onResume, onFullscreen }) {
   $('start-button').addEventListener('click', onStart);
   $('again-button').addEventListener('click', onStart);
   $('menu-button').addEventListener('click', onMenu);
+  $('pause-button').addEventListener('click', onPause);
+  $('resume-button').addEventListener('click', onResume);
+  $('menu-fullscreen-button').addEventListener('click', onFullscreen);
+  $('game-fullscreen-button').addEventListener('click', onFullscreen);
   $('upgrade-cards').addEventListener('click', (event) => {
     const button = event.target.closest('[data-upgrade]');
     if (button) onUpgrade(button.dataset.upgrade);
@@ -23,7 +27,9 @@ export function showScreen(name) {
   $('hud').classList.toggle('hidden', name === 'menu-screen' || name === 'end-screen');
 }
 
-export function hideOverlays() { screens.filter((id) => id !== 'menu-screen').forEach((id) => $(id).classList.add('hidden')); }
+export function hideOverlays() { screens.filter((id) => id !== 'menu-screen').forEach((id) => { $(id).classList.add('hidden'); $(id).classList.remove('active'); }); }
+export function setGameActionsVisible(visible) { $('game-actions').classList.toggle('hidden', !visible); }
+export function setPauseButtonVisible(visible) { $('pause-button').classList.toggle('hidden', !visible); }
 export function updateMenuCoins() { $('menu-total-coins').textContent = getTotalCoins(); }
 export function setMuted(muted) { $('hud-muted').classList.toggle('hidden', !muted); }
 

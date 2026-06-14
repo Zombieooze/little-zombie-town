@@ -3,6 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#101321" />
     <title>Little Zombie Town</title>
     <link rel="stylesheet" href="style.css" />
     <script type="importmap">
@@ -24,6 +28,7 @@
           <p class="tagline">Survive ten spooky-cute minutes in a bigger ruined town.</p>
           <p class="coins">Total Coins: <span id="menu-total-coins">0</span></p>
           <button id="start-button" class="primary-button">Start Game</button>
+          <button id="menu-fullscreen-button" class="secondary-button mobile-only-button" type="button">Fullscreen</button>
           <p class="hint">WASD move · Shift sprint · Space jump · Right-drag camera · Wheel zoom · P pause · M mute</p>
           <p class="hint mobile-hint">Mobile: left stick move · right side drag camera · JUMP button</p>
         </div>
@@ -42,8 +47,17 @@
         <div id="hud-muted" class="hud-card small hidden">Muted</div>
       </section>
 
+      <div id="game-actions" class="game-actions hidden">
+        <button id="pause-button" class="icon-button" type="button" aria-label="Pause game">Ⅱ</button>
+        <button id="game-fullscreen-button" class="icon-button mobile-only-button" type="button" aria-label="Fullscreen">⛶</button>
+      </div>
+
       <section id="pause-screen" class="screen overlay hidden">
-        <div class="panel"><h2>Paused</h2><p>Press P to return to the town.</p></div>
+        <div class="panel">
+          <h2>Paused</h2>
+          <p>Press P, Escape, or Resume to return to the town.</p>
+          <button id="resume-button" class="primary-button" type="button">Resume</button>
+        </div>
       </section>
 
       <section id="upgrade-screen" class="screen overlay hidden">
