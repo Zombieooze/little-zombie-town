@@ -12,6 +12,7 @@ const menuGroups = {
   ended: { root: 'end-screen', selector: '#again-button, #menu-button' },
 };
 let toastTimer = null;
+let damageFlashTimer = null;
 
 export function initUI({ onStart, onUpgrade, onMenu, onPause, onResume, onFullscreen }) {
   $('start-button').addEventListener('click', onStart);
@@ -36,6 +37,17 @@ export function setFullscreenActive(active) {
   $('menu-fullscreen-button').textContent = label;
   $('game-fullscreen-button').textContent = icon;
   $('game-fullscreen-button').setAttribute('aria-label', label);
+}
+
+
+export function showDamageFlash() {
+  const flash = $('damage-flash');
+  if (!flash) return;
+  flash.classList.remove('active');
+  void flash.offsetWidth;
+  flash.classList.add('active');
+  clearTimeout(damageFlashTimer);
+  damageFlashTimer = setTimeout(() => flash.classList.remove('active'), 430);
 }
 
 export function showControllerMessage(message) {
