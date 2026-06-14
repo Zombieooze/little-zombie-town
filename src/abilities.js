@@ -154,16 +154,26 @@ export const ABILITY_DEFINITIONS = {
       10: 'Traps burst into scrap when triggered.',
     },
   },
-  turret: {
-    id: 'turret',
+  junkyardTurret: {
+    id: 'junkyardTurret',
     name: 'Junkyard Turret',
     shortName: 'Turret',
     unlockName: 'Unlock Junkyard Turret',
-    unlockDescription: 'Planned: deploy a small scrap turret that shoots nearby zombies.',
+    unlockDescription: 'Deploy a temporary scrap turret that automatically shoots nearby zombies.',
     maxLevel: MAX_ABILITY_LEVEL,
-    implemented: false,
-    plannedRole: 'Hold an area with automatic ranged fire.',
-    upgrades: {},
+    implemented: true,
+    defaults: { damage: 13, cooldown: 11.5, duration: 9.5, range: 8, fireCooldown: 1, maxTurrets: 1, projectileSpeed: 18, projectileLifetime: .7, hitRadius: .32, deployDistance: 1.8, visualLifetime: .16, burstShots: 1 },
+    upgrades: {
+      2: 'Turret damage increases.',
+      3: 'Turret fires faster.',
+      4: 'Turret range increases.',
+      5: 'Turret lasts longer.',
+      6: 'Turret damage increases.',
+      7: 'Deploy an extra turret.',
+      8: 'Turret fires faster.',
+      9: 'Turret damage and range increase.',
+      10: 'Turret unleashes stronger scrap fire.',
+    },
   },
 };
 
@@ -186,6 +196,7 @@ function makeAbilityState() {
     nailBlaster: { ...ABILITY_DEFINITIONS.nailBlaster.defaults, timer: .45, nails: [] },
     shockwaveStomp: { ...ABILITY_DEFINITIONS.shockwaveStomp.defaults, timer: 2.4, effects: [] },
     bearTrapToss: { ...ABILITY_DEFINITIONS.bearTrapToss.defaults, timer: 1.5, traps: [], effects: [] },
+    junkyardTurret: { ...ABILITY_DEFINITIONS.junkyardTurret.defaults, timer: 2.25, turrets: [], bolts: [], effects: [] },
   };
 }
 
@@ -200,6 +211,9 @@ export function resetAbilities(scene, state) {
     state.abilities.shockwaveStomp?.effects?.forEach((effect) => removeShockwaveEffect(scene, effect));
     state.abilities.bearTrapToss?.traps?.forEach((trap) => removeBearTrap(scene, trap));
     state.abilities.bearTrapToss?.effects?.forEach((effect) => removeBearTrapEffect(scene, effect));
+    state.abilities.junkyardTurret?.turrets?.forEach((turret) => removeJunkyardTurret(scene, turret));
+    state.abilities.junkyardTurret?.bolts?.forEach((bolt) => removeTurretBolt(scene, bolt));
+    state.abilities.junkyardTurret?.effects?.forEach((effect) => removeTurretEffect(scene, effect));
   }
   state.abilities = makeAbilityState();
 }
@@ -302,6 +316,17 @@ function applyAbilityLevelTuning(state, abilityId, level) {
     if (level === 9) { abilities.bearTrapToss.lifetime += 3; abilities.bearTrapToss.damage += 8; }
     if (level === 10) { abilities.bearTrapToss.burstDamage = 24; abilities.bearTrapToss.burstRadius = 2.15; }
   }
+  if (abilityId === 'junkyardTurret') {
+    if (level === 2) abilities.junkyardTurret.damage += 6;
+    if (level === 3) abilities.junkyardTurret.fireCooldown = Math.max(.62, abilities.junkyardTurret.fireCooldown * .82);
+    if (level === 4) abilities.junkyardTurret.range += 1.25;
+    if (level === 5) abilities.junkyardTurret.duration += 3;
+    if (level === 6) abilities.junkyardTurret.damage += 7;
+    if (level === 7) abilities.junkyardTurret.maxTurrets = Math.min(2, abilities.junkyardTurret.maxTurrets + 1);
+    if (level === 8) abilities.junkyardTurret.fireCooldown = Math.max(.62, abilities.junkyardTurret.fireCooldown * .78);
+    if (level === 9) { abilities.junkyardTurret.damage += 8; abilities.junkyardTurret.range += 1.1; }
+    if (level === 10) { abilities.junkyardTurret.damage += 12; abilities.junkyardTurret.maxTurrets = Math.min(3, abilities.junkyardTurret.maxTurrets + 1); abilities.junkyardTurret.burstShots = 2; }
+  }
   if (abilityId === 'shockwaveStomp') {
     if (level === 2) abilities.shockwaveStomp.damage += 7;
     if (level === 3) abilities.shockwaveStomp.radius += .55;
@@ -344,6 +369,7 @@ export function updateAbilities(scene, state, player, delta, onKilled, onHit) {
   if (isAbilityUnlocked(state, 'nailBlaster')) updateNailBlaster(scene, state, player, delta, onKilled, onHit);
   if (isAbilityUnlocked(state, 'shockwaveStomp')) updateShockwaveStomp(scene, state, player, delta, onKilled, onHit);
   if (isAbilityUnlocked(state, 'bearTrapToss')) updateBearTrapToss(scene, state, player, delta, onKilled, onHit);
+  if (isAbilityUnlocked(state, 'junkyardTurret')) updateJunkyardTurret(scene, state, player, delta, onKilled, onHit);
 }
 
 function disposeObjectTree(object) {
@@ -351,6 +377,124 @@ function disposeObjectTree(object) {
     part.geometry?.dispose?.();
     if (Array.isArray(part.material)) part.material.forEach((material) => material.dispose?.());
     else part.material?.dispose?.();
+  });
+}
+
+
+function createJunkyardTurretMesh() {
+  const group = new THREE.Group();
+  const dark = new THREE.MeshStandardMaterial({ color: 0x374151, metalness: .32, roughness: .58 });
+  const light = new THREE.MeshStandardMaterial({ color: 0x9ca3af, metalness: .28, roughness: .52 });
+  const accent = new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: .12, roughness: .5 });
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(.42, .55, .16, 8), dark);
+  base.position.y = .08;
+  const body = new THREE.Mesh(new THREE.BoxGeometry(.58, .38, .48), light);
+  body.position.y = .44;
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(.07, .09, .72, 7), dark);
+  barrel.rotation.x = Math.PI / 2;
+  barrel.position.set(0, .47, .52);
+  const cap = new THREE.Mesh(new THREE.BoxGeometry(.24, .18, .16), accent);
+  cap.position.set(0, .66, -.08);
+  group.add(base, body, barrel, cap);
+  for (const side of [-1, 1]) {
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(.08, .42, .08), dark);
+    leg.position.set(side * .38, .18, -.22);
+    leg.rotation.z = side * .45;
+    group.add(leg);
+  }
+  return group;
+}
+
+function createTurretBoltMesh() {
+  const group = new THREE.Group();
+  const shaft = new THREE.Mesh(new THREE.BoxGeometry(.11, .11, .42), new THREE.MeshBasicMaterial({ color: 0xfacc15 }));
+  const scrap = new THREE.Mesh(new THREE.BoxGeometry(.16, .08, .12), new THREE.MeshBasicMaterial({ color: 0xd1d5db }));
+  scrap.position.z = -.18;
+  group.add(shaft, scrap);
+  return group;
+}
+
+function removeJunkyardTurret(scene, turret) { scene.remove(turret.mesh); disposeObjectTree(turret.mesh); }
+function removeTurretBolt(scene, bolt) { scene.remove(bolt.mesh); disposeObjectTree(bolt.mesh); }
+function removeTurretEffect(scene, effect) { scene.remove(effect.mesh); disposeObjectTree(effect.mesh); }
+
+function addTurretEffect(scene, turretAbility, position) {
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(.16, 6, 4), new THREE.MeshBasicMaterial({ color: 0xfff1a8, transparent: true, opacity: .75 }));
+  mesh.position.copy(position);
+  scene.add(mesh);
+  turretAbility.effects.push({ mesh, life: turretAbility.visualLifetime, maxLife: turretAbility.visualLifetime });
+}
+
+function deployJunkyardTurret(scene, state, player) {
+  const turretAbility = state.abilities.junkyardTurret;
+  while (turretAbility.turrets.length >= turretAbility.maxTurrets) removeJunkyardTurret(scene, turretAbility.turrets.shift());
+  const target = getNearestZombieInRange(player.position, turretAbility.range);
+  const angle = target ? Math.atan2(target.position.x - player.position.x, target.position.z - player.position.z) : player.rotation.y + (Math.random() - .5) * .8;
+  const mesh = createJunkyardTurretMesh();
+  mesh.position.set(player.position.x + Math.sin(angle) * turretAbility.deployDistance, 0, player.position.z + Math.cos(angle) * turretAbility.deployDistance);
+  mesh.rotation.y = angle;
+  scene.add(mesh);
+  turretAbility.turrets.push({ mesh, life: turretAbility.duration, fireTimer: .25 });
+}
+
+function fireTurretBolt(scene, turretAbility, turret, target, spread = 0) {
+  const angle = Math.atan2(target.position.x - turret.mesh.position.x, target.position.z - turret.mesh.position.z) + spread;
+  turret.mesh.rotation.y = angle;
+  const mesh = createTurretBoltMesh();
+  mesh.position.set(turret.mesh.position.x, .52, turret.mesh.position.z);
+  mesh.rotation.y = angle;
+  scene.add(mesh);
+  turretAbility.bolts.push({ mesh, velocity: new THREE.Vector3(Math.sin(angle) * turretAbility.projectileSpeed, 0, Math.cos(angle) * turretAbility.projectileSpeed), life: turretAbility.projectileLifetime });
+  addTurretEffect(scene, turretAbility, new THREE.Vector3(turret.mesh.position.x + Math.sin(angle) * .6, .52, turret.mesh.position.z + Math.cos(angle) * .6));
+}
+
+function updateTurretEffects(scene, turretAbility, delta) {
+  turretAbility.effects = turretAbility.effects.filter((effect) => {
+    effect.life -= delta;
+    const fade = Math.max(0, effect.life / effect.maxLife);
+    effect.mesh.material.opacity = fade * .75;
+    effect.mesh.scale.setScalar(1 + (1 - fade) * 1.5);
+    if (effect.life <= 0) { removeTurretEffect(scene, effect); return false; }
+    return true;
+  });
+}
+
+function updateJunkyardTurret(scene, state, player, delta, onKilled, onHit) {
+  const turretAbility = state.abilities.junkyardTurret;
+  turretAbility.timer -= delta;
+  updateTurretEffects(scene, turretAbility, delta);
+  if (turretAbility.timer <= 0) { deployJunkyardTurret(scene, state, player); turretAbility.timer = turretAbility.cooldown; }
+  turretAbility.turrets = turretAbility.turrets.filter((turret) => {
+    turret.life -= delta;
+    turret.fireTimer -= delta;
+    const target = getNearestZombieInRange(turret.mesh.position, turretAbility.range);
+    if (target) {
+      const aim = Math.atan2(target.position.x - turret.mesh.position.x, target.position.z - turret.mesh.position.z);
+      turret.mesh.rotation.y = aim;
+      if (turret.fireTimer <= 0) {
+        const shots = Math.max(1, turretAbility.burstShots);
+        for (let i = 0; i < shots; i++) fireTurretBolt(scene, turretAbility, turret, target, (i - (shots - 1) / 2) * .12);
+        turret.fireTimer = turretAbility.fireCooldown;
+      }
+    }
+    if (turret.life <= 0) { removeJunkyardTurret(scene, turret); return false; }
+    return true;
+  });
+  turretAbility.bolts = turretAbility.bolts.filter((bolt) => {
+    bolt.life -= delta;
+    bolt.mesh.position.addScaledVector(bolt.velocity, delta);
+    bolt.mesh.rotation.z += delta * 14;
+    for (const zombie of [...getZombies()]) {
+      const type = CONFIG.zombie.types[zombie.userData.typeKey] ?? CONFIG.zombie.types.walker;
+      const dist = Math.hypot(bolt.mesh.position.x - zombie.position.x, bolt.mesh.position.z - zombie.position.z);
+      if (dist <= turretAbility.hitRadius + type.radius) {
+        damageZombie(scene, zombie, bolt.mesh.position, turretAbility.damage, onKilled, onHit);
+        removeTurretBolt(scene, bolt);
+        return false;
+      }
+    }
+    if (bolt.life <= 0) { removeTurretBolt(scene, bolt); return false; }
+    return true;
   });
 }
 
