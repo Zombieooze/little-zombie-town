@@ -20,12 +20,6 @@ export const UPGRADES = [
   { id: 'energyDrink', name: 'Energy Drink', description: '+12% damage.' },
   { id: 'coffeeRush', name: 'Coffee Rush', description: '-8% weapon and ability cooldowns.' },
   { id: 'scrapMagnet', name: 'Scrap Magnet', description: '+35% pickup radius.' },
-  { id: 'paddedJacket', name: 'Padded Jacket', description: '-2 damage taken per hit.' },
-  { id: 'bandageWrap', name: 'Bandage Wrap', description: '+0.8 HP/sec regen.' },
-  { id: 'luckyCharm', name: 'Lucky Charm', description: '+6% crit chance.' },
-  { id: 'adrenalineRush', name: 'Adrenaline Rush', description: '+12% sprint speed.' },
-  { id: 'deepBreaths', name: 'Deep Breaths', description: '+30 max stamina.' },
-  { id: 'secondWind', name: 'Second Wind', description: '+35% stamina regen.' },
 ];
 
 function canOfferPassive(state, upgrade) {

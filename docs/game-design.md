@@ -64,7 +64,7 @@ With all 8 planned special abilities implemented, the 4-ability cap remains the 
 
 ## Passive run upgrades
 
-Passive run upgrades now use CubeBasher-style values with Little Zombie Town names. They are repeatable up to simple safety caps, improve only the current run, and stack with permanent Upgrade Lab bonuses without mutating saved shop data or base config values.
+Passive run upgrades now use CubeBasher-style values with Little Zombie Town names. They are repeatable up to simple safety caps, improve only the current run, and stack with permanent Upgrade Lab bonuses without mutating saved shop data or base config values. The current in-run passive upgrade pool has been simplified so level-up choices stay cleaner and leave more room for useful upgrades and special ability cards.
 
 Current passive cards:
 
@@ -73,14 +73,8 @@ Current passive cards:
 - **Energy Drink:** +12% global player damage for the bat and player-created abilities where practical.
 - **Coffee Rush:** -8% weapon and ability cooldowns, with cooldowns clamped so timers stay safe.
 - **Scrap Magnet:** +35% pickup radius for XP pickup/magnet behavior.
-- **Padded Jacket:** -2 incoming damage per hit, clamped so hits still deal at least 1 damage.
-- **Bandage Wrap:** +0.8 HP/sec regeneration, healing only up to max HP.
-- **Lucky Charm:** +6% player crit chance; crits use a simple 2x player-damage multiplier.
-- **Adrenaline Rush:** +12% sprint speed when sprinting is active.
-- **Deep Breaths:** +30 max stamina, stored safely for stamina systems.
-- **Second Wind:** +35% stamina regen multiplier, stored safely for stamina systems.
 
-Special ability cards still exist separately from these passive cards, keep their own Level 1-10 progression, and still respect the 4-special-ability cap. Permanent upgrades and in-run passives stack additively or multiplicatively through run state: Power stacks with Energy Drink damage, Vitality with First Aid Training max HP, Swiftness with Running Shoes speed, Recovery with Bandage Wrap regen, Endurance with Deep Breaths stamina, and Magnetism with Scrap Magnet pickup radius.
+Stamina, armor, crit, and regen passives were removed from the level-up pool for now to keep in-run choices cleaner while the sprint system remains simple and the map is still small. Special ability cards still exist separately from these passive cards, keep their own Level 1-10 progression, and still respect the 4-special-ability cap. Permanent upgrades and in-run passives stack additively or multiplicatively through run state: Power stacks with Energy Drink damage, Vitality with First Aid Training max HP, Swiftness with Running Shoes speed, and Magnetism with Scrap Magnet pickup radius.
 
 ## Permanent Upgrade Lab
 
