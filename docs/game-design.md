@@ -3,7 +3,7 @@
 ## Core loop
 
 1. Start a ten-minute run from the main menu.
-2. Move around a larger ruined town arena while zombies spawn at the edges.
+2. Move around a handcrafted 220 x 220 little-town map while zombies spawn at the edges.
 3. Let automatic fixed-range baseball bat swings clear nearby zombies in emergencies.
 4. Collect dropped XP gems from every defeated zombie.
 5. Grab medkits as the basic healing system when damage starts to pile up.
@@ -13,7 +13,7 @@
 ## First version scope
 
 - Static browser game with no build system or backend.
-- Procedural low-poly town using basic Three.js geometry.
+- Handcrafted 220 x 220 low-poly town foundation using basic Three.js geometry, with procedural-style filler props kept only where safe.
 - One readable procedural survivor character with WASD movement, sprinting, touch joystick support, Xbox-style controller support, and a quick arcade jump.
 - Survivor visual direction: red shirt or jacket, dark undershirt, blue pants, dark shoes, white/red/black cap, simple brown backpack, and wooden baseball bat. The survivor rises as a whole when jumping, tucks the legs slightly while airborne, and uses a small landing dip when returning to the ground.
 - Multiple simple procedural zombie types that all chase the player directly.
@@ -28,7 +28,7 @@
 - **Spacebar** or an Xbox-style controller **A** button starts a quick, modest arcade jump only while grounded. Holding the jump input does not repeat jumps in midair.
 - The player keeps camera-relative steering while airborne, so pressing a new WASD direction during a jump changes the movement direction instead of locking the original takeoff direction.
 - Jumping is currently a movement-feel feature only: it does not grant invincibility, stomp damage, dodge frames, or special combat rules. Bat swings and special abilities can still operate while jumping.
-- Cars, buildings, and other town props still do not block movement in this pass. Obstacle collision remains planned for a later dedicated pass.
+- Cars, placeholder buildings, district lots, and other town props still do not block movement in this foundation pass. Obstacle collision remains planned for a later dedicated pass.
 
 ## Special ability system
 
@@ -104,7 +104,11 @@ The bat is the close-range emergency weapon. Its range/radius should stay fixed,
 
 ## Current prototype target
 
-- Survive **10 minutes** in a noticeably larger arena than the earliest prototype.
+- Survive **10 minutes** on a **220 x 220** playable town map centered around the origin.
+- The world now uses a handcrafted town foundation layout instead of the old simple arena/testing-field feel.
+- Major districts are blocked in as readable top-down zones: Downtown, Park, School, Residential neighborhood, Apartment/Townhouse blocks, Police Station lot, Fire Station lot, Industrial/Junkyard, Gas Station, and extra housing lots.
+- Roads use a central downtown cross/intersection, connected side streets, sidewalks, parking lots, park paths, grass lawns, paved civic lots, a school field/play area, and rough junkyard/dirt surfaces so districts are distinguishable before the final art pass.
+- Placeholder block buildings and lot markers are intentionally simple in this pass; district detail, open-roof/walls-only building remodels, debris polish, loot crates, and detailed interiors are planned for later section-by-section passes.
 - Keep the first playable loop approachable: enemies pressure the player, but there is enough room to kite zombies and collect XP.
 - Use increased late-run spawn pressure plus light enemy health and damage scaling so the 10-minute test stays tense after the player levels up.
 - Use simple browser-friendly geometry only: boxes, cylinders, spheres, cones, low-poly primitives, flat colors, and no imported models or textures.
