@@ -48,7 +48,7 @@ export function registerWorldCollider(collider) {
   const type = collider.type === 'circle' ? 'circle' : 'rect';
   const normalized = type === 'circle'
     ? { type, x: collider.x, z: collider.z, radius: Math.max(0, collider.radius ?? 0), label: collider.label ?? 'world' }
-    : { type, x: collider.x, z: collider.z, width: Math.max(0, collider.width ?? 0), depth: Math.max(0, collider.depth ?? 0), label: collider.label ?? 'world' };
+    : { type, x: collider.x, z: collider.z, width: Math.max(0, collider.width ?? 0), depth: Math.max(0, collider.depth ?? 0), rotation: collider.rotation ?? 0, label: collider.label ?? 'world' };
   worldColliders.push(normalized);
   return normalized;
 }
@@ -70,23 +70,36 @@ function getColliderPushOut(x, z, radius, collider) {
 
   const halfW = collider.width / 2;
   const halfD = collider.depth / 2;
-  const closestX = THREE.MathUtils.clamp(x, collider.x - halfW, collider.x + halfW);
-  const closestZ = THREE.MathUtils.clamp(z, collider.z - halfD, collider.z + halfD);
-  const dx = x - closestX;
-  const dz = z - closestZ;
+  const angle = -(collider.rotation ?? 0);
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const worldDx = x - collider.x;
+  const worldDz = z - collider.z;
+  const localX = worldDx * cos - worldDz * sin;
+  const localZ = worldDx * sin + worldDz * cos;
+  const closestX = THREE.MathUtils.clamp(localX, -halfW, halfW);
+  const closestZ = THREE.MathUtils.clamp(localZ, -halfD, halfD);
+  const dx = localX - closestX;
+  const dz = localZ - closestZ;
   const dist = Math.hypot(dx, dz);
-  if (dist > 0.0001 && dist < radius) return { x: (dx / dist) * (radius - dist), z: (dz / dist) * (radius - dist) };
-  if (x < collider.x - halfW || x > collider.x + halfW || z < collider.z - halfD || z > collider.z + halfD) return null;
+  const toWorld = (lx, lz) => {
+    const rot = collider.rotation ?? 0;
+    const c = Math.cos(rot);
+    const s = Math.sin(rot);
+    return { x: lx * c - lz * s, z: lx * s + lz * c };
+  };
+  if (dist > 0.0001 && dist < radius) return toWorld((dx / dist) * (radius - dist), (dz / dist) * (radius - dist));
+  if (localX < -halfW || localX > halfW || localZ < -halfD || localZ > halfD) return null;
 
-  const left = Math.abs(x - (collider.x - halfW));
-  const right = Math.abs((collider.x + halfW) - x);
-  const bottom = Math.abs(z - (collider.z - halfD));
-  const top = Math.abs((collider.z + halfD) - z);
+  const left = Math.abs(localX + halfW);
+  const right = Math.abs(halfW - localX);
+  const bottom = Math.abs(localZ + halfD);
+  const top = Math.abs(halfD - localZ);
   const min = Math.min(left, right, bottom, top);
-  if (min === left) return { x: -(left + radius), z: 0 };
-  if (min === right) return { x: right + radius, z: 0 };
-  if (min === bottom) return { x: 0, z: -(bottom + radius) };
-  return { x: 0, z: top + radius };
+  if (min === left) return toWorld(-(left + radius), 0);
+  if (min === right) return toWorld(right + radius, 0);
+  if (min === bottom) return toWorld(0, -(bottom + radius));
+  return toWorld(0, top + radius);
 }
 
 export function resolveWorldCollision(position, radius = 0) {
@@ -177,23 +190,87 @@ function finishAsset(group, options, collider) {
     const x = group.position.x;
     const z = group.position.z;
     if (collider.type === 'circle') registerWorldCollider({ ...collider, x, z, radius: collider.radius * scale });
-    else registerWorldCollider({ ...collider, x, z, width: collider.width * scale, depth: collider.depth * scale });
+    else registerWorldCollider({ ...collider, x, z, rotation: group.rotation.y, width: collider.width * scale, depth: collider.depth * scale });
   }
   return group;
 }
 
+function vehicleBox(group, w, h, d, color, position, rotation = [0, 0, 0]) {
+  return assetPart(group, box(w, h, d, color), position, rotation);
+}
+
+function addWheel(group, x, z, radius = .34) {
+  assetPart(group, new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, .28, 10), ASSET_MATS.black), [x, radius + .06, z], [Math.PI / 2, 0, 0]);
+  assetPart(group, new THREE.Mesh(new THREE.CylinderGeometry(radius * .5, radius * .5, .31, 8), ASSET_MATS.darkMetal), [x, radius + .06, z], [Math.PI / 2, 0, 0]);
+}
+
+function addRustPatches(group, dims, count, roofY) {
+  for (let i = 0; i < count; i++) {
+    const side = i % 3;
+    const w = .28 + (i % 4) * .12;
+    const h = .08 + (i % 2) * .06;
+    const x = -dims[0] * .42 + ((i * .37) % .84) * dims[0];
+    const z = side === 0 ? -dims[2] * .51 : side === 1 ? dims[2] * .51 : -dims[2] * .2 + ((i * .29) % .4) * dims[2];
+    const y = side === 2 ? roofY : .95 + (i % 4) * .32;
+    vehicleBox(group, w, h, .035, 0x8a4b2f, [x, y, z], [0, side === 1 ? 0 : 0, (i % 5) * .12]);
+  }
+}
+
+function addBrokenWindow(group, x, y, z, w, h, side = 'front') {
+  const rot = side === 'left' ? [0, Math.PI / 2, 0] : side === 'right' ? [0, Math.PI / 2, 0] : [0, 0, 0];
+  vehicleBox(group, w, h, .04, 0x050505, [x, y, z], rot);
+  for (let i = 0; i < 3; i++) {
+    const shard = vehicleBox(group, w * .18, h * .22, .045, 0x3f4548, [x + (i - 1) * w * .22, y + (i % 2 ? .12 : -.08), z + (side === 'rear' ? -.01 : .01)], rot);
+    shard.rotation.z = (i - 1) * .35;
+  }
+}
+
 function createBurntVehicle(options = {}, kind = 'sedan') {
-  const dims = { sedan: [3.8, .75, 1.7], van: [4.5, 1.35, 1.95], pickup: [4.3, .85, 1.85], rv: [5.2, 1.65, 2.2] }[kind];
-  const color = { sedan: 0x4a4a42, van: 0x6b665c, pickup: 0x52675d, rv: 0x8a806d }[kind];
+  const specs = {
+    sedan: { dims: [4.1, .72, 1.75], color: 0x555348, cabin: [1.85, .82, 1.58], cabinX: -.25, scale: 1.24, wheels: .32 },
+    van: { dims: [4.9, 1.2, 2.0], color: 0x68685d, cabin: [3.55, .92, 1.82], cabinX: .2, scale: 1.25, wheels: .35 },
+    pickup: { dims: [4.7, .86, 1.95], color: 0x53635a, cabin: [1.55, .9, 1.68], cabinX: -.9, scale: 1.24, wheels: .36 },
+    rv: { dims: [5.9, 1.62, 2.28], color: 0x8e8775, cabin: [4.9, 1.25, 2.05], cabinX: .15, scale: 1.23, wheels: .38 },
+  }[kind];
+  const { dims } = specs;
   const g = new THREE.Group();
-  assetPart(g, box(dims[0], dims[1], dims[2], color), [0, dims[1] / 2 + .28, 0]);
-  if (kind === 'pickup') assetPart(g, box(1.4, .62, dims[2] * .92, 0x35463e), [-.85, 1.05, 0]);
-  else assetPart(g, box(dims[0] * .52, .7, dims[2] * .9, 0x303236), [-.25, dims[1] + .55, 0]);
-  if (kind === 'rv') assetPart(g, box(1.1, 1.25, dims[2] * .9, 0x7c6f5f), [1.25, 1.18, 0]);
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) assetPart(g, new THREE.Mesh(new THREE.CylinderGeometry(.34, .34, .28, 10), ASSET_MATS.black), [sx * dims[0] * .34, .35, sz * dims[2] * .54], [Math.PI / 2, 0, 0]);
-  for (let i = 0; i < 6; i++) assetPart(g, box(.08, .04, dims[2] + .08, i % 2 ? 0x2d2b28 : 0x8a4b2f), [-dims[0] * .4 + i * dims[0] * .16, dims[1] + .93, 0]);
-  assetPart(g, box(dims[0] * .82, .08, .08, 0x8a4b2f), [0, dims[1] + .08, -dims[2] * .51]);
-  return finishAsset(g, tuneAssetScale(options, { sedan: 1.22, van: 1.24, pickup: 1.22, rv: 1.28 }[kind] ?? 1), { type: 'circle', radius: Math.max(dims[0], dims[2]) * .48, label: `burnt-${kind}` });
+  vehicleBox(g, dims[0], dims[1], dims[2], specs.color, [0, dims[1] / 2 + .28, 0]);
+  vehicleBox(g, dims[0] * .9, .22, dims[2] * 1.06, 0x2b2c2a, [0, .35, 0]);
+
+  if (kind === 'pickup') {
+    vehicleBox(g, specs.cabin[0], specs.cabin[1], specs.cabin[2], 0x37443d, [specs.cabinX, dims[1] + .55, 0]);
+    vehicleBox(g, 1.9, .58, 1.72, 0x2c3832, [1.08, .96, 0]);
+    vehicleBox(g, 1.68, .12, 1.25, 0x111111, [1.1, 1.22, 0]);
+    for (const z of [-.75, .75]) vehicleBox(g, 1.9, .32, .18, specs.color, [1.08, 1.35, z]);
+    vehicleBox(g, .16, 1.05, .16, 0x252525, [.05, 1.75, -.72], [0, 0, -.25]);
+    vehicleBox(g, .16, 1.05, .16, 0x252525, [.05, 1.75, .72], [0, 0, -.25]);
+  } else {
+    vehicleBox(g, specs.cabin[0], specs.cabin[1], specs.cabin[2], kind === 'rv' ? 0x7e7868 : 0x343633, [specs.cabinX, dims[1] + .55, 0]);
+  }
+
+  if (kind === 'rv') {
+    vehicleBox(g, dims[0] * .82, .08, .16, 0x2f6670, [.18, 1.55, -dims[2] * .53]);
+    vehicleBox(g, dims[0] * .78, .08, .12, 0x8a4b2f, [.1, 1.15, -dims[2] * .535]);
+    vehicleBox(g, .62, 1.05, .08, 0xd8d0bc, [-.45, 1.05, -dims[2] * .56]);
+    vehicleBox(g, 1.1, .42, .85, 0x252525, [.8, dims[1] + 1.28, 0]);
+    vehicleBox(g, 1.15, .16, 1.0, 0x111111, [-1.0, dims[1] + 1.18, 0]);
+    for (let i = 0; i < 3; i++) vehicleBox(g, 1.0, .13, .16, 0x6b5138, [1.35 + i * .12, 1.72 - i * .18, -dims[2] * .58], [0, 0, -.18]);
+  }
+
+  addBrokenWindow(g, -dims[0] * .42, dims[1] + .72, -dims[2] * .52, kind === 'rv' ? 1.1 : 1.0, .42, 'front');
+  addBrokenWindow(g, dims[0] * .28, dims[1] + .68, -dims[2] * .52, kind === 'sedan' ? .72 : .9, .38, 'front');
+  addBrokenWindow(g, dims[0] * .22, dims[1] + .68, dims[2] * .52, kind === 'pickup' ? .66 : .9, .38, 'rear');
+  if (kind !== 'pickup') addBrokenWindow(g, dims[0] * .42, dims[1] + .62, dims[2] * .52, .8, .38, 'rear');
+
+  vehicleBox(g, dims[0] * .28, .12, dims[2] * .42, 0x111111, [kind === 'sedan' ? -1.25 : 0, dims[1] + 1.03, 0]);
+  vehicleBox(g, dims[0] * .14, .08, dims[2] * .25, 0x252525, [kind === 'sedan' ? -1.25 : 0, dims[1] + 1.07, 0]);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) addWheel(g, sx * dims[0] * .34, sz * dims[2] * .55, specs.wheels);
+  vehicleBox(g, dims[0] * .72, .18, .16, 0x111111, [-dims[0] * .25, .95, -dims[2] * .56]);
+  vehicleBox(g, dims[0] * .45, .12, .13, 0x3f4548, [-dims[0] * .3, .98, -dims[2] * .58]);
+  vehicleBox(g, .22, .22, .08, 0xc96f24, [-dims[0] * .51, .86, -dims[2] * .32]);
+  vehicleBox(g, .22, .22, .08, 0xd8d0bc, [-dims[0] * .51, .86, dims[2] * .32]);
+  addRustPatches(g, dims, kind === 'rv' ? 18 : 12, dims[1] + 1.03);
+  return finishAsset(g, tuneAssetScale(options, specs.scale), { type: 'rect', width: dims[0] * .95, depth: dims[2] * .95, label: `burnt-${kind}` });
 }
 
 export const createBurntSedan = (options = {}) => createBurntVehicle(options, 'sedan');
@@ -410,10 +487,12 @@ function addDistricts(scene) {
   townBuilding(scene, -50, 29, 12, 10, 3.2, 0x5f705e);
   [[-50, 39, 5, 12], [-34, 40, 5, 13], [-42, 23, 14, 5]].forEach(([x, z, w, d]) => townRoadSlab(scene, x, z, w, d, COLORS.pavement));
   createStreetTree({ scene, position: [town(-58), 0, town(56)], scale: town(.82) });
+  createBurntSedan({ scene, position: [town(-42), 0, town(38)], rotation: Math.PI / 2 + .08, scale: town(.72) });
   townLotLabel(scene, 'RESIDENTIAL', -43, 20);
 
   // Gas / convenience store corner with one solid shop and non-blocking pump details.
   addGasPumps(scene, 40, 42);
+  createBurntRV({ scene, position: [town(55), 0, town(34)], rotation: -.08, scale: town(.74) });
   townLotLabel(scene, 'GAS', 38, 20);
 
   // Park corner: mostly open grass, with only a few large tree trunks as meaningful blockers.
@@ -426,10 +505,12 @@ function addDistricts(scene) {
   townRoadSlab(scene, 38, -38, 42, 42, COLORS.parking);
   townBuilding(scene, 52, -51, 15, 10, 3.1, 0x72634a);
   addParkingStripes(scene, 36, -34);
-  createBurntSedan({ scene, position: [town(30), 0, town(-32)], rotation: .2, scale: town(.9) });
-  createBurntPickupTruck({ scene, position: [town(45), 0, town(-38)], rotation: Math.PI - .35, scale: town(.9) });
-  createBurntVan({ scene, position: [town(31), 0, town(-53)], rotation: -.15, scale: town(.82) });
+  createBurntSedan({ scene, position: [town(29), 0, town(-31)], rotation: .2, scale: town(.82) });
+  createBurntPickupTruck({ scene, position: [town(45), 0, town(-38)], rotation: Math.PI - .35, scale: town(.82) });
+  createBurntVan({ scene, position: [town(31), 0, town(-53)], rotation: -.15, scale: town(.76) });
   townLotLabel(scene, 'PARKING LOT\nJUNK LOT', 38, -58);
+
+  createBurntVan({ scene, position: [town(8), 0, town(56)], rotation: Math.PI / 2 - .12, scale: town(.68) });
 
   [[-18, 16], [16, 18], [-20, -16], [18, -18], [54, 54], [-58, -58]].forEach(([x, z]) => addRubblePatch(scene, x, z, 5));
 }
