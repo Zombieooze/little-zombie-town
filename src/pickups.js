@@ -49,7 +49,7 @@ export function resetPickups(scene) { pickups.splice(0).forEach((p) => scene.rem
 export function dropXp(scene, position, value = CONFIG.zombie.types.walker.xp) {
   const gem = new THREE.Mesh(gemGeo, gemMat);
   const safePosition = findSafeSpawnPositionNear(position.x, position.z, 0.35, 10);
-  gem.position.copy(safePosition); gem.position.y = .55; gem.userData = { kind: 'xp', value, rushing: false };
+  gem.position.copy(safePosition); gem.position.y = .55; gem.userData = { kind: 'xp', value, rushing: false, attracted: false };
   pickups.push(gem); scene.add(gem);
   return gem;
 }
@@ -58,7 +58,7 @@ export function dropCoin(scene, position, value = 1) {
   const coin = new THREE.Mesh(coinGeo, coinMat);
   const safePosition = findSafeSpawnPositionNear(position.x, position.z, 0.35, 10);
   coin.position.copy(safePosition); coin.position.y = .46; coin.rotation.x = Math.PI / 2;
-  coin.userData = { kind: 'coin', value, rushing: false };
+  coin.userData = { kind: 'coin', value, rushing: false, attracted: false };
   pickups.push(coin); scene.add(coin);
   return coin;
 }
@@ -114,11 +114,13 @@ export function updatePickups(scene, player, delta, onCollect, magnetMultiplier 
     const dx = player.position.x - pickup.position.x, dz = player.position.z - pickup.position.z;
     const dist = Math.hypot(dx, dz) || 1;
     const magnetScale = Math.max(0.1, magnetMultiplier);
+    if (kind === 'xp' && dist < CONFIG.xp.magnetRadius * magnetScale) pickup.userData.attracted = true;
+    if (kind === 'coin' && dist < CONFIG.coin.magnetRadius * magnetScale) pickup.userData.attracted = true;
     if (pickup.userData.rushing && (kind === 'xp' || kind === 'coin')) {
       moveTowardPlayer(pickup, player, dist, dx, dz, CONFIG.scrapRush.speed, delta);
-    } else if (kind === 'xp' && dist < CONFIG.xp.magnetRadius * magnetScale) {
+    } else if (kind === 'xp' && pickup.userData.attracted) {
       moveTowardPlayer(pickup, player, dist, dx, dz, CONFIG.xp.speed, delta);
-    } else if (kind === 'coin' && dist < CONFIG.coin.magnetRadius * magnetScale) {
+    } else if (kind === 'coin' && pickup.userData.attracted) {
       moveTowardPlayer(pickup, player, dist, dx, dz, CONFIG.coin.speed, delta);
     }
     const basePickupRadius = kind === 'medkit' ? CONFIG.medkit.pickupRadius : kind === 'scrapRush' ? CONFIG.scrapRush.pickupRadius : kind === 'coin' ? CONFIG.coin.pickupRadius : CONFIG.xp.pickupRadius;
