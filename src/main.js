@@ -17,6 +17,7 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 160);
 const clock = new THREE.Clock();
+const isDesignMode = new URLSearchParams(window.location.search).has('design');
 let player;
 let mode = 'menu';
 let muted = false;
@@ -69,6 +70,7 @@ initInput();
 initCameraControls();
 createWorld(scene);
 initUI({ onStart: startGame, onUpgrade: chooseUpgrade, onMenu: returnToMenu, onShop: openShop, onPause: pauseGame, onResume: resumeGame, onFullscreen: requestGameFullscreen });
+document.getElementById('design-mode-banner')?.classList.toggle('hidden', !isDesignMode);
 showScreen('menu-screen');
 
 function resetState() {
@@ -558,21 +560,23 @@ function tick() {
 
   if (mode === 'playing') {
     const previousElapsed = state.elapsed;
-    state.elapsed += delta;
+    if (!isDesignMode) state.elapsed += delta;
     attackVisualTimer = Math.max(0, attackVisualTimer - delta);
     cameraShake = Math.max(0, cameraShake - delta);
     updatePlayer(player, delta, attackVisualTimer, cameraControls.yaw, state.speedMultiplier, state.sprintSpeedMultiplier);
     spawnTimer -= delta; pulseTimer -= delta; worldMedkitTimer -= delta;
-    trySpawnBossEvents(previousElapsed);
-    if (spawnTimer <= 0) {
-      spawnZombie(scene, { elapsed: state.elapsed, level: state.level, playerPosition: player.position });
-      spawnTimer = getSpawnDelay(state.elapsed);
+    if (!isDesignMode) {
+      trySpawnBossEvents(previousElapsed);
+      if (spawnTimer <= 0) {
+        spawnZombie(scene, { elapsed: state.elapsed, level: state.level, playerPosition: player.position });
+        spawnTimer = getSpawnDelay(state.elapsed);
+      }
     }
     if (worldMedkitTimer <= 0) {
       spawnWorldMedkit();
       scheduleNextWorldMedkit();
     }
-    updateZombies(scene, player, delta, damagePlayer);
+    if (!isDesignMode) updateZombies(scene, player, delta, damagePlayer);
     updatePickups(scene, player, delta, collectPickup, state.pickupMagnetMultiplier);
     if (state.healthRegen > 0 && state.health > 0 && state.health < state.maxHealth) {
       state.health = Math.min(state.maxHealth, state.health + state.healthRegen * delta);
@@ -581,8 +585,8 @@ function tick() {
     updateAbilities(scene, state, player, delta, (position, type, typeKey) => {
       state.kills += 1; dropKillRewards(position, type, typeKey);
     }, createHitParticles);
-    if (state.health <= 0) endRun(false);
-    if (state.elapsed >= CONFIG.runDuration) endRun(true);
+    if (!isDesignMode && state.health <= 0) endRun(false);
+    if (!isDesignMode && state.elapsed >= CONFIG.runDuration) endRun(true);
     updateHUD(state); updateBossHealthBar(getActiveBoss()); updateCamera(delta);
   }
 
