@@ -2,8 +2,8 @@
 
 ## Core loop
 
-1. Start a ten-minute run from the main menu.
-2. Move around a handcrafted 180 x 180 little-town map while zombies spawn in a safe pressure ring around the player.
+1. Start a twelve-minute run from the main menu.
+2. Move around a simplified 130 x 130 arena-town map while zombies spawn in a safe pressure ring around the player.
 3. Let automatic fixed-range baseball bat swings clear nearby zombies in emergencies.
 4. Collect dropped XP gems from every defeated zombie.
 5. Grab medkits as the basic healing system when damage starts to pile up.
@@ -13,7 +13,7 @@
 ## First version scope
 
 - Static browser game with no build system or backend.
-- Handcrafted 180 x 180 low-poly town foundation using basic Three.js geometry, with procedural-style filler props kept only where safe.
+- Simplified 130 x 130 low-poly arena-town foundation using basic Three.js geometry, with clutter-heavy blockers removed for cleaner combat flow.
 - One readable procedural survivor character with WASD movement, sprinting, touch joystick support, Xbox-style controller support, and a quick arcade jump.
 - Survivor visual direction: red shirt or jacket, dark undershirt, blue pants, dark shoes, white/red/black cap, simple brown backpack, and wooden baseball bat. The survivor rises as a whole when jumping, tucks the legs slightly while airborne, and uses a small landing dip when returning to the ground.
 - Multiple simple procedural zombie types that all chase the player directly.
@@ -24,7 +24,7 @@
 
 ## Movement and jump
 
-- Base player and zombie movement speeds are tuned about **10% faster** than the previous stable feel so the town pace is slightly snappier without changing the 10-minute run clock, spawn cadence, cooldowns, XP curve, medkit timers, or damage tick timers.
+- Base player and zombie movement speeds are tuned about **10% faster** than the previous stable feel so the town pace is slightly snappier without changing the 12-minute run clock, spawn cadence, cooldowns, XP curve, medkit timers, or damage tick timers.
 - **Spacebar** or an Xbox-style controller **A** button starts a quick, modest arcade jump only while grounded. Holding the jump input does not repeat jumps in midair.
 - The player keeps camera-relative steering while airborne, so pressing a new WASD direction during a jump changes the movement direction instead of locking the original takeoff direction.
 - Jumping is currently a movement-feel feature only: it does not grant invincibility, stomp damage, dodge frames, or special combat rules. Bat swings and special abilities can still operate while jumping.
@@ -104,24 +104,14 @@ The bat is the close-range emergency weapon. Its range/radius should stay fixed,
 
 ## Current prototype target
 
-- Survive **10 minutes** on a **180 x 180** playable town map centered around the origin, roughly spanning -90 to +90 on X/Z.
-- The world now uses a handcrafted town foundation layout instead of the old simple arena/testing-field feel.
-- The town foundation was compressed from 220 x 220 to 180 x 180 for tighter, more action-focused 10-minute gameplay while keeping the approved reference layout readable. The compressed layout has been rearranged to more closely match the approved top-down town plan, with roads and districts treated as one unified blockout instead of separate placements.
-- Current districts are blocked in as readable top-down zones: Downtown, Park Zone, School Zone, Residential Zone, Apartment/Townhouse Zone, Police Station area, Fire Station area, Industrial/Junkyard zone, Gas Station zone, and an extra southeast housing block.
-- Roads use a central downtown cross/intersection, north/south collector streets, east/west service streets, sidewalks, parking lots, park paths, grass lawns, paved civic lots, a school field/play area, and rough junkyard/dirt surfaces so districts are distinguishable before the final art pass.
-- The 180 x 180 town foundation layout keeps the existing clean surface layering system with an explicit visual surface layer order: base ground, district/grass/dirt/junk surfaces, road/parking/pavement lots, sidewalks/paths/curbs, and top-level road markings. This keeps roads, sidewalks, parking lots, grass, junkyard surfaces, and district slabs from fighting or flickering against each other.
-- Sidewalks are segmented beside major roads with gaps at intersections, while crosswalks use separate road-marking strips so sidewalks do not cut through road lanes.
-- Placeholder block buildings and lot markers are intentionally simple in this pass; detailed district passes, section-by-section building passes, open-roof/walls-only building remodels, debris polish, loot crates, and detailed interiors are planned for later.
-- A reusable low-poly world asset pack now lives in `src/world.js` as code-built prefab helpers with shared placement options for position, rotation, scale, optional scene insertion, and optional collision registration. The pack covers vehicles and roadside props (burnt sedan, van, pickup, RV, lamp post, stop sign, street sign, concrete barrier, traffic cone, road barricade, utility pole, fire hydrant), trees/fences/yard props (street/dead/burnt trees, bush, hedge, mailbox, wood fence, chain-link fence, bench, picnic table, planter, wooden shed), and debris/utility/public props (dumpster, garbage bags, tire pile, scrap pile, barrel stack, crate stack, wood debris, trash can, bus stop sign, playground slide, playground swings, junk pile). These helpers are intended for future district-by-district art passes so each zone can reuse consistent shared props instead of rebuilding silhouettes from scratch.
-- Asset-pack collision is deliberately selective: large/solid props such as burnt vehicles, trees, hedges, fence sections, barriers, barricades, utility poles, benches, picnic tables, planters, sheds, dumpsters, barrel/crate stacks, junk piles, and playground equipment register simple world colliders by default, while tiny or soft decorative props such as cones, hydrants, mailboxes, bushes, garbage bags, tire piles, loose scrap/wood debris, and trash cans remain mostly decorative to avoid over-blocking movement. After in-game scale testing, vehicles, chain-link fences, and burnt trees kept their prior tuned sizes, while a second focused scale pass bumped lamp/street-sign/utility posts, dead/street trees, playground equipment, benches, and picnic tables larger; hydrants, dumpsters, rubble/scrap piles, barriers, bushes, wood fences, trash cans, and stop signs stayed at their original readable sizes.
-- Outside the completed Residential Zone Pass 1 area, the current map includes only a light asset-pack preview set spread near existing roads, park/school, civic, gas, and junkyard areas. This is for visual verification only and is not a full downtown, school, park, gas station, civic, apartment, southeast housing, or junkyard decoration pass.
-- **Residential Zone Pass 1 is complete.** The northeast Residential Zone now has a handcrafted abandoned neighborhood block using simple no-roof, open-shell house construction so interiors stay visible from gameplay. The pass uses a mix of single-story houses, two-story houses, and a small townhouse/duplex-style building with passable doorway/garage openings, believable upper-body/head-height exterior-wall windows, simple floor surfaces, and a few furniture hints.
-- Residential Zone Pass 1 uses reusable asset-pack props for front/back yards and abandoned-neighborhood dressing: wood and chain-link fence runs, hedges, bushes, mailboxes, street trees, a shed, bench, picnic table, burnt sedan, burnt pickup, lamp post, street sign, trash can, garbage bags, and wood debris.
-- Residential Zone Pass 1 also cleaned up the local residential ground layout with an internal neighborhood lane, aligned sidewalks, readable grass lots/yards, and driveway/pavement connections so houses, roads, yards, and lot boundaries feel intentional. This was a local residential cleanup only, not a whole-town road pass.
-- Residential houses were cleaned up into readable exterior-wall shells: most interior divider walls were removed so the player can enter and move around in large open interiors instead of maze-like rooms. Windows are exterior-wall visual details placed on vertical wall surfaces at believable upper-body/head height, not interior blockers or ground strips.
-- Residential exterior wall pieces, fences/hedges, vehicles, trees, shed, bench, and picnic table register through the existing world collider/safe-spawn system where appropriate, while removed interior dividers no longer add colliders. Doorway and garage gaps remain open and collision matches the cleaned-up exterior wall pieces, so pickup and medkit safe-spawn checks avoid the new solid residential obstacles without adding a new save or spawn system. Other zones remain pending future art/build passes.
-- Keep the first playable loop approachable: enemies pressure the player, but there is enough room to kite zombies and collect XP.
-- Use increased late-run spawn pressure plus light enemy health and damage scaling so the 10-minute test stays tense after the player levels up.
+- Survive **12 minutes** on a **130 x 130** playable arena-town map centered around the origin, roughly spanning -65 to +65 on X/Z.
+- The world now uses a simplified arena-town layout instead of the oversized handcrafted exploration-town experiment. The pivot keeps the zombie-town fantasy but prioritizes combat readability, kiting lanes, and reliable zombie flow.
+- The arena is **130 x 130** with one clear central road crossing/intersection and four compact themed corners: Residential, Gas / convenience store, Park / open grass, and Parking lot / junk lot.
+- Buildings in the active world are now solid, roofed, boarded-up obstacle structures. They are scenery and collision pieces only: no open-top houses, no enterable interiors, and no interior walls.
+- Clutter-heavy blockers from the larger town pass were removed from the active world for gameplay reasons, including fences, chain-link fences, benches, picnic tables, playground items, hedges, bushes, dumpsters, road barricades, mailboxes, and other narrow props that could snag zombies.
+- Active major blockers are intentionally limited to solid buildings, burnt vehicles, and larger park trees. Light rubble patches, road cracks/markings, sidewalks, parking lines, pumps, and small ground debris are decorative or minimally intrusive.
+- Some reusable world prop helpers remain in `src/world.js` for now because they are self-contained prefab code and may still be useful later, but the simplified arena no longer places the clutter-heavy helpers in the active world.
+- Use increased late-run spawn pressure plus light enemy health and damage scaling so the 12-minute test stays tense after the player levels up.
 - Use simple browser-friendly geometry only: boxes, cylinders, spheres, cones, low-poly primitives, flat colors, and no imported models or textures.
 
 ## Healing and pickups
@@ -132,7 +122,7 @@ Medkits are the current basic healing system. They use simple low-poly red boxes
 - Every defeated zombie still drops its XP gem and a loose coin pickup for its coin reward. Medkits are an extra rare drop and never replace XP or coin rewards.
 - **Scrap Rush** is a rare glowing magnet/scrap pickup. Normal enemies have a tunable **0.8%** chance (`0.008`) to drop Scrap Rush, and Gravebreaker drops one on defeat. When collected, Scrap Rush shows a short "SCRAP RUSH!" message and marks every loose XP gem and coin on the map to rush toward the player like a magnet burst. Medkits are deliberately excluded so players can choose when to heal.
 - Drop chances live near zombie type tuning: Walkers are rare, Runners/Little Zombies and Spitters are slightly more likely, and Brutes/Crushers/Mini Bosses are more rewarding without replacing XP drops.
-- World medkits begin appearing around **0:45**, then occasionally respawn near—but not directly on—the player, with small world and total active caps so healing remains helpful without flooding the arena. Medkits and practical pickup drops use the shared safe-spawn helper so they stay inside the 180 x 180 play area and avoid registered solid world objects such as buildings, vehicles, trees, fences, bushes, barriers, and large props as those colliders are added.
+- World medkits begin appearing around **0:45**, then occasionally respawn near—but not directly on—the player, with small world and total active caps so healing remains helpful without flooding the arena. Medkits and practical pickup drops use the shared safe-spawn helper so they stay inside the 130 x 130 play area and avoid registered solid world objects such as buildings, vehicles, and large trees.
 
 ## Zombie progression
 
@@ -145,9 +135,9 @@ Zombie tuning lives in `src/config.js` so health, speed, damage, XP, coins, size
 - **6:00+ or level 9+:** Crusher Zombies enter as late-game heavy chasers between Brutes and Gravebreaker.
 - **4:00 and 8:00 boss events:** Gravebreaker awakens as a timed boss event. Only one Gravebreaker can exist at a time, so the 8:00 event is skipped if the 4:00 Gravebreaker is still alive.
 
-Normal zombies spawn near the player in a tunable donut/ring rather than across the far side of the larger town map, keeping combat pressure tight without increasing the spawn rate or horde cap. Spawn candidates are checked against the 180 x 180 map bounds and registered solid world objects when possible, so mobs avoid buildings, vehicles, trees, fences, bushes, barriers, and large props before falling back to the safest available nearby point. Zombies still use simple direct chasing after spawning; this does not add navmesh or smart pathfinding.
+Normal zombies spawn near the player in a tunable donut/ring rather than across the far side of the larger town map, keeping combat pressure tight without increasing the spawn rate or horde cap. Spawn candidates are checked against the 130 x 130 map bounds and registered solid world objects when possible, so mobs avoid buildings, vehicles, and large trees before falling back to the safest available nearby point. Zombies still use simple direct chasing after spawning; this does not add navmesh or smart pathfinding.
 
-Spawn pressure increases over the run: spawn delays shrink gradually, the active horde cap rises, and later zombie type weights become more prominent after they unlock, with extra late pressure on heavy enemies after minute five. Enemy health scales slowly by elapsed minutes and contact damage scales even more lightly, keeping the opening approachable while preventing the late run from becoming too easy. XP rewards also gain a modest time-based multiplier after minute five, and level XP growth softens after level 10, so upgrades keep feeding through the full 10-minute run. Strong successful play should trend closer to level 24-30 instead of stalling near the high teens.
+Spawn pressure increases over the run: spawn delays shrink gradually, the active horde cap rises, and later zombie type weights become more prominent after they unlock, with extra late pressure on heavy enemies after minute five. Enemy health scales slowly by elapsed minutes and contact damage scales even more lightly, keeping the opening approachable while preventing the late run from becoming too easy. XP rewards also gain a modest time-based multiplier after minute five, and level XP growth softens after level 10, so upgrades keep feeding through the full 12-minute run. Strong successful play should trend closer to level 24-30 instead of stalling near the high teens.
 
 ## Zombie type roles
 
@@ -161,7 +151,7 @@ Spawn pressure increases over the run: spawn delays shrink gradually, the active
 ## Future ideas
 
 - Give Spitter Zombies an isolated, easy-to-read projectile attack once the foundation is stable.
-- More town props, barricades, rubble clusters, signs, and readable low-poly landmarks.
+- More readable low-poly landmarks only if they preserve the simplified arena flow; avoid returning to clutter-heavy barricades or narrow blocker props.
 - Persistent cosmetic unlocks bought with coins.
 - More arenas, weather effects, and ambient sound.
 - Controller and touch controls.
@@ -203,5 +193,5 @@ Mobile/touch controls are hidden on normal desktop/laptop screens and appear onl
 
 ## Win/loss condition
 
-- Win by surviving until the timer reaches **10:00**.
+- Win by surviving until the timer reaches **12:00**.
 - Lose if health reaches **0** before the timer finishes.

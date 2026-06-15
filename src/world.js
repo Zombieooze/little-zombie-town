@@ -29,7 +29,7 @@ const SURFACE_Y = {
 };
 
 const SURFACE_THICKNESS = 0.04;
-const REFERENCE_ARENA_SIZE = 220;
+const REFERENCE_ARENA_SIZE = 130;
 const TOWN_SCALE = CONFIG.arenaSize / REFERENCE_ARENA_SIZE;
 const town = (value) => value * TOWN_SCALE;
 
@@ -288,132 +288,43 @@ function townStripe(scene, x, z, w, d, color = COLORS.roadMarking) {
 }
 
 function building(scene, x, z, w, d, h, color = COLORS.buildingA) {
+  const group = new THREE.Group();
   const base = box(w, h, d, color);
-  base.position.set(x, h / 2, z);
-  const roof = box(w + 0.35, 0.22, d + 0.35, COLORS.roof);
-  roof.position.set(x, h + 0.12, z);
-  scene.add(base, roof);
-  registerWorldCollider({ type: 'rect', x, z, width: w, depth: d, label: 'building' });
+  base.position.set(0, h / 2, 0);
+  const roof = box(w + 0.6, 0.34, d + 0.6, COLORS.roof);
+  roof.position.set(0, h + 0.17, 0);
+  group.add(base, roof);
+
+  const trim = 0x171717;
+  const board = 0x6b5138;
+  const frontZ = d / 2 + 0.03;
+  const backZ = -d / 2 - 0.03;
+  for (const [bx, bz, rot] of [[-w * .24, frontZ, 0], [w * .24, frontZ, 0], [0, backZ, 0]]) {
+    const window = box(Math.min(2.0, w * .24), 1.0, 0.08, trim);
+    window.position.set(bx, h * .55, bz);
+    const slatA = box(Math.min(2.2, w * .28), 0.18, 0.11, board);
+    const slatB = box(Math.min(2.2, w * .28), 0.18, 0.11, board);
+    slatA.position.set(bx, h * .55, bz + (bz > 0 ? .03 : -.03));
+    slatB.position.copy(slatA.position);
+    slatA.rotation.z = .28 + rot;
+    slatB.rotation.z = -.28 + rot;
+    group.add(window, slatA, slatB);
+  }
+  const door = box(Math.min(1.6, w * .2), 1.6, 0.1, 0x3b2f24);
+  door.position.set(0, .8, frontZ + .04);
+  const doorBoard = box(Math.min(1.8, w * .22), 0.2, 0.12, board);
+  doorBoard.position.set(0, 1.08, frontZ + .09);
+  doorBoard.rotation.z = -.32;
+  group.add(door, doorBoard);
+  group.position.set(x, 0, z);
+  scene.add(group);
+  registerWorldCollider({ type: 'rect', x, z, width: w, depth: d, label: 'solid-boarded-building' });
 }
 
 function townBuilding(scene, x, z, w, d, h, color = COLORS.buildingA) {
   building(scene, town(x), town(z), town(w), town(d), h, color);
 }
 
-
-function createOpenHouse(scene, spec) {
-  const {
-    x, z, w, d, color = 0x65735b, wallHeight = 3.0, story = 1, door = 'south', garage = false,
-    rotation = 0, furniture = true,
-  } = spec;
-  const g = new THREE.Group();
-  const wallT = town(0.75);
-  const tw = town(w), td = town(d), th = story === 2 ? wallHeight * 1.45 : wallHeight;
-  const matColor = color;
-  const trim = 0xc8c0a8;
-  const floor = box(tw, 0.08, td, 0x5b4a38);
-  floor.position.y = 0.06;
-  g.add(floor);
-
-  function addLocalWall(name, lx, lz, ww, dd, h = th, c = matColor) {
-    const mesh = box(ww, h, dd, c);
-    mesh.position.set(lx, h / 2, lz);
-    g.add(mesh);
-    const wx = town(x) + Math.cos(rotation) * lx + Math.sin(rotation) * lz;
-    const wz = town(z) - Math.sin(rotation) * lx + Math.cos(rotation) * lz;
-    registerWorldCollider({ type: 'rect', x: wx, z: wz, width: Math.abs(Math.cos(rotation)) > .5 ? ww : dd, depth: Math.abs(Math.cos(rotation)) > .5 ? dd : ww, label: name });
-    return mesh;
-  }
-  function addWindow(lx, lz, side = 'south') {
-    const onNorthSouthWall = side === 'south' || side === 'north';
-    const frame = box(
-      onNorthSouthWall ? town(2.25) : town(0.12),
-      town(1.28),
-      onNorthSouthWall ? town(0.12) : town(2.25),
-      trim,
-    );
-    const glass = box(
-      onNorthSouthWall ? town(2.0) : town(0.08),
-      town(1.05),
-      onNorthSouthWall ? town(0.08) : town(2.0),
-      0x9fb6bd,
-    );
-    frame.position.set(lx, town(1.9), lz);
-    glass.position.set(lx, town(1.9), lz);
-    g.add(frame, glass);
-  }
-
-  const frontGap = garage ? town(6.2) : town(3.4);
-  const sideGap = town(3.0);
-  // Four exterior walls split around real passable door/garage openings.
-  const halfW = tw / 2, halfD = td / 2;
-  addLocalWall('residential-wall', 0, -halfD + wallT/2, tw, wallT);
-  if (door === 'south') {
-    addLocalWall('residential-wall', -halfW/2 - frontGap/4, halfD - wallT/2, halfW - frontGap/2, wallT);
-    addLocalWall('residential-wall', halfW/2 + frontGap/4, halfD - wallT/2, halfW - frontGap/2, wallT);
-  } else addLocalWall('residential-wall', 0, halfD - wallT/2, tw, wallT);
-  if (door === 'west') {
-    addLocalWall('residential-wall', -halfW + wallT/2, -halfD/2 - sideGap/4, wallT, halfD - sideGap/2);
-    addLocalWall('residential-wall', -halfW + wallT/2, halfD/2 + sideGap/4, wallT, halfD - sideGap/2);
-  } else addLocalWall('residential-wall', -halfW + wallT/2, 0, wallT, td);
-  if (door === 'east') {
-    addLocalWall('residential-wall', halfW - wallT/2, -halfD/2 - sideGap/4, wallT, halfD - sideGap/2);
-    addLocalWall('residential-wall', halfW - wallT/2, halfD/2 + sideGap/4, wallT, halfD - sideGap/2);
-  } else addLocalWall('residential-wall', halfW - wallT/2, 0, wallT, td);
-
-  // Keep residential interiors as clean, readable open shells; furniture/debris imply room use later.
-  addWindow(-tw * .24, halfD - wallT - town(.03), 'south'); addWindow(tw * .28, -halfD + wallT + town(.03), 'north');
-  addWindow(-halfW + wallT + town(.03), -td * .18, 'west'); addWindow(halfW - wallT - town(.03), td * .18, 'east');
-  if (story === 2) { addWindow(tw * .18, halfD - wallT - town(.03), 'south'); addWindow(halfW - wallT - town(.03), -td * .22, 'east'); }
-  if (furniture) {
-    assetPart(g, box(town(2.1), town(.55), town(1.1), 0x40546c), [-tw*.2, town(.35), -td*.18]);
-    assetPart(g, box(town(1.4), town(.5), town(1.4), 0x6b5138), [tw*.25, town(.3), td*.15]);
-    assetPart(g, box(town(1.2), town(1.1), town(.55), 0x8a806d), [-tw*.32, town(.58), td*.28]);
-  }
-  g.position.set(town(x), 0, town(z)); g.rotation.y = rotation; scene.add(g);
-  return g;
-}
-
-function addFenceLine(scene, points, factory = createWoodFenceSection) {
-  points.forEach(([x,z,rot]) => factory({ scene, position:[town(x),0,town(z)], rotation:rot, scale:town(1), collide:true }));
-}
-
-function addResidentialZone(scene) {
-  townSlab(scene, 82, 77, 48, 48, COLORS.grassAlt);
-  // Local residential ground cleanup: a believable neighborhood lane, aligned walks, driveways, and yards.
-  townRoadSlab(scene, 82, 77, 8, 46, COLORS.road);
-  townRoadSlab(scene, 82, 77, 46, 8, COLORS.road);
-  townSidewalkSlab(scene, 73, 77, 1.5, 43, COLORS.sidewalk);
-  townSidewalkSlab(scene, 91, 77, 1.5, 43, COLORS.sidewalk);
-  townSidewalkSlab(scene, 82, 68, 43, 1.5, COLORS.sidewalk);
-  townSidewalkSlab(scene, 82, 86, 43, 1.5, COLORS.sidewalk);
-  [[66,66,13,13],[99,66,13,13],[66,91,13,14],[99,91,13,14],[82,95,15,12]].forEach(([x,z,w,d]) => townDistrictDetailSlab(scene,x,z,w,d,COLORS.grass));
-  [[72,66,4,12],[92,66,4,12],[72,90,4,10],[92,90,4,10],[82,89,4,13]].forEach(([x,z,w,d]) => townRoadSlab(scene,x,z,w,d,COLORS.pavement));
-
-  createOpenHouse(scene, { x:64.5, z:64, w:12, d:10, color:0x66725a, door:'east', furniture:true });
-  createOpenHouse(scene, { x:100, z:64, w:13, d:10, color:0x6f684f, door:'west', garage:true, furniture:true });
-  createOpenHouse(scene, { x:64, z:91, w:12, d:12, color:0x7c765f, story:2, door:'east', furniture:true });
-  createOpenHouse(scene, { x:100, z:91, w:13, d:12, color:0x5f705e, door:'west', furniture:true });
-  createOpenHouse(scene, { x:82, z:98, w:15, d:9, color:0x6d7b62, story:2, door:'south', furniture:false });
-
-  // Lot boundaries and yard details, leaving breaks at sidewalks and doors.
-  addFenceLine(scene, [[58,58,0],[62,58,0],[98,58,0],[102,58,0],[58,73,0],[62,73,0],[98,73,0],[102,73,0],[58,84,0],[62,84,0],[98,84,0],[102,84,0],[58,105,0],[62,105,0],[98,105,0],[102,105,0]]);
-  addFenceLine(scene, [[56,64,Math.PI/2],[56,68,Math.PI/2],[108,64,Math.PI/2],[108,68,Math.PI/2],[56,91,Math.PI/2],[56,96,Math.PI/2],[108,91,Math.PI/2],[108,96,Math.PI/2]], createChainLinkFence);
-  [[73,58,0],[91,58,0],[73,105,0],[91,105,0],[59,80,Math.PI/2],[105,80,Math.PI/2]].forEach(([x,z,r]) => createHedge({ scene, position:[town(x),0,town(z)], rotation:r, scale:town(1) }));
-  [[71,66],[93,66],[71,91],[93,91],[82,89]].forEach(([x,z]) => createMailbox({ scene, position:[town(x),0,town(z)], scale:town(1) }));
-  [[60,60],[104,73],[60,100],[105,100],[75,96],[89,60]].forEach(([x,z]) => createBush({ scene, position:[town(x),0,town(z)], scale:town(1) }));
-  [[59,59],[105,59],[59,105],[105,105],[72,96],[92,96]].forEach(([x,z]) => createStreetTree({ scene, position:[town(x),0,town(z)], scale:town(.9) }));
-  createWoodenShed({ scene, position:[town(58),0,town(99)], rotation:.1, scale:town(1) });
-  createPicnicTable({ scene, position:[town(103),0,town(101)], rotation:.2, scale:town(1) });
-  createBench({ scene, position:[town(78),0,town(67)], rotation:Math.PI/2, scale:town(1) });
-  createBurntSedan({ scene, position:[town(74),0,town(76)], rotation:.15, scale:town(1) });
-  createBurntPickupTruck({ scene, position:[town(94),0,town(76)], rotation:Math.PI-.08, scale:town(1) });
-  createLampPost({ scene, position:[town(76),0,town(86)], scale:town(1) });
-  createStreetSign({ scene, position:[town(88),0,town(68)], rotation:Math.PI/2, scale:town(1) });
-  createTrashCan({ scene, position:[town(93),0,town(68)], scale:town(1) });
-  createGarbageBags({ scene, position:[town(96),0,town(68)], scale:town(1) });
-  createWoodDebris({ scene, position:[town(64),0,town(82)], rotation:.4, scale:town(1) });
-}
 
 function lotLabel(scene, text, x, z) {
   const canvas = document.createElement('canvas');
@@ -424,8 +335,14 @@ function lotLabel(scene, text, x, z) {
   ctx.fillStyle = '#f7f3d0';
   ctx.strokeStyle = '#111827';
   ctx.lineWidth = 5;
-  ctx.strokeText(text, 128, 40);
-  ctx.fillText(text, 128, 40);
+  const lines = text.split('\n');
+  const lineHeight = lines.length > 1 ? 24 : 0;
+  const startY = lines.length > 1 ? 28 : 40;
+  lines.forEach((line, index) => {
+    const y = startY + index * lineHeight;
+    ctx.strokeText(line, 128, y);
+    ctx.fillText(line, 128, y);
+  });
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true }));
   sprite.position.set(x, 1.7, z);
   sprite.scale.set(7 * TOWN_SCALE, 1.75 * TOWN_SCALE, 1);
@@ -437,153 +354,85 @@ function townLotLabel(scene, text, x, z) {
 }
 
 function addRoadNetwork(scene) {
-  // Reference-map street grid: downtown is the center block, with north/south collectors and
-  // east/west streets that deliberately frame the surrounding district lots.
-  [
-    [0, 0, REFERENCE_ARENA_SIZE, 10],
-    [0, 0, 10, REFERENCE_ARENA_SIZE],
-    [-55, 0, 8, REFERENCE_ARENA_SIZE],
-    [55, 0, 8, REFERENCE_ARENA_SIZE],
-    [82, 20, 8, 118],
-    [0, 56, REFERENCE_ARENA_SIZE, 8],
-    [0, -56, REFERENCE_ARENA_SIZE, 8],
-    [-82, 32, 8, 48],
-    [82, -48, 8, 54],
-    [0, 88, 126, 7],
-    [0, -88, 126, 7],
-  ].forEach(([x, z, w, d]) => townRoadSlab(scene, x, z, w, d));
+  // Compact 130 x 130 arena roads: one clean central crossing with readable sidewalks.
+  townRoadSlab(scene, 0, 0, REFERENCE_ARENA_SIZE, 14);
+  townRoadSlab(scene, 0, 0, 14, REFERENCE_ARENA_SIZE);
+  townRoadSlab(scene, 0, 0, 34, 34, COLORS.pavement);
 
-  // Sidewalk shoulders are segmented so they stay beside roads and leave clean road space at intersections.
-  const horizontalSidewalks = [
-    [-84, -7, 42, 2], [-26, -7, 38, 2], [26, -7, 38, 2], [84, -7, 42, 2],
-    [-84, 7, 42, 2], [-26, 7, 38, 2], [26, 7, 38, 2], [84, 7, 42, 2],
-    [-84, 50.5, 42, 1.4], [-26, 50.5, 38, 1.4], [26, 50.5, 38, 1.4], [84, 50.5, 42, 1.4],
-    [-84, 61.5, 42, 1.4], [-26, 61.5, 38, 1.4], [26, 61.5, 38, 1.4], [84, 61.5, 42, 1.4],
-    [-84, -50.5, 42, 1.4], [-26, -50.5, 38, 1.4], [26, -50.5, 38, 1.4], [84, -50.5, 42, 1.4],
-    [-84, -61.5, 42, 1.4], [-26, -61.5, 38, 1.4], [26, -61.5, 38, 1.4], [84, -61.5, 42, 1.4],
-    [-34, 83.5, 42, 1.2], [34, 83.5, 42, 1.2], [-34, 92.5, 42, 1.2], [34, 92.5, 42, 1.2],
-    [-34, -83.5, 42, 1.2], [34, -83.5, 42, 1.2], [-34, -92.5, 42, 1.2], [34, -92.5, 42, 1.2],
-  ];
-  const verticalSidewalks = [
-    [-7, -86, 2, 42], [-7, -26, 2, 38], [-7, 26, 2, 38], [-7, 86, 2, 42],
-    [7, -86, 2, 42], [7, -26, 2, 38], [7, 26, 2, 38], [7, 86, 2, 42],
-    [-49.5, -86, 1.4, 42], [-49.5, -26, 1.4, 38], [-49.5, 26, 1.4, 38], [-49.5, 86, 1.4, 42],
-    [-60.5, -86, 1.4, 42], [-60.5, -26, 1.4, 38], [-60.5, 26, 1.4, 38], [-60.5, 86, 1.4, 42],
-    [49.5, -86, 1.4, 42], [49.5, -26, 1.4, 38], [49.5, 26, 1.4, 38], [49.5, 86, 1.4, 42],
-    [60.5, -86, 1.4, 42], [60.5, -26, 1.4, 38], [60.5, 26, 1.4, 38], [60.5, 86, 1.4, 42],
-    [76.5, -45, 1.4, 38], [87.5, -45, 1.4, 38], [76.5, 28, 1.4, 54], [87.5, 28, 1.4, 54],
-  ];
-  [...horizontalSidewalks, ...verticalSidewalks].forEach(([x, z, w, d]) => townSidewalkSlab(scene, x, z, w, d));
-
-  for (let i = -96; i <= 96; i += 16) {
-    townStripe(scene, i, 0, 5, 0.25);
-    townStripe(scene, 0, i, 0.25, 5);
+  [[0, -9, 112, 2], [0, 9, 112, 2], [-9, 0, 2, 112], [9, 0, 2, 112]].forEach(([x, z, w, d]) => townSidewalkSlab(scene, x, z, w, d));
+  for (let i = -54; i <= 54; i += 12) {
+    if (Math.abs(i) > 8) townStripe(scene, i, 0, 4, .22);
+    if (Math.abs(i) > 8) townStripe(scene, 0, i, .22, 4);
   }
+  [-12, 12].forEach((offset) => {
+    townStripe(scene, offset, -7, .38, 5.5, 0xcfd3d6);
+    townStripe(scene, offset, 7, .38, 5.5, 0xcfd3d6);
+    townStripe(scene, -7, offset, 5.5, .38, 0xcfd3d6);
+    townStripe(scene, 7, offset, 5.5, .38, 0xcfd3d6);
+  });
+  townStripe(scene, 0, 0, 15, .28, 0xbfc3c7);
+  townStripe(scene, 0, 0, .28, 15, 0xbfc3c7);
+}
 
-  // Simple crosswalks mark intersections without using sidewalk slabs across the road lanes.
-  [-55, 0, 55, 82].forEach((x) => {
-    townStripe(scene, x - 2.5, 0, 0.35, 7, 0xcfd3d6);
-    townStripe(scene, x + 2.5, 0, 0.35, 7, 0xcfd3d6);
-  });
-  [-88, -56, 0, 56, 88].forEach((z) => {
-    townStripe(scene, 0, z - 2.5, 7, 0.35, 0xcfd3d6);
-    townStripe(scene, 0, z + 2.5, 7, 0.35, 0xcfd3d6);
-  });
+function addParkingStripes(scene, cx, cz) {
+  for (let i = 0; i < 5; i++) townStripe(scene, cx - 16 + i * 8, cz + 2, .25, 15, 0xcfd3d6);
+  townStripe(scene, cx, cz - 6, 38, .25, 0xcfd3d6);
+}
+
+function addRubblePatch(scene, x, z, count = 7) {
+  for (let i = 0; i < count; i++) {
+    const r = box(.45 + Math.random() * .6, .08, .3 + Math.random() * .5, i % 2 ? 0x77736a : 0x5f574c);
+    r.position.set(town(x + (Math.random() - .5) * 8), SURFACE_Y.marking + .05, town(z + (Math.random() - .5) * 8));
+    r.rotation.y = Math.random() * Math.PI;
+    scene.add(r);
+  }
+}
+
+function addGasPumps(scene, x, z) {
+  townRoadSlab(scene, x, z, 20, 7, 0x5f6468);
+  townBuilding(scene, x - 10, z - 14, 18, 10, 3.2, 0x8b3d32);
+  for (const px of [x - 4, x + 5]) {
+    const pump = box(1.1, 1.6, .85, 0x9f2f26);
+    pump.position.set(town(px), .8, town(z));
+    scene.add(pump);
+  }
 }
 
 function addDistricts(scene) {
-  // Downtown core: centered at the main cross and ringed by the collector streets.
-  townRoadSlab(scene, 0, 0, 48, 44, COLORS.pavement);
-  [[-16,-14,9,10,5],[0,-15,10,8,4],[16,-12,8,12,5],[-16,14,8,11,4],[3,15,14,8,5],[18,12,7,10,4]].forEach((b, i) => townBuilding(scene, ...b, i % 2 ? COLORS.buildingA : COLORS.buildingB));
-  townStripe(scene, 0, 0, 9, 9, 0x6b7280);
-  townLotLabel(scene, 'DOWNTOWN', 0, 4);
+  // Four simple themed corners around the central road crossing.
+  townSlab(scene, -38, 38, 44, 44, COLORS.grassAlt);
+  townSlab(scene, 38, 38, 44, 44, COLORS.parking);
+  townSlab(scene, -38, -38, 44, 44, COLORS.grassAlt);
+  townSlab(scene, 38, -38, 44, 44, COLORS.junk);
 
-  // Park northwest with open green space, paths, and trees against the west/north roads.
-  townSlab(scene, -83, 78, 45, 50, COLORS.grassAlt);
-  townSidewalkSlab(scene, -83, 78, 41, 4, COLORS.path);
-  townSidewalkSlab(scene, -83, 78, 4, 42, COLORS.path);
-  townDistrictDetailSlab(scene, -91, 68, 17, 11, 0x3b5d36);
-  for (let i = 0; i < 14; i++) addTree(scene, -101 + (i % 5) * 10, 58 + Math.floor(i / 5) * 13);
-  townLotLabel(scene, 'PARK', -84, 82);
+  // Residential corner: three solid boarded houses with open lawns and driveways.
+  townBuilding(scene, -50, 48, 11, 9, 3.0, 0x7a5a48);
+  townBuilding(scene, -34, 50, 11, 9, 3.0, 0x66725a);
+  townBuilding(scene, -50, 29, 12, 10, 3.2, 0x5f705e);
+  [[-50, 39, 5, 12], [-34, 40, 5, 13], [-42, 23, 14, 5]].forEach(([x, z, w, d]) => townRoadSlab(scene, x, z, w, d, COLORS.pavement));
+  createStreetTree({ scene, position: [town(-58), 0, town(56)], scale: town(.82) });
+  townLotLabel(scene, 'RESIDENTIAL', -43, 20);
 
-  // School campus north-center, anchored between the west and east collectors with a field on the road side.
-  townSlab(scene, 0, 78, 78, 48, COLORS.schoolField);
-  townRoadSlab(scene, -14, 78, 34, 24, COLORS.pavement);
-  townDistrictDetailSlab(scene, 24, 78, 24, 30, 0x355f31);
-  townBuilding(scene, -16, 79, 22, 14, 3.5, 0x7b6656);
-  townBuilding(scene, 4, 68, 12, 8, 3.1, 0x7b6656);
-  townLotLabel(scene, 'SCHOOL', 0, 95);
+  // Gas / convenience store corner with one solid shop and non-blocking pump details.
+  addGasPumps(scene, 40, 42);
+  townLotLabel(scene, 'GAS', 38, 20);
 
-  // Residential neighborhood northeast: first real zone art pass with no-roof, wall-only homes.
-  addResidentialZone(scene);
-  townLotLabel(scene, 'RESIDENTIAL', 82, 98);
+  // Park corner: mostly open grass, with only a few large tree trunks as meaningful blockers.
+  [[-55, -50], [-38, -43], [-52, -27], [-25, -55], [-28, -30]].forEach(([x, z]) => createStreetTree({ scene, position: [town(x), 0, town(z)], scale: town(.9) }));
+  townSidewalkSlab(scene, -38, -38, 33, 3, COLORS.path);
+  townSidewalkSlab(scene, -38, -38, 3, 33, COLORS.path);
+  townLotLabel(scene, 'PARK', -43, -57);
 
-  // Apartment/townhouse block west-mid with its parking lot directly tied to the west street.
-  townSlab(scene, -83, -14, 48, 46, COLORS.grassAlt);
-  townRoadSlab(scene, -75, -12, 22, 30, COLORS.parking);
-  [-99, -88, -66].forEach((x) => townBuilding(scene, x, -19, 8, 20, 4.2, 0x60546a));
-  for (let z = -25; z <= 3; z += 7) townStripe(scene, -75, z, 6, 0.25, 0xcfd3d6);
-  townLotLabel(scene, 'APARTMENTS', -84, 8);
+  // Parking / junk lot corner with burnt vehicles and one simple solid garage.
+  townRoadSlab(scene, 38, -38, 42, 42, COLORS.parking);
+  townBuilding(scene, 52, -51, 15, 10, 3.1, 0x72634a);
+  addParkingStripes(scene, 36, -34);
+  createBurntSedan({ scene, position: [town(30), 0, town(-32)], rotation: .2, scale: town(.9) });
+  createBurntPickupTruck({ scene, position: [town(45), 0, town(-38)], rotation: Math.PI - .35, scale: town(.9) });
+  createBurntVan({ scene, position: [town(31), 0, town(-53)], rotation: -.15, scale: town(.82) });
+  townLotLabel(scene, 'PARKING LOT\nJUNK LOT', 38, -58);
 
-  // Police and fire are separate civic lots on the east side, each fronting a deliberate service road.
-  townRoadSlab(scene, 84, 18, 36, 24, COLORS.pavement);
-  townBuilding(scene, 78, 19, 15, 10, 3.2, 0x4d6178);
-  townLotLabel(scene, 'POLICE', 84, 31);
-  townRoadSlab(scene, 84, -31, 36, 24, COLORS.pavement);
-  townBuilding(scene, 77, -31, 17, 10, 3.1, 0x8b3d32);
-  townRoadSlab(scene, 93, -31, 7, 14, 0xa32929);
-  townLotLabel(scene, 'FIRE', 84, -17);
-
-  // Industrial/junkyard southwest with rough dirt and scrap kept behind the bottom/west roads.
-  townSlab(scene, -83, -84, 50, 46, COLORS.junk);
-  townDistrictDetailSlab(scene, -83, -84, 42, 34, COLORS.dirt);
-  addScrap(scene, -83, -84);
-  townLotLabel(scene, 'JUNKYARD', -83, -65);
-
-  // Gas station south-center along the lower east/west street, with parking and pumps near the road.
-  townRoadSlab(scene, 10, -82, 42, 42, COLORS.parking);
-  townBuilding(scene, 4, -82, 13, 9, 2.4, 0x72634a);
-  townRoadSlab(scene, 22, -76, 13, 7, 0x9a2f2f);
-  for (let x = -4; x <= 24; x += 7) townStripe(scene, x, -65, 0.25, 6, 0xcfd3d6);
-  townLotLabel(scene, 'GAS', 10, -62);
-
-  // Extra southeast housing keeps the lower-right reference block readable without becoming a detailed pass.
-  townSlab(scene, 82, -82, 48, 48, COLORS.grassAlt);
-  for (let r = 0; r < 2; r++) for (let c = 0; c < 3; c++) {
-    const x = 66 + c * 16, z = -96 + r * 20;
-    townDistrictDetailSlab(scene, x, z + 4, 10, 7, COLORS.grass);
-    townBuilding(scene, x, z + 4, 7, 6, 2.4, COLORS.house);
-  }
-}
-
-function addTree(scene, x, z) {
-  createStreetTree({ scene, position: [town(x), 0, town(z)], scale: town(1) });
-}
-
-function addScrap(scene, cx, cz) {
-  for (let i = 0; i < 20; i++) {
-    const s = box(1 + Math.random() * 2, .25 + Math.random() * .65, .6 + Math.random() * 1.8, i % 2 ? 0x7a6f64 : 0x57534e);
-    s.position.set(town(cx + (Math.random() - .5) * 28), .18, town(cz + (Math.random() - .5) * 36));
-    s.rotation.y = Math.random() * Math.PI;
-    scene.add(s);
-    if (s.geometry.parameters.width >= 2.2 || s.geometry.parameters.depth >= 1.6) registerWorldCollider({ type: 'circle', x: s.position.x, z: s.position.z, radius: Math.max(s.geometry.parameters.width, s.geometry.parameters.depth) * .45, label: 'scrap' });
-  }
-}
-
-function addAssetPackSamples(scene) {
-  const samples = [
-    [createBurntSedan, -18, -5, .2], [createBurntVan, 35, 4, Math.PI / 2], [createBurntPickupTruck, 17, -55, -.1],
-    [createLampPost, -8, 8, 0], [createStopSign, 8, 8, Math.PI / 4], [createStreetSign, -58, 8, 0],
-    [createConcreteBarrier, -89, -61, .08], [createRoadBarricade, -75, -61, .2], [createUtilityPole, 61, -44, 0], [createFireHydrant, 70, -17, 0],
-    [createDeadTree, -95, 67, 0], [createBurntTree, -76, -73, 0], [createHedge, 72, 59, Math.PI / 2],
-    [createWoodFenceSection, 90, 64, 0], [createChainLinkFence, -94, -62, 0], [createBench, -84, 73, 0], [createPicnicTable, -72, 82, .15],
-    [createMailbox, 68, 88, 0], [createPlanter, 6, 8, 0], [createWoodenShed, 99, -76, 0],
-    [createDumpster, -68, -91, .1], [createGarbageBags, -71, -88, 0], [createTirePile, -90, -81, 0], [createScrapPile, -83, -91, 0],
-    [createBarrelStack, -99, -88, 0], [createCrateStack, -77, -76, 0], [createWoodDebris, -91, -71, 0], [createTrashCan, 42, 7, 0],
-    [createBusStopSign, -50, 48, 0], [createPlaygroundSlide, -30, 79, .2], [createPlaygroundSwings, -37, 88, 0], [createJunkPile, -66, -86, 0],
-    [createTrafficCone, 25, -65, 0], [createBurntRV, 28, -87, Math.PI / 2], [createBush, 95, 88, 0],
-  ];
-  samples.forEach(([factory, x, z, rotation]) => factory({ scene, position: [town(x), 0, town(z)], rotation, scale: town(1) }));
+  [[-18, 16], [16, 18], [-20, -16], [18, -18], [54, 54], [-58, -58]].forEach(([x, z]) => addRubblePatch(scene, x, z, 5));
 }
 
 export function createWorld(scene) {
@@ -601,5 +450,4 @@ export function createWorld(scene) {
 
   addRoadNetwork(scene);
   addDistricts(scene);
-  addAssetPackSamples(scene);
 }
