@@ -300,6 +300,112 @@ function townBuilding(scene, x, z, w, d, h, color = COLORS.buildingA) {
   building(scene, town(x), town(z), town(w), town(d), h, color);
 }
 
+
+function createOpenHouse(scene, spec) {
+  const {
+    x, z, w, d, color = 0x65735b, wallHeight = 3.0, story = 1, door = 'south', garage = false,
+    rooms = [], rotation = 0, furniture = true,
+  } = spec;
+  const g = new THREE.Group();
+  const wallT = town(0.75);
+  const tw = town(w), td = town(d), th = story === 2 ? wallHeight * 1.45 : wallHeight;
+  const matColor = color;
+  const trim = 0xc8c0a8;
+  const floor = box(tw, 0.08, td, 0x5b4a38);
+  floor.position.y = 0.06;
+  g.add(floor);
+
+  function addLocalWall(name, lx, lz, ww, dd, h = th, c = matColor) {
+    const mesh = box(ww, h, dd, c);
+    mesh.position.set(lx, h / 2, lz);
+    g.add(mesh);
+    const wx = town(x) + Math.cos(rotation) * lx + Math.sin(rotation) * lz;
+    const wz = town(z) - Math.sin(rotation) * lx + Math.cos(rotation) * lz;
+    registerWorldCollider({ type: 'rect', x: wx, z: wz, width: Math.abs(Math.cos(rotation)) > .5 ? ww : dd, depth: Math.abs(Math.cos(rotation)) > .5 ? dd : ww, label: name });
+    return mesh;
+  }
+  function addWindow(lx, lz, side='south') {
+    const horiz = side === 'south' || side === 'north';
+    const win = box(town(2.0), town(0.08), town(1.05), 0x9fb6bd);
+    win.position.set(lx, town(2.0), lz);
+    win.rotation.y = horiz ? 0 : Math.PI / 2;
+    g.add(win);
+    const frame = box(town(2.25), town(0.12), town(1.28), trim);
+    frame.position.copy(win.position); frame.position.y -= town(.02); frame.rotation.copy(win.rotation); g.add(frame); g.add(win);
+  }
+
+  const frontGap = garage ? town(6.2) : town(3.4);
+  const sideGap = town(3.0);
+  // Four exterior walls split around real passable door/garage openings.
+  const halfW = tw / 2, halfD = td / 2;
+  addLocalWall('residential-wall', 0, -halfD + wallT/2, tw, wallT);
+  if (door === 'south') {
+    addLocalWall('residential-wall', -halfW/2 - frontGap/4, halfD - wallT/2, halfW - frontGap/2, wallT);
+    addLocalWall('residential-wall', halfW/2 + frontGap/4, halfD - wallT/2, halfW - frontGap/2, wallT);
+  } else addLocalWall('residential-wall', 0, halfD - wallT/2, tw, wallT);
+  if (door === 'west') {
+    addLocalWall('residential-wall', -halfW + wallT/2, -halfD/2 - sideGap/4, wallT, halfD - sideGap/2);
+    addLocalWall('residential-wall', -halfW + wallT/2, halfD/2 + sideGap/4, wallT, halfD - sideGap/2);
+  } else addLocalWall('residential-wall', -halfW + wallT/2, 0, wallT, td);
+  if (door === 'east') {
+    addLocalWall('residential-wall', halfW - wallT/2, -halfD/2 - sideGap/4, wallT, halfD - sideGap/2);
+    addLocalWall('residential-wall', halfW - wallT/2, halfD/2 + sideGap/4, wallT, halfD - sideGap/2);
+  } else addLocalWall('residential-wall', halfW - wallT/2, 0, wallT, td);
+
+  rooms.forEach(([lx, lz, ww, dd]) => addLocalWall('residential-interior-wall', town(lx), town(lz), town(ww), town(dd), th * .72, 0x8b927d));
+  addWindow(-tw*.24, halfD + town(.04), 'south'); addWindow(tw*.28, -halfD - town(.04), 'north');
+  addWindow(-halfW - town(.04), -td*.18, 'west'); addWindow(halfW + town(.04), td*.18, 'east');
+  if (story === 2) { addWindow(tw*.18, halfD + town(.04), 'south'); addWindow(halfW + town(.04), -td*.22, 'east'); }
+  if (furniture) {
+    assetPart(g, box(town(2.1), town(.55), town(1.1), 0x40546c), [-tw*.2, town(.35), -td*.18]);
+    assetPart(g, box(town(1.4), town(.5), town(1.4), 0x6b5138), [tw*.25, town(.3), td*.15]);
+    assetPart(g, box(town(1.2), town(1.1), town(.55), 0x8a806d), [-tw*.32, town(.58), td*.28]);
+  }
+  g.position.set(town(x), 0, town(z)); g.rotation.y = rotation; scene.add(g);
+  return g;
+}
+
+function addFenceLine(scene, points, factory = createWoodFenceSection) {
+  points.forEach(([x,z,rot]) => factory({ scene, position:[town(x),0,town(z)], rotation:rot, scale:town(1), collide:true }));
+}
+
+function addResidentialZone(scene) {
+  townSlab(scene, 82, 77, 48, 48, COLORS.grassAlt);
+  // Local residential ground cleanup: a believable neighborhood lane, aligned walks, driveways, and yards.
+  townRoadSlab(scene, 82, 77, 8, 46, COLORS.road);
+  townRoadSlab(scene, 82, 77, 46, 8, COLORS.road);
+  townSidewalkSlab(scene, 73, 77, 1.5, 43, COLORS.sidewalk);
+  townSidewalkSlab(scene, 91, 77, 1.5, 43, COLORS.sidewalk);
+  townSidewalkSlab(scene, 82, 68, 43, 1.5, COLORS.sidewalk);
+  townSidewalkSlab(scene, 82, 86, 43, 1.5, COLORS.sidewalk);
+  [[66,66,13,13],[99,66,13,13],[66,91,13,14],[99,91,13,14],[82,95,15,12]].forEach(([x,z,w,d]) => townDistrictDetailSlab(scene,x,z,w,d,COLORS.grass));
+  [[72,66,4,12],[92,66,4,12],[72,90,4,10],[92,90,4,10],[82,89,4,13]].forEach(([x,z,w,d]) => townRoadSlab(scene,x,z,w,d,COLORS.pavement));
+
+  createOpenHouse(scene, { x:64.5, z:64, w:12, d:10, color:0x66725a, door:'east', rooms:[[0,0,8,.65],[-2.2,1.8,.65,4]], furniture:true });
+  createOpenHouse(scene, { x:100, z:64, w:13, d:10, color:0x6f684f, door:'west', garage:true, rooms:[[1.5,0,.65,8]], furniture:true });
+  createOpenHouse(scene, { x:64, z:91, w:12, d:12, color:0x7c765f, story:2, door:'east', rooms:[[0,-1,8,.65],[-2,2,.65,4]], furniture:true });
+  createOpenHouse(scene, { x:100, z:91, w:13, d:12, color:0x5f705e, door:'west', rooms:[[0,0,9,.65],[2.5,-2,.65,4]], furniture:true });
+  createOpenHouse(scene, { x:82, z:98, w:15, d:9, color:0x6d7b62, story:2, door:'south', rooms:[[0,0,10,.65],[-3,0,.65,5],[3,0,.65,5]], furniture:false });
+
+  // Lot boundaries and yard details, leaving breaks at sidewalks and doors.
+  addFenceLine(scene, [[58,58,0],[62,58,0],[98,58,0],[102,58,0],[58,73,0],[62,73,0],[98,73,0],[102,73,0],[58,84,0],[62,84,0],[98,84,0],[102,84,0],[58,105,0],[62,105,0],[98,105,0],[102,105,0]]);
+  addFenceLine(scene, [[56,64,Math.PI/2],[56,68,Math.PI/2],[108,64,Math.PI/2],[108,68,Math.PI/2],[56,91,Math.PI/2],[56,96,Math.PI/2],[108,91,Math.PI/2],[108,96,Math.PI/2]], createChainLinkFence);
+  [[73,58,0],[91,58,0],[73,105,0],[91,105,0],[59,80,Math.PI/2],[105,80,Math.PI/2]].forEach(([x,z,r]) => createHedge({ scene, position:[town(x),0,town(z)], rotation:r, scale:town(1) }));
+  [[71,66],[93,66],[71,91],[93,91],[82,89]].forEach(([x,z]) => createMailbox({ scene, position:[town(x),0,town(z)], scale:town(1) }));
+  [[60,60],[104,73],[60,100],[105,100],[75,96],[89,60]].forEach(([x,z]) => createBush({ scene, position:[town(x),0,town(z)], scale:town(1) }));
+  [[59,59],[105,59],[59,105],[105,105],[72,96],[92,96]].forEach(([x,z]) => createStreetTree({ scene, position:[town(x),0,town(z)], scale:town(.9) }));
+  createWoodenShed({ scene, position:[town(58),0,town(99)], rotation:.1, scale:town(1) });
+  createPicnicTable({ scene, position:[town(103),0,town(101)], rotation:.2, scale:town(1) });
+  createBench({ scene, position:[town(78),0,town(67)], rotation:Math.PI/2, scale:town(1) });
+  createBurntSedan({ scene, position:[town(74),0,town(76)], rotation:.15, scale:town(1) });
+  createBurntPickupTruck({ scene, position:[town(94),0,town(76)], rotation:Math.PI-.08, scale:town(1) });
+  createLampPost({ scene, position:[town(76),0,town(86)], scale:town(1) });
+  createStreetSign({ scene, position:[town(88),0,town(68)], rotation:Math.PI/2, scale:town(1) });
+  createTrashCan({ scene, position:[town(93),0,town(68)], scale:town(1) });
+  createGarbageBags({ scene, position:[town(96),0,town(68)], scale:town(1) });
+  createWoodDebris({ scene, position:[town(64),0,town(82)], rotation:.4, scale:town(1) });
+}
+
 function lotLabel(scene, text, x, z) {
   const canvas = document.createElement('canvas');
   canvas.width = 256; canvas.height = 64;
@@ -399,14 +505,8 @@ function addDistricts(scene) {
   townBuilding(scene, 4, 68, 12, 8, 3.1, 0x7b6656);
   townLotLabel(scene, 'SCHOOL', 0, 95);
 
-  // Residential neighborhood northeast in gridded blocks served by the east and north roads.
-  townSlab(scene, 82, 77, 48, 48, COLORS.grassAlt);
-  for (let r = 0; r < 2; r++) for (let c = 0; c < 3; c++) {
-    const x = 65 + c * 17, z = 66 + r * 20;
-    townDistrictDetailSlab(scene, x, z + 4, 10, 7, COLORS.grass);
-    townSidewalkSlab(scene, x - 5, z + 4, 2, 9, COLORS.pavement);
-    townBuilding(scene, x, z + 4, 7, 6, 2.6, COLORS.house);
-  }
+  // Residential neighborhood northeast: first real zone art pass with no-roof, wall-only homes.
+  addResidentialZone(scene);
   townLotLabel(scene, 'RESIDENTIAL', 82, 98);
 
   // Apartment/townhouse block west-mid with its parking lot directly tied to the west street.
