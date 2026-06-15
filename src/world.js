@@ -204,24 +204,56 @@ function addWheel(group, x, z, radius = .34) {
   assetPart(group, new THREE.Mesh(new THREE.CylinderGeometry(radius * .5, radius * .5, .31, 8), ASSET_MATS.darkMetal), [x, radius + .06, z], [Math.PI / 2, 0, 0]);
 }
 
+function surfaceRotation(face) {
+  if (face === 'front' || face === 'rear') return [0, Math.PI / 2, 0];
+  return [0, 0, 0];
+}
+
+function surfaceOffset(face, dims, inset = .026) {
+  if (face === 'front') return [-dims[0] / 2 - inset, 0];
+  if (face === 'rear') return [dims[0] / 2 + inset, 0];
+  if (face === 'right') return [0, dims[2] / 2 + inset];
+  return [0, -dims[2] / 2 - inset];
+}
+
+function addSurfaceBox(group, dims, face, center, w, h, color, thickness = .045, rotationZ = 0) {
+  const [sx, sz] = surfaceOffset(face, dims);
+  const x = face === 'front' || face === 'rear' ? sx : center[0];
+  const z = face === 'front' || face === 'rear' ? center[0] : sz;
+  const mesh = vehicleBox(group, w, h, thickness, color, [x, center[2], z], surfaceRotation(face));
+  mesh.rotation.z = rotationZ;
+  return mesh;
+}
+
 function addRustPatches(group, dims, count, roofY) {
+  const faces = ['left', 'right', 'roof'];
   for (let i = 0; i < count; i++) {
-    const side = i % 3;
-    const w = .28 + (i % 4) * .12;
-    const h = .08 + (i % 2) * .06;
+    const face = faces[i % faces.length];
+    const w = .24 + (i % 4) * .1;
+    const h = .07 + (i % 2) * .05;
     const x = -dims[0] * .42 + ((i * .37) % .84) * dims[0];
-    const z = side === 0 ? -dims[2] * .51 : side === 1 ? dims[2] * .51 : -dims[2] * .2 + ((i * .29) % .4) * dims[2];
-    const y = side === 2 ? roofY : .95 + (i % 4) * .32;
-    vehicleBox(group, w, h, .035, 0x8a4b2f, [x, y, z], [0, side === 1 ? 0 : 0, (i % 5) * .12]);
+    if (face === 'roof') {
+      const z = -dims[2] * .28 + ((i * .29) % .56) * dims[2];
+      vehicleBox(group, w, .035, h, 0x8a4b2f, [x, roofY, z], [0, (i % 5) * .18, 0]);
+    } else {
+      const y = .78 + (i % 4) * .28;
+      addSurfaceBox(group, dims, face, [x, 0, y], w, h, 0x8a4b2f, .035, (i % 5) * .12);
+    }
   }
 }
 
-function addBrokenWindow(group, x, y, z, w, h, side = 'front') {
-  const rot = side === 'left' ? [0, Math.PI / 2, 0] : side === 'right' ? [0, Math.PI / 2, 0] : [0, 0, 0];
-  vehicleBox(group, w, h, .04, 0x050505, [x, y, z], rot);
+function addBrokenWindow(group, dims, face, xOrZ, y, w, h) {
+  addSurfaceBox(group, dims, face, [xOrZ, 0, y], w, h, 0x050505, .045);
   for (let i = 0; i < 3; i++) {
-    const shard = vehicleBox(group, w * .18, h * .22, .045, 0x3f4548, [x + (i - 1) * w * .22, y + (i % 2 ? .12 : -.08), z + (side === 'rear' ? -.01 : .01)], rot);
-    shard.rotation.z = (i - 1) * .35;
+    const local = xOrZ + (i - 1) * w * .22;
+    const shard = addSurfaceBox(group, dims, face, [local, 0, y + (i % 2 ? .11 : -.08)], w * .18, h * .22, 0x3f4548, .05, (i - 1) * .35);
+    shard.position.y = y + (i % 2 ? .11 : -.08);
+  }
+}
+
+function addBoardedPlanks(group, dims, face, xOrZ, y, width, count = 3) {
+  for (let i = 0; i < count; i++) {
+    addSurfaceBox(group, dims, face, [xOrZ + (i - 1) * .06, 0, y + (i - 1) * .14], width, .13, 0x6b5138, .07, (i - 1) * .18);
   }
 }
 
@@ -242,33 +274,36 @@ function createBurntVehicle(options = {}, kind = 'sedan') {
     vehicleBox(g, 1.9, .58, 1.72, 0x2c3832, [1.08, .96, 0]);
     vehicleBox(g, 1.68, .12, 1.25, 0x111111, [1.1, 1.22, 0]);
     for (const z of [-.75, .75]) vehicleBox(g, 1.9, .32, .18, specs.color, [1.08, 1.35, z]);
-    vehicleBox(g, .16, 1.05, .16, 0x252525, [.05, 1.75, -.72], [0, 0, -.25]);
-    vehicleBox(g, .16, 1.05, .16, 0x252525, [.05, 1.75, .72], [0, 0, -.25]);
+    for (const z of [-.72, .72]) vehicleBox(g, .16, 1.05, .16, 0x252525, [.05, 1.75, z], [0, 0, -.25]);
+    addBoardedPlanks(g, dims, 'left', .9, 1.35, 1.2, 2);
   } else {
     vehicleBox(g, specs.cabin[0], specs.cabin[1], specs.cabin[2], kind === 'rv' ? 0x7e7868 : 0x343633, [specs.cabinX, dims[1] + .55, 0]);
   }
 
   if (kind === 'rv') {
-    vehicleBox(g, dims[0] * .82, .08, .16, 0x2f6670, [.18, 1.55, -dims[2] * .53]);
-    vehicleBox(g, dims[0] * .78, .08, .12, 0x8a4b2f, [.1, 1.15, -dims[2] * .535]);
-    vehicleBox(g, .62, 1.05, .08, 0xd8d0bc, [-.45, 1.05, -dims[2] * .56]);
+    addSurfaceBox(g, dims, 'left', [.18, 0, 1.55], dims[0] * .82, .08, 0x2f6670, .045);
+    addSurfaceBox(g, dims, 'left', [.1, 0, 1.15], dims[0] * .78, .08, 0x8a4b2f, .045);
+    addSurfaceBox(g, dims, 'left', [-.45, 0, 1.05], .62, 1.05, 0xd8d0bc, .055);
     vehicleBox(g, 1.1, .42, .85, 0x252525, [.8, dims[1] + 1.28, 0]);
     vehicleBox(g, 1.15, .16, 1.0, 0x111111, [-1.0, dims[1] + 1.18, 0]);
-    for (let i = 0; i < 3; i++) vehicleBox(g, 1.0, .13, .16, 0x6b5138, [1.35 + i * .12, 1.72 - i * .18, -dims[2] * .58], [0, 0, -.18]);
+    addBoardedPlanks(g, dims, 'left', 1.45, 1.78, 1.05, 3);
   }
 
-  addBrokenWindow(g, -dims[0] * .42, dims[1] + .72, -dims[2] * .52, kind === 'rv' ? 1.1 : 1.0, .42, 'front');
-  addBrokenWindow(g, dims[0] * .28, dims[1] + .68, -dims[2] * .52, kind === 'sedan' ? .72 : .9, .38, 'front');
-  addBrokenWindow(g, dims[0] * .22, dims[1] + .68, dims[2] * .52, kind === 'pickup' ? .66 : .9, .38, 'rear');
-  if (kind !== 'pickup') addBrokenWindow(g, dims[0] * .42, dims[1] + .62, dims[2] * .52, .8, .38, 'rear');
+  const frontY = dims[1] + (kind === 'rv' ? .68 : .62);
+  addBrokenWindow(g, dims, 'front', -dims[2] * .28, frontY, kind === 'rv' ? .82 : .68, .42);
+  addBrokenWindow(g, dims, 'front', dims[2] * .28, frontY, kind === 'rv' ? .82 : .68, .42);
+  addBrokenWindow(g, dims, 'left', kind === 'pickup' ? -.95 : -dims[0] * .2, dims[1] + .65, kind === 'pickup' ? .72 : .82, .38);
+  addBrokenWindow(g, dims, 'right', kind === 'pickup' ? -.95 : -dims[0] * .2, dims[1] + .65, kind === 'pickup' ? .72 : .82, .38);
+  if (kind !== 'pickup') addBrokenWindow(g, dims, 'left', dims[0] * .25, dims[1] + .62, kind === 'rv' ? .9 : .76, .36);
+  addBrokenWindow(g, dims, 'rear', 0, dims[1] + .62, kind === 'pickup' ? .86 : 1.05, .4);
 
   vehicleBox(g, dims[0] * .28, .12, dims[2] * .42, 0x111111, [kind === 'sedan' ? -1.25 : 0, dims[1] + 1.03, 0]);
   vehicleBox(g, dims[0] * .14, .08, dims[2] * .25, 0x252525, [kind === 'sedan' ? -1.25 : 0, dims[1] + 1.07, 0]);
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) addWheel(g, sx * dims[0] * .34, sz * dims[2] * .55, specs.wheels);
-  vehicleBox(g, dims[0] * .72, .18, .16, 0x111111, [-dims[0] * .25, .95, -dims[2] * .56]);
-  vehicleBox(g, dims[0] * .45, .12, .13, 0x3f4548, [-dims[0] * .3, .98, -dims[2] * .58]);
-  vehicleBox(g, .22, .22, .08, 0xc96f24, [-dims[0] * .51, .86, -dims[2] * .32]);
-  vehicleBox(g, .22, .22, .08, 0xd8d0bc, [-dims[0] * .51, .86, dims[2] * .32]);
+  addSurfaceBox(g, dims, 'front', [0, 0, .95], dims[2] * .68, .18, 0x111111, .055);
+  addSurfaceBox(g, dims, 'front', [0, 0, .98], dims[2] * .45, .12, 0x3f4548, .06);
+  addSurfaceBox(g, dims, 'front', [-dims[2] * .32, 0, .86], .22, .22, 0xc96f24, .06);
+  addSurfaceBox(g, dims, 'front', [dims[2] * .32, 0, .86], .22, .22, 0xd8d0bc, .06);
   addRustPatches(g, dims, kind === 'rv' ? 18 : 12, dims[1] + 1.03);
   return finishAsset(g, tuneAssetScale(options, specs.scale), { type: 'rect', width: dims[0] * .95, depth: dims[2] * .95, label: `burnt-${kind}` });
 }
