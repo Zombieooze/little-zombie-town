@@ -106,8 +106,9 @@ The bat is the close-range emergency weapon. Its range/radius should stay fixed,
 
 - Survive **10 minutes** on a **220 x 220** playable town map centered around the origin.
 - The world now uses a handcrafted town foundation layout instead of the old simple arena/testing-field feel.
-- Major districts are blocked in as readable top-down zones: Downtown, Park, School, Residential neighborhood, Apartment/Townhouse blocks, Police Station lot, Fire Station lot, Industrial/Junkyard, Gas Station, and extra housing lots.
-- Roads use a central downtown cross/intersection, connected side streets, sidewalks, parking lots, park paths, grass lawns, paved civic lots, a school field/play area, and rough junkyard/dirt surfaces so districts are distinguishable before the final art pass.
+- The 220 x 220 town foundation layout has been rearranged to more closely match the approved top-down town plan, with roads and districts treated as one unified blockout instead of separate placements.
+- Current districts are blocked in as readable top-down zones: Downtown, Park Zone, School Zone, Residential Zone, Apartment/Townhouse Zone, Police Station lot, Fire Station lot, Industrial/Junkyard, Gas Station, and an extra southeast housing block.
+- Roads use a central downtown cross/intersection, north/south collector streets, east/west service streets, sidewalks, parking lots, park paths, grass lawns, paved civic lots, a school field/play area, and rough junkyard/dirt surfaces so districts are distinguishable before the final art pass.
 - The 220 x 220 town foundation layout has been cleaned up with an explicit visual surface layer order: base ground, district/grass/dirt/junk surfaces, road/parking/pavement lots, sidewalks/paths/curbs, and top-level road markings. This keeps roads, sidewalks, parking lots, grass, junkyard surfaces, and district slabs from fighting or flickering against each other.
 - Sidewalks are segmented beside major roads with gaps at intersections, while crosswalks use separate road-marking strips so sidewalks do not cut through road lanes.
 - Placeholder block buildings and lot markers are intentionally simple in this pass; detailed section-by-section building passes, open-roof/walls-only building remodels, debris polish, loot crates, and detailed interiors are planned for later.
