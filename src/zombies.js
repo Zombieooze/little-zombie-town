@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
-import { findSafeSpawnPositionNear, resolveWorldCollision } from './world.js';
+import { findSafeSpawnPositionNear, isPickupSpawnSafe, resolveWorldCollision } from './world.js';
 
 const zombies = [];
 const slimeProjectiles = [];
@@ -830,6 +830,61 @@ export function getActiveBoss() {
   return zombies.find((z) => z?.userData?.typeKey === 'boss') ?? null;
 }
 
+
+function findZombieSpawnNearPlayer(playerPosition, radius = ZOMBIE_TYPES.walker.radius) {
+  const ring = CONFIG.zombie.spawnRing ?? {};
+  const minDistance = ring.minDistance ?? 34;
+  const maxDistance = Math.max(minDistance, ring.maxDistance ?? 46);
+  const attempts = ring.attempts ?? 28;
+  const limit = CONFIG.arenaSize / 2 - Math.max(1, radius);
+  const hasPlayerPosition = playerPosition && Number.isFinite(playerPosition.x) && Number.isFinite(playerPosition.z);
+
+  if (!hasPlayerPosition) {
+    const edge = Math.floor(Math.random() * 4);
+    const half = CONFIG.arenaSize / 2 + 2;
+    const roll = (Math.random() - .5) * CONFIG.arenaSize;
+    return findSafeSpawnPositionNear(
+      edge < 2 ? (edge === 0 ? -half : half) : roll,
+      edge >= 2 ? (edge === 2 ? -half : half) : roll,
+      radius,
+      12,
+    );
+  }
+
+  let bestFallback = null;
+  let bestFallbackDistance = -Infinity;
+  for (let i = 0; i < attempts; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const distance = minDistance + Math.random() * (maxDistance - minDistance);
+    const rawX = playerPosition.x + Math.cos(angle) * distance;
+    const rawZ = playerPosition.z + Math.sin(angle) * distance;
+    if (rawX < -limit || rawX > limit || rawZ < -limit || rawZ > limit) continue;
+
+    const candidate = new THREE.Vector3(rawX, 0, rawZ);
+    const distanceFromPlayer = Math.hypot(candidate.x - playerPosition.x, candidate.z - playerPosition.z);
+    if (distanceFromPlayer < minDistance) continue;
+    if (isPickupSpawnSafe(candidate.x, candidate.z, radius)) return candidate;
+
+    const nudged = findSafeSpawnPositionNear(candidate.x, candidate.z, radius, 8);
+    const nudgedDistance = Math.hypot(nudged.x - playerPosition.x, nudged.z - playerPosition.z);
+    if (nudgedDistance >= minDistance && nudgedDistance <= maxDistance + 4 && nudgedDistance > bestFallbackDistance) {
+      bestFallback = nudged;
+      bestFallbackDistance = nudgedDistance;
+    }
+  }
+
+  if (bestFallback) return bestFallback;
+
+  const fallbackAngle = Math.random() * Math.PI * 2;
+  const fallbackDistance = (minDistance + maxDistance) / 2;
+  return findSafeSpawnPositionNear(
+    THREE.MathUtils.clamp(playerPosition.x + Math.cos(fallbackAngle) * fallbackDistance, -limit, limit),
+    THREE.MathUtils.clamp(playerPosition.z + Math.sin(fallbackAngle) * fallbackDistance, -limit, limit),
+    radius,
+    16,
+  );
+}
+
 export function spawnBossZombie(scene, progress = {}) {
   if (!scene || getActiveBoss()) return null;
   const z = zombieMesh('boss', progress);
@@ -845,9 +900,7 @@ export function spawnZombie(scene, progress = {}) {
   const typeKey = chooseZombieType(progress);
   const type = ZOMBIE_TYPES[typeKey] ?? ZOMBIE_TYPES.walker;
   const z = zombieMesh(typeKey, progress);
-  const edge = Math.floor(Math.random() * 4), half = CONFIG.arenaSize / 2 + 2, roll = (Math.random() - .5) * CONFIG.arenaSize;
-  z.position.set(edge < 2 ? (edge === 0 ? -half : half) : roll, 0, edge >= 2 ? (edge === 2 ? -half : half) : roll);
-  z.position.copy(findSafeSpawnPositionNear(z.position.x, z.position.z, type.radius ?? ZOMBIE_TYPES.walker.radius, 12));
+  z.position.copy(findZombieSpawnNearPlayer(progress.playerPosition, type.radius ?? ZOMBIE_TYPES.walker.radius));
   zombies.push(z); scene.add(z); return z;
 }
 

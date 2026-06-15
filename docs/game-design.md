@@ -3,7 +3,7 @@
 ## Core loop
 
 1. Start a ten-minute run from the main menu.
-2. Move around a handcrafted 180 x 180 little-town map while zombies spawn at the edges.
+2. Move around a handcrafted 180 x 180 little-town map while zombies spawn in a safe pressure ring around the player.
 3. Let automatic fixed-range baseball bat swings clear nearby zombies in emergencies.
 4. Collect dropped XP gems from every defeated zombie.
 5. Grab medkits as the basic healing system when damage starts to pile up.
@@ -135,6 +135,8 @@ Zombie tuning lives in `src/config.js` so health, speed, damage, XP, coins, size
 - **5:00+ or level 6+:** Spitter Zombies join as toxic-colored visual variants; for now they still chase directly instead of firing projectiles.
 - **6:00+ or level 9+:** Crusher Zombies enter as late-game heavy chasers between Brutes and Gravebreaker.
 - **4:00 and 8:00 boss events:** Gravebreaker awakens as a timed boss event. Only one Gravebreaker can exist at a time, so the 8:00 event is skipped if the 4:00 Gravebreaker is still alive.
+
+Normal zombies spawn near the player in a tunable donut/ring rather than across the far side of the larger town map, keeping combat pressure tight without increasing the spawn rate or horde cap. Spawn candidates are checked against the 180 x 180 map bounds and registered solid world objects when possible, so mobs avoid buildings, vehicles, trees, fences, bushes, barriers, and large props before falling back to the safest available nearby point. Zombies still use simple direct chasing after spawning; this does not add navmesh or smart pathfinding.
 
 Spawn pressure increases over the run: spawn delays shrink gradually, the active horde cap rises, and later zombie type weights become more prominent after they unlock, with extra late pressure on heavy enemies after minute five. Enemy health scales slowly by elapsed minutes and contact damage scales even more lightly, keeping the opening approachable while preventing the late run from becoming too easy. XP rewards also gain a modest time-based multiplier after minute five, and level XP growth softens after level 10, so upgrades keep feeding through the full 10-minute run. Strong successful play should trend closer to level 24-30 instead of stalling near the high teens.
 
