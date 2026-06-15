@@ -7,7 +7,7 @@ import { calculatePermanentStats } from './permanent-upgrades.js';
 import { createWorld } from './world.js';
 import { createPlayer, updatePlayer } from './player.js';
 import { spawnZombie, spawnBossZombie, getActiveBoss, updateZombies, damageZombies, resetZombies, getSpawnDelay } from './zombies.js';
-import { dropXp, dropMedkit, updatePickups, resetPickups, countWorldMedkits } from './pickups.js';
+import { dropXp, dropCoin, dropMedkit, dropScrapRush, triggerScrapRush, updatePickups, resetPickups, countWorldMedkits } from './pickups.js';
 import { getUpgradeChoices, applyUpgrade } from './upgrades.js';
 import { resetAbilities, updateAbilities, unlockAbility, applyAbilityUpgrade, isAbilityCard } from './abilities.js';
 
@@ -184,11 +184,39 @@ function collectPickup(pickup) {
     gainXp(pickup.value);
     return;
   }
+  if (pickup.kind === 'coin') {
+    state.coins += Math.max(0, Number(pickup.value) || 0);
+    return;
+  }
+  if (pickup.kind === 'scrapRush') {
+    triggerScrapRush();
+    createPickupMessage(player.position, 'SCRAP RUSH!', '#74fff2', '#105f72');
+    return;
+  }
   if (pickup.kind === 'medkit') {
     const oldHealth = state.health;
     state.health = Math.min(state.maxHealth, state.health + pickup.healAmount);
     createHealFloater(player.position, Math.ceil(state.health - oldHealth));
   }
+}
+
+function createPickupMessage(position, text, fill = '#ffffff', stroke = '#1f2937') {
+  const canvasText = document.createElement('canvas');
+  canvasText.width = 256; canvasText.height = 80;
+  const ctx = canvasText.getContext('2d');
+  ctx.font = 'bold 34px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = fill;
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth = 7;
+  ctx.strokeText(text, 128, 52);
+  ctx.fillText(text, 128, 52);
+  const texture = new THREE.CanvasTexture(canvasText);
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true }));
+  sprite.position.set(position.x, 3.1, position.z);
+  sprite.scale.set(3.8, 1.2, 1);
+  sprite.userData = { life: 1.05, maxLife: 1.05 };
+  scene.add(sprite); healFloaters.push(sprite);
 }
 
 function createHealFloater(position, amount) {
@@ -215,6 +243,21 @@ function createHealFloater(position, amount) {
 function maybeDropMedkit(position, type, typeKey) {
   const chance = type.medkitChance ?? CONFIG.zombie.types[typeKey]?.medkitChance ?? 0;
   if (Math.random() < chance) dropMedkit(scene, position, 'zombie');
+}
+
+function maybeDropScrapRush(position, typeKey) {
+  if (typeKey === 'boss') {
+    dropScrapRush(scene, position);
+    return;
+  }
+  if (Math.random() < CONFIG.scrapRush.dropChance) dropScrapRush(scene, position);
+}
+
+function dropKillRewards(position, type, typeKey) {
+  dropXp(scene, position, getXpReward(type.xp));
+  dropCoin(scene, position, awardCoins(type.coins));
+  maybeDropMedkit(position, type, typeKey);
+  maybeDropScrapRush(position, typeKey);
 }
 
 function scheduleNextWorldMedkit() {
@@ -279,8 +322,7 @@ function playerDamageAmount(amount) {
 function doPulse() {
   createPulseVisual();
   damageZombies(scene, player.position, state.pulseRange, playerDamageAmount(state.pulseDamage), (position, type, typeKey) => {
-    state.kills += 1; state.coins += awardCoins(type.coins); dropXp(scene, position, getXpReward(type.xp));
-    maybeDropMedkit(position, type, typeKey);
+    state.kills += 1; dropKillRewards(position, type, typeKey);
   }, createHitParticles, state.batKnockback);
 }
 
@@ -537,8 +579,7 @@ function tick() {
     }
     if (pulseTimer <= 0) { doPulse(); pulseTimer = Math.max(0.1, state.pulseCooldown); }
     updateAbilities(scene, state, player, delta, (position, type, typeKey) => {
-      state.kills += 1; state.coins += awardCoins(type.coins); dropXp(scene, position, getXpReward(type.xp));
-      maybeDropMedkit(position, type, typeKey);
+      state.kills += 1; dropKillRewards(position, type, typeKey);
     }, createHitParticles);
     if (state.health <= 0) endRun(false);
     if (state.elapsed >= CONFIG.runDuration) endRun(true);
