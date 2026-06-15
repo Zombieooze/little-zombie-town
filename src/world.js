@@ -225,18 +225,19 @@ function addSurfaceBox(group, dims, face, center, w, h, color, thickness = .045,
   return mesh;
 }
 
-function addRustPatches(group, dims, count, roofY) {
+function addRustPatches(group, dims, count, roofY, roofDims = dims, roofX = 0) {
   const faces = ['left', 'right', 'roof'];
   for (let i = 0; i < count; i++) {
     const face = faces[i % faces.length];
     const w = .24 + (i % 4) * .1;
     const h = .07 + (i % 2) * .05;
-    const x = -dims[0] * .42 + ((i * .37) % .84) * dims[0];
+    const x = -dims[0] * 0.35 + ((i * .37) % .84) * dims[0];
     if (face === 'roof') {
-      const z = -dims[2] * .28 + ((i * .29) % .56) * dims[2];
-      vehicleBox(group, w, .035, h, 0x8a4b2f, [x, roofY, z], [0, (i % 5) * .18, 0]);
+      const roofLocalX = -roofDims[0] * .36 + ((i * .27) % .72) * roofDims[0];
+      const z = -roofDims[2] * .28 + ((i * .29) % .56) * roofDims[2];
+      vehicleBox(group, w, .035, h, 0x8a4b2f, [roofX + roofLocalX, roofY, z], [0, (i % 5) * .18, 0]);
     } else {
-      const y = .78 + (i % 4) * .28;
+      const y = .78 + (i % 4) * .008;
       addSurfaceBox(group, dims, face, [x, 0, y], w, h, 0x8a4b2f, .035, (i % 5) * .12);
     }
   }
@@ -259,10 +260,10 @@ function addBoardedPlanks(group, dims, face, xOrZ, y, width, count = 3) {
 
 function createBurntVehicle(options = {}, kind = 'sedan') {
   const specs = {
-    sedan: { dims: [4.1, .72, 1.75], color: 0x555348, cabin: [1.85, .82, 1.58], cabinX: -.25, scale: 1.24, wheels: .32 },
-    van: { dims: [4.9, 1.2, 2.0], color: 0x68685d, cabin: [3.55, .92, 1.82], cabinX: .2, scale: 1.25, wheels: .35 },
-    pickup: { dims: [4.7, .86, 1.95], color: 0x53635a, cabin: [1.55, .9, 1.68], cabinX: -.9, scale: 1.24, wheels: .36 },
-    rv: { dims: [5.9, 1.62, 2.28], color: 0x8e8775, cabin: [4.9, 1.25, 2.05], cabinX: .15, scale: 1.23, wheels: .38 },
+    sedan: { dims: [4.1, .72, 1.75], color: 0x555348, cabin: [2.25, .82, 1.74], cabinX: 0, scale: 1.24, wheels: .32 },
+    van: { dims: [4.9, 1.2, 2.0], color: 0x68685d, cabin: [4.25, .92, 1.99], cabinX: .2, scale: 1.25, wheels: .35 },
+    pickup: { dims: [4.7, .86, 1.95], color: 0x53635a, cabin: [1.55, .9, 1.94], cabinX: -.9, scale: 1.24, wheels: .36 },
+    rv: { dims: [5.9, 1.62, 2.28], color: 0x8e8775, cabin: [5.8, 1.25, 2.27], cabinX: 0, scale: 1.23, wheels: .38 },
   }[kind];
   const { dims } = specs;
   const g = new THREE.Group();
@@ -274,8 +275,8 @@ function createBurntVehicle(options = {}, kind = 'sedan') {
     vehicleBox(g, 1.9, .58, 1.72, 0x2c3832, [1.08, .96, 0]);
     vehicleBox(g, 1.68, .12, 1.25, 0x111111, [1.1, 1.22, 0]);
     for (const z of [-.75, .75]) vehicleBox(g, 1.9, .32, .18, specs.color, [1.08, 1.35, z]);
-    for (const z of [-.72, .72]) vehicleBox(g, .16, 1.05, .16, 0x252525, [.05, 1.75, z], [0, 0, -.25]);
-    addBoardedPlanks(g, dims, 'left', .9, 1.35, 1.2, 2);
+    for (const z of [-.72, .72]) vehicleBox(g, .26, 1.05, .26, 0x252525, [.05, 1.75, z], [0, 0, 0]);
+    addBoardedPlanks(g, dims, 'left', -0.95, 1.55, 1.2, 2);
   } else {
     vehicleBox(g, specs.cabin[0], specs.cabin[1], specs.cabin[2], kind === 'rv' ? 0x7e7868 : 0x343633, [specs.cabinX, dims[1] + .55, 0]);
   }
@@ -283,10 +284,10 @@ function createBurntVehicle(options = {}, kind = 'sedan') {
   if (kind === 'rv') {
     addSurfaceBox(g, dims, 'left', [.18, 0, 1.55], dims[0] * .82, .08, 0x2f6670, .045);
     addSurfaceBox(g, dims, 'left', [.1, 0, 1.15], dims[0] * .78, .08, 0x8a4b2f, .045);
-    addSurfaceBox(g, dims, 'left', [-.45, 0, 1.05], .62, 1.05, 0xd8d0bc, .055);
+    addSurfaceBox(g, dims, 'left', [0.05, 0, 1.50], .99, 2.05, 0xd8d0bc, .055);
     vehicleBox(g, 1.1, .42, .85, 0x252525, [.8, dims[1] + 1.28, 0]);
     vehicleBox(g, 1.15, .16, 1.0, 0x111111, [-1.0, dims[1] + 1.18, 0]);
-    addBoardedPlanks(g, dims, 'left', 1.45, 1.78, 1.05, 3);
+    addBoardedPlanks(g, dims, 'left', 0, 1.78, 1.05, 4);
   }
 
   const cabinDims = specs.cabin;
@@ -298,9 +299,9 @@ function createBurntVehicle(options = {}, kind = 'sedan') {
   addBrokenWindow(g, cabinDims, 'left', kind === 'pickup' ? -.08 : -cabinDims[0] * .24, windowY, kind === 'pickup' ? .66 : .72, .36, cabinSurface);
   addBrokenWindow(g, cabinDims, 'right', kind === 'pickup' ? -.08 : -cabinDims[0] * .24, windowY, kind === 'pickup' ? .66 : .72, .36, cabinSurface);
   if (kind !== 'pickup') addBrokenWindow(g, cabinDims, 'left', cabinDims[0] * .24, windowY, kind === 'rv' ? .78 : .68, .34, cabinSurface);
-  addBrokenWindow(g, kind === 'pickup' ? cabinDims : dims, 'rear', 0, windowY, kind === 'pickup' ? .72 : 1.0, .38, kind === 'pickup' ? cabinSurface : {});
-
-  const roofX = kind === 'sedan' ? specs.cabinX - .35 : specs.cabinX;
+  addBrokenWindow(g, cabinDims, 'rear', 0, windowY, 1.0, .34, cabinSurface);
+  
+  const roofX = kind === 'sedan' ? specs.cabinX - .15 : specs.cabinX;
   const roofY = dims[1] + .55 + cabinDims[1] / 2 + .035;
   vehicleBox(g, dims[0] * .28, .08, dims[2] * .38, 0x111111, [roofX, roofY, 0]);
   vehicleBox(g, dims[0] * .14, .055, dims[2] * .22, 0x252525, [roofX, roofY + .055, 0]);
@@ -309,7 +310,9 @@ function createBurntVehicle(options = {}, kind = 'sedan') {
   addSurfaceBox(g, dims, 'front', [0, 0, .98], dims[2] * .45, .12, 0x3f4548, .06);
   addSurfaceBox(g, dims, 'front', [-dims[2] * .32, 0, .86], .22, .22, 0xc96f24, .06);
   addSurfaceBox(g, dims, 'front', [dims[2] * .32, 0, .86], .22, .22, 0xd8d0bc, .06);
-  addRustPatches(g, dims, kind === 'rv' ? 14 : 10, roofY + .035);
+  const rustRoofDims = kind === 'pickup' || kind === 'sedan' ? cabinDims : dims;
+  const rustRoofX = kind === 'pickup' || kind === 'sedan' ? specs.cabinX : 0;
+  addRustPatches(g, dims, kind === 'rv' ? 14 : 12, roofY + 0.035, rustRoofDims, rustRoofX);
   return finishAsset(g, tuneAssetScale(options, specs.scale), { type: 'rect', width: dims[0] * .95, depth: dims[2] * .95, label: `burnt-${kind}` });
 }
 
