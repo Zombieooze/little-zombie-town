@@ -5,6 +5,7 @@ export const CONFIG = {
   pulse: { cooldown: 2.5, range: 5.2, damage: 35, visualDuration: 0.55 },
   zombie: {
     spawnEvery: 1.25, maxAlive: 48, hitCooldown: 0.8,
+    spawnRing: { minDistance: 34, maxDistance: 46, attempts: 28 },
     pacing: {
       minSpawnMultiplier: 0.28,
       maxAliveBonus: 42,

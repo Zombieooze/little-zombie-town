@@ -523,7 +523,7 @@ function tick() {
     spawnTimer -= delta; pulseTimer -= delta; worldMedkitTimer -= delta;
     trySpawnBossEvents(previousElapsed);
     if (spawnTimer <= 0) {
-      spawnZombie(scene, { elapsed: state.elapsed, level: state.level });
+      spawnZombie(scene, { elapsed: state.elapsed, level: state.level, playerPosition: player.position });
       spawnTimer = getSpawnDelay(state.elapsed);
     }
     if (worldMedkitTimer <= 0) {
