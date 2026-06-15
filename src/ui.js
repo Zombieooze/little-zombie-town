@@ -1,5 +1,5 @@
 import { buyPermanentUpgrade, getPermanentUpgradeLevels, getTotalCoins } from './save.js';
-import { PERMANENT_UPGRADES } from './permanent-upgrades.js';
+import { PERMANENT_UPGRADES, getPermanentUpgradeCost } from './permanent-upgrades.js';
 import { getAbilityDisplayName, MAX_ABILITY_LEVEL } from './abilities.js';
 
 const $ = (id) => document.getElementById(id);
@@ -139,18 +139,18 @@ function renderShop() {
   $('shop-total-coins').textContent = totalCoins;
   $('shop-cards').innerHTML = PERMANENT_UPGRADES.map((upgrade) => {
     const level = levels[upgrade.id] ?? 0;
-    const maxLevel = upgrade.costs.length;
+    const maxLevel = upgrade.max;
     const isMaxed = level >= maxLevel;
-    const cost = isMaxed ? 0 : upgrade.costs[level];
+    const cost = isMaxed ? 0 : getPermanentUpgradeCost(upgrade, level);
     const affordable = totalCoins >= cost;
-    const status = isMaxed ? 'MAX' : `${cost} coins`;
+    const pips = Array.from({ length: maxLevel }, (_, index) => `<span class="shop-pip ${index < level ? 'filled' : ''}"></span>`).join('');
     return `
       <article class="shop-card">
-        <div class="shop-card-top"><h3>${upgrade.name}</h3><span>Lv. ${level}/${maxLevel}</span></div>
+        <div class="shop-card-top"><span class="shop-emoji">${upgrade.emoji}</span><div><h3>${upgrade.name}</h3><small>Lv. ${level}/${maxLevel}</small></div></div>
         <p>${upgrade.description}</p>
-        <p class="shop-benefit">Current: ${upgrade.benefit(level)}</p>
-        <p class="shop-benefit">Next: ${isMaxed ? 'Fully upgraded' : upgrade.nextBenefit(level + 1)}</p>
-        <button class="shop-buy-button ${isMaxed ? 'maxed' : ''}" data-shop-upgrade="${upgrade.id}" ${isMaxed || !affordable ? 'disabled' : ''}>${isMaxed ? 'MAX' : `Buy · ${status}`}</button>
+        <div class="shop-pips" aria-label="${level} of ${maxLevel} levels">${pips}</div>
+        <p class="shop-benefit">${level ? upgrade.effect(level) : 'No bonus yet'}</p>
+        <button class="shop-buy-button ${isMaxed ? 'maxed' : ''}" data-shop-upgrade="${upgrade.id}" ${isMaxed || !affordable ? 'disabled' : ''}>${isMaxed ? 'MAXED' : `Buy · ${cost}`}</button>
       </article>`;
   }).join('');
 }

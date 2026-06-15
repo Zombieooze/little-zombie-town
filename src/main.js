@@ -61,7 +61,7 @@ const cameraLimits = {
 const state = {
   elapsed: 0, health: 100, maxHealth: 100, level: 1, xp: 0, nextXp: CONFIG.level.baseXp,
   coins: 0, kills: 0, pulseCooldown: CONFIG.pulse.cooldown, pulseRange: CONFIG.pulse.range,
-  pulseDamage: CONFIG.pulse.damage, speedMultiplier: 1, pickupMagnetMultiplier: 1, coinMultiplier: 1, bossSpawnCount: 0, bossEventsTriggered: [], batKnockback: 0,
+  pulseDamage: CONFIG.pulse.damage, damageMultiplier: 1, speedMultiplier: 1, pickupMagnetMultiplier: 1, coinMultiplier: 1, xpMultiplier: 1, healthRegen: 0, maxStamina: 0, stamina: 0, bossSpawnCount: 0, bossEventsTriggered: [], batKnockback: 0,
 };
 
 setControllerStatusCallback(showControllerMessage);
@@ -74,9 +74,9 @@ showScreen('menu-screen');
 function resetState() {
   const permanentStats = calculatePermanentStats(getPermanentUpgradeLevels());
   Object.assign(state, { elapsed: 0, health: permanentStats.maxHealth, maxHealth: permanentStats.maxHealth, level: 1, xp: 0,
-    nextXp: CONFIG.level.baseXp, coins: 0, kills: 0, pulseCooldown: permanentStats.batCooldown, pulseRange: CONFIG.pulse.range,
-    pulseDamage: permanentStats.batDamage, speedMultiplier: permanentStats.speedMultiplier, pickupMagnetMultiplier: permanentStats.pickupMagnetMultiplier,
-    coinMultiplier: permanentStats.coinMultiplier, bossSpawnCount: 0, bossEventsTriggered: [], batKnockback: 0 });
+    nextXp: CONFIG.level.baseXp, coins: 0, kills: 0, pulseCooldown: permanentStats.pulseCooldown, pulseRange: CONFIG.pulse.range,
+    pulseDamage: permanentStats.pulseDamage, damageMultiplier: permanentStats.damageMultiplier, speedMultiplier: permanentStats.speedMultiplier, pickupMagnetMultiplier: permanentStats.pickupMagnetMultiplier,
+    coinMultiplier: permanentStats.coinMultiplier, xpMultiplier: permanentStats.xpMultiplier, healthRegen: permanentStats.healthRegen, maxStamina: permanentStats.maxStamina, stamina: permanentStats.stamina, bossSpawnCount: 0, bossEventsTriggered: [], batKnockback: 0 });
   resetAbilities(scene, state);
   spawnTimer = 0; worldMedkitTimer = CONFIG.medkit.worldFirstSpawn; pulseTimer = 0; pendingChoices = [];
 }
@@ -156,7 +156,7 @@ function getXpReward(baseAmount) {
     CONFIG.rewards.maxXpMultiplier,
     1 + elapsedMinutes * CONFIG.rewards.xpMultiplierPerMinute,
   );
-  return Math.ceil(baseAmount * multiplier);
+  return Math.ceil(baseAmount * multiplier * Math.max(0, state.xpMultiplier || 1));
 }
 
 function getNextLevelXp() {
@@ -526,6 +526,9 @@ function tick() {
     }
     updateZombies(scene, player, delta, damagePlayer);
     updatePickups(scene, player, delta, collectPickup, state.pickupMagnetMultiplier);
+    if (state.healthRegen > 0 && state.health > 0 && state.health < state.maxHealth) {
+      state.health = Math.min(state.maxHealth, state.health + state.healthRegen * delta);
+    }
     if (pulseTimer <= 0) { doPulse(); pulseTimer = state.pulseCooldown; }
     updateAbilities(scene, state, player, delta, (position, type, typeKey) => {
       state.kills += 1; state.coins += awardCoins(type.coins); dropXp(scene, position, getXpReward(type.xp));

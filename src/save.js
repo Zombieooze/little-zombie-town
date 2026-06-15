@@ -1,4 +1,4 @@
-import { clampPermanentLevels, getPermanentUpgrade } from './permanent-upgrades.js';
+import { clampPermanentLevels, getPermanentUpgrade, getPermanentUpgradeCost, migratePermanentLevels } from './permanent-upgrades.js';
 
 const COINS_KEY = 'little-zombie-town-total-coins';
 const PERMANENT_UPGRADES_KEY = 'little-zombie-town-permanent-upgrades';
@@ -25,7 +25,7 @@ export function spendCoins(amount) {
 
 export function getPermanentUpgradeLevels() {
   try {
-    return clampPermanentLevels(JSON.parse(localStorage.getItem(PERMANENT_UPGRADES_KEY) || '{}'));
+    return migratePermanentLevels(JSON.parse(localStorage.getItem(PERMANENT_UPGRADES_KEY) || '{}'));
   } catch (_) {
     return clampPermanentLevels({});
   }
@@ -42,8 +42,8 @@ export function buyPermanentUpgrade(id) {
   if (!upgrade) return { ok: false, reason: 'invalid' };
   const levels = getPermanentUpgradeLevels();
   const currentLevel = levels[id] ?? 0;
-  if (currentLevel >= upgrade.costs.length) return { ok: false, reason: 'maxed' };
-  const cost = upgrade.costs[currentLevel];
+  if (currentLevel >= upgrade.max) return { ok: false, reason: 'maxed' };
+  const cost = getPermanentUpgradeCost(upgrade, currentLevel);
   if (!spendCoins(cost)) return { ok: false, reason: 'coins' };
   levels[id] = currentLevel + 1;
   return { ok: true, levels: savePermanentUpgradeLevels(levels), totalCoins: getTotalCoins() };
