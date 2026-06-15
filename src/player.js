@@ -100,7 +100,7 @@ export function createPlayer(scene) {
   return group;
 }
 
-export function updatePlayer(player, delta, attackTimer = 0, cameraYaw = 0, speedMultiplier = 1) {
+export function updatePlayer(player, delta, attackTimer = 0, cameraYaw = 0, speedMultiplier = 1, sprintSpeedMultiplier = 1) {
   if ((consumePress(' ') || consumeGamepadPress('a')) && player.userData.grounded) {
     player.userData.jumpVelocity = CONFIG.player.jumpVelocity;
     player.userData.grounded = false;
@@ -111,7 +111,7 @@ export function updatePlayer(player, delta, attackTimer = 0, cameraYaw = 0, spee
   const sin = Math.sin(cameraYaw);
   const moveX = input.x * cos + input.z * sin;
   const moveZ = input.z * cos - input.x * sin;
-  const sprint = isDown('shift') ? CONFIG.player.sprintMultiplier : 1;
+  const sprint = isDown('shift') ? CONFIG.player.sprintMultiplier * Math.max(0.1, sprintSpeedMultiplier) : 1;
   const speed = CONFIG.player.speed * Math.max(0.1, speedMultiplier) * sprint;
   player.position.x += moveX * speed * delta;
   player.position.z += moveZ * speed * delta;

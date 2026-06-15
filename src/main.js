@@ -61,7 +61,7 @@ const cameraLimits = {
 const state = {
   elapsed: 0, health: 100, maxHealth: 100, level: 1, xp: 0, nextXp: CONFIG.level.baseXp,
   coins: 0, kills: 0, pulseCooldown: CONFIG.pulse.cooldown, pulseRange: CONFIG.pulse.range,
-  pulseDamage: CONFIG.pulse.damage, damageMultiplier: 1, speedMultiplier: 1, pickupMagnetMultiplier: 1, coinMultiplier: 1, xpMultiplier: 1, healthRegen: 0, maxStamina: 0, stamina: 0, bossSpawnCount: 0, bossEventsTriggered: [], batKnockback: 0,
+  pulseDamage: CONFIG.pulse.damage, damageMultiplier: 1, speedMultiplier: 1, pickupMagnetMultiplier: 1, coinMultiplier: 1, xpMultiplier: 1, healthRegen: 0, maxStamina: 0, stamina: 0, bossSpawnCount: 0, bossEventsTriggered: [], batKnockback: 0, cooldownMultiplier: 1, damageReduction: 0, critChance: 0, sprintSpeedMultiplier: 1, staminaRegenMultiplier: 1, passiveUpgradeCounts: {},
 };
 
 setControllerStatusCallback(showControllerMessage);
@@ -75,8 +75,8 @@ function resetState() {
   const permanentStats = calculatePermanentStats(getPermanentUpgradeLevels());
   Object.assign(state, { elapsed: 0, health: permanentStats.maxHealth, maxHealth: permanentStats.maxHealth, level: 1, xp: 0,
     nextXp: CONFIG.level.baseXp, coins: 0, kills: 0, pulseCooldown: permanentStats.pulseCooldown, pulseRange: CONFIG.pulse.range,
-    pulseDamage: permanentStats.pulseDamage, damageMultiplier: permanentStats.damageMultiplier, speedMultiplier: permanentStats.speedMultiplier, pickupMagnetMultiplier: permanentStats.pickupMagnetMultiplier,
-    coinMultiplier: permanentStats.coinMultiplier, xpMultiplier: permanentStats.xpMultiplier, healthRegen: permanentStats.healthRegen, maxStamina: permanentStats.maxStamina, stamina: permanentStats.stamina, bossSpawnCount: 0, bossEventsTriggered: [], batKnockback: 0 });
+    pulseDamage: CONFIG.pulse.damage, damageMultiplier: permanentStats.damageMultiplier, speedMultiplier: permanentStats.speedMultiplier, pickupMagnetMultiplier: permanentStats.pickupMagnetMultiplier,
+    coinMultiplier: permanentStats.coinMultiplier, xpMultiplier: permanentStats.xpMultiplier, healthRegen: permanentStats.healthRegen, maxStamina: permanentStats.maxStamina, stamina: permanentStats.stamina, bossSpawnCount: 0, bossEventsTriggered: [], batKnockback: 0, cooldownMultiplier: 1, damageReduction: 0, critChance: 0, sprintSpeedMultiplier: 1, staminaRegenMultiplier: 1, passiveUpgradeCounts: {} });
   resetAbilities(scene, state);
   spawnTimer = 0; worldMedkitTimer = CONFIG.medkit.worldFirstSpawn; pulseTimer = 0; pendingChoices = [];
 }
@@ -174,7 +174,8 @@ function gainXp(amount) {
 
 function damagePlayer(damage) {
   if (!Number.isFinite(damage) || damage <= 0 || state.health <= 0) return;
-  state.health = Math.max(0, state.health - damage);
+  const reducedDamage = Math.max(1, damage - (state.damageReduction ?? 0));
+  state.health = Math.max(0, state.health - reducedDamage);
   showDamageFlash();
 }
 
@@ -270,9 +271,14 @@ function awardCoins(baseCoins) {
   return Math.max(0, Math.round(safeBase * state.coinMultiplier));
 }
 
+function playerDamageAmount(amount) {
+  const critMultiplier = Math.random() < Math.max(0, state.critChance || 0) ? 2 : 1;
+  return amount * Math.max(0, state.damageMultiplier || 1) * critMultiplier;
+}
+
 function doPulse() {
   createPulseVisual();
-  damageZombies(scene, player.position, state.pulseRange, state.pulseDamage, (position, type, typeKey) => {
+  damageZombies(scene, player.position, state.pulseRange, playerDamageAmount(state.pulseDamage), (position, type, typeKey) => {
     state.kills += 1; state.coins += awardCoins(type.coins); dropXp(scene, position, getXpReward(type.xp));
     maybeDropMedkit(position, type, typeKey);
   }, createHitParticles, state.batKnockback);
@@ -513,7 +519,7 @@ function tick() {
     state.elapsed += delta;
     attackVisualTimer = Math.max(0, attackVisualTimer - delta);
     cameraShake = Math.max(0, cameraShake - delta);
-    updatePlayer(player, delta, attackVisualTimer, cameraControls.yaw, state.speedMultiplier);
+    updatePlayer(player, delta, attackVisualTimer, cameraControls.yaw, state.speedMultiplier, state.sprintSpeedMultiplier);
     spawnTimer -= delta; pulseTimer -= delta; worldMedkitTimer -= delta;
     trySpawnBossEvents(previousElapsed);
     if (spawnTimer <= 0) {
@@ -529,7 +535,7 @@ function tick() {
     if (state.healthRegen > 0 && state.health > 0 && state.health < state.maxHealth) {
       state.health = Math.min(state.maxHealth, state.health + state.healthRegen * delta);
     }
-    if (pulseTimer <= 0) { doPulse(); pulseTimer = state.pulseCooldown; }
+    if (pulseTimer <= 0) { doPulse(); pulseTimer = Math.max(0.1, state.pulseCooldown); }
     updateAbilities(scene, state, player, delta, (position, type, typeKey) => {
       state.kills += 1; state.coins += awardCoins(type.coins); dropXp(scene, position, getXpReward(type.xp));
       maybeDropMedkit(position, type, typeKey);

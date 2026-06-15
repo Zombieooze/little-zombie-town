@@ -374,7 +374,12 @@ export function updateAbilities(scene, state, player, delta, onKilled, onHit) {
 
 
 function playerDamage(state, amount) {
-  return amount * Math.max(0, state.damageMultiplier || 1);
+  const critMultiplier = Math.random() < Math.max(0, state.critChance || 0) ? 2 : 1;
+  return amount * Math.max(0, state.damageMultiplier || 1) * critMultiplier;
+}
+
+function abilityCooldown(state, cooldown) {
+  return Math.max(0.05, cooldown * Math.max(0.05, state.cooldownMultiplier ?? 1));
 }
 
 function disposeObjectTree(object) {
@@ -468,7 +473,7 @@ function updateJunkyardTurret(scene, state, player, delta, onKilled, onHit) {
   const turretAbility = state.abilities.junkyardTurret;
   turretAbility.timer -= delta;
   updateTurretEffects(scene, turretAbility, delta);
-  if (turretAbility.timer <= 0) { deployJunkyardTurret(scene, state, player); turretAbility.timer = turretAbility.cooldown; }
+  if (turretAbility.timer <= 0) { deployJunkyardTurret(scene, state, player); turretAbility.timer = abilityCooldown(state, turretAbility.cooldown); }
   turretAbility.turrets = turretAbility.turrets.filter((turret) => {
     turret.life -= delta;
     turret.fireTimer -= delta;
@@ -619,7 +624,7 @@ function updateBearTrapToss(scene, state, player, delta, onKilled, onHit) {
   updateBearTrapEffects(scene, bearTrap, delta);
   if (bearTrap.timer <= 0) {
     placeBearTrap(scene, state, player);
-    bearTrap.timer = bearTrap.cooldown;
+    bearTrap.timer = abilityCooldown(state, bearTrap.cooldown);
   }
   bearTrap.traps = bearTrap.traps.filter((trap) => {
     trap.life -= delta;
@@ -714,7 +719,7 @@ function updateShockwaveStomp(scene, state, player, delta, onKilled, onHit) {
   updateShockwaveEffects(scene, stomp, delta);
   if (stomp.timer <= 0) {
     fireShockwaveStomp(scene, state, player, onKilled, onHit);
-    stomp.timer = stomp.cooldown;
+    stomp.timer = abilityCooldown(state, stomp.cooldown);
   }
 }
 
@@ -761,7 +766,7 @@ function launchSawblades(scene, state, player) {
 function updateSawblades(scene, state, player, delta, onKilled, onHit) {
   const saw = state.abilities.sawblade;
   saw.timer -= delta;
-  if (saw.timer <= 0) { launchSawblades(scene, state, player); saw.timer = saw.cooldown; }
+  if (saw.timer <= 0) { launchSawblades(scene, state, player); saw.timer = abilityCooldown(state, saw.cooldown); }
   saw.projectiles = saw.projectiles.filter((blade) => {
     blade.life -= delta; blade.hitTimer -= delta;
     blade.mesh.position.addScaledVector(blade.velocity, delta);
@@ -824,7 +829,7 @@ function fireNailBlaster(scene, state, player) {
 function updateNailBlaster(scene, state, player, delta, onKilled, onHit) {
   const blaster = state.abilities.nailBlaster;
   blaster.timer -= delta;
-  if (blaster.timer <= 0 && fireNailBlaster(scene, state, player)) blaster.timer = blaster.cooldown;
+  if (blaster.timer <= 0 && fireNailBlaster(scene, state, player)) blaster.timer = abilityCooldown(state, blaster.cooldown);
   blaster.nails = blaster.nails.filter((nail) => {
     nail.life -= delta;
     nail.mesh.position.addScaledVector(nail.velocity, delta);
@@ -945,7 +950,7 @@ function updateElectricZapper(scene, state, player, delta, onKilled, onHit) {
   updateElectricZapperEffects(scene, zapper, delta);
   if (zapper.timer <= 0) {
     fireElectricZapper(scene, state, player, onKilled, onHit);
-    zapper.timer = zapper.cooldown;
+    zapper.timer = abilityCooldown(state, zapper.cooldown);
   }
 }
 
@@ -1022,7 +1027,7 @@ function updateFireBottle(scene, state, player, delta, onKilled, onHit) {
   fire.timer -= delta;
   if (fire.timer <= 0) {
     throwFireBottles(scene, state, player);
-    fire.timer = fire.cooldown;
+    fire.timer = abilityCooldown(state, fire.cooldown);
   }
   fire.bottles = fire.bottles.filter((bottle) => {
     bottle.age += delta;

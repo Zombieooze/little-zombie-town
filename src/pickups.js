@@ -59,7 +59,8 @@ export function updatePickups(scene, player, delta, onCollect, magnetMultiplier 
       pickup.position.x += (dx / dist) * CONFIG.xp.speed * delta;
       pickup.position.z += (dz / dist) * CONFIG.xp.speed * delta;
     }
-    const pickupRadius = pickup.userData.kind === 'medkit' ? CONFIG.medkit.pickupRadius : CONFIG.xp.pickupRadius;
+    const basePickupRadius = pickup.userData.kind === 'medkit' ? CONFIG.medkit.pickupRadius : CONFIG.xp.pickupRadius;
+    const pickupRadius = pickup.userData.kind === 'xp' ? basePickupRadius * Math.max(0.1, magnetMultiplier) : basePickupRadius;
     if (dist < pickupRadius) {
       onCollect(pickup.userData);
       pickups.splice(i, 1); scene.remove(pickup);
