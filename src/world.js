@@ -357,7 +357,6 @@ function addRoadNetwork(scene) {
   // Compact 130 x 130 arena roads: one clean central crossing with readable sidewalks.
   townRoadSlab(scene, 0, 0, REFERENCE_ARENA_SIZE, 14);
   townRoadSlab(scene, 0, 0, 14, REFERENCE_ARENA_SIZE);
-  townRoadSlab(scene, 0, 0, 34, 34, COLORS.pavement);
 
   [[0, -9, 112, 2], [0, 9, 112, 2], [-9, 0, 2, 112], [9, 0, 2, 112]].forEach(([x, z, w, d]) => townSidewalkSlab(scene, x, z, w, d));
   for (let i = -54; i <= 54; i += 12) {
