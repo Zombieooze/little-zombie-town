@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
 import { initInput, consumePress, resetTouchMovement, updateGamepadInput, getGamepadLookVector, consumeGamepadPress, setControllerStatusCallback, isGamepadDown } from './input.js';
-import { initUI, updateHUD, showScreen, hideOverlays, showUpgrades, showEnd, setMuted, updateMenuCoins, setGameActionsVisible, setPauseButtonVisible, setFullscreenActive, showControllerMessage, moveUpgradeSelection, getSelectedUpgradeId, moveMenuSelection, activateMenuSelection, showDamageFlash, showBossWarning, updateBossHealthBar } from './ui.js';
-import { addCoins } from './save.js';
+import { initUI, updateHUD, showScreen, hideOverlays, showUpgrades, showEnd, setMuted, updateMenuCoins, setGameActionsVisible, setPauseButtonVisible, setFullscreenActive, showControllerMessage, moveUpgradeSelection, getSelectedUpgradeId, moveMenuSelection, activateMenuSelection, showDamageFlash, showBossWarning, updateBossHealthBar, showShop } from './ui.js';
+import { addCoins, getPermanentUpgradeLevels } from './save.js';
+import { calculatePermanentStats } from './permanent-upgrades.js';
 import { createWorld } from './world.js';
 import { createPlayer, updatePlayer } from './player.js';
 import { spawnZombie, spawnBossZombie, getActiveBoss, updateZombies, damageZombies, resetZombies, getSpawnDelay } from './zombies.js';
@@ -60,20 +61,22 @@ const cameraLimits = {
 const state = {
   elapsed: 0, health: 100, maxHealth: 100, level: 1, xp: 0, nextXp: CONFIG.level.baseXp,
   coins: 0, kills: 0, pulseCooldown: CONFIG.pulse.cooldown, pulseRange: CONFIG.pulse.range,
-  pulseDamage: CONFIG.pulse.damage, speedMultiplier: 1, bossSpawnCount: 0, bossEventsTriggered: [], batKnockback: 0,
+  pulseDamage: CONFIG.pulse.damage, speedMultiplier: 1, pickupMagnetMultiplier: 1, coinMultiplier: 1, bossSpawnCount: 0, bossEventsTriggered: [], batKnockback: 0,
 };
 
 setControllerStatusCallback(showControllerMessage);
 initInput();
 initCameraControls();
 createWorld(scene);
-initUI({ onStart: startGame, onUpgrade: chooseUpgrade, onMenu: returnToMenu, onPause: pauseGame, onResume: resumeGame, onFullscreen: requestGameFullscreen });
+initUI({ onStart: startGame, onUpgrade: chooseUpgrade, onMenu: returnToMenu, onShop: openShop, onPause: pauseGame, onResume: resumeGame, onFullscreen: requestGameFullscreen });
 showScreen('menu-screen');
 
 function resetState() {
-  Object.assign(state, { elapsed: 0, health: CONFIG.player.maxHealth, maxHealth: CONFIG.player.maxHealth, level: 1, xp: 0,
-    nextXp: CONFIG.level.baseXp, coins: 0, kills: 0, pulseCooldown: CONFIG.pulse.cooldown, pulseRange: CONFIG.pulse.range,
-    pulseDamage: CONFIG.pulse.damage, speedMultiplier: 1, bossSpawnCount: 0, bossEventsTriggered: [], batKnockback: 0 });
+  const permanentStats = calculatePermanentStats(getPermanentUpgradeLevels());
+  Object.assign(state, { elapsed: 0, health: permanentStats.maxHealth, maxHealth: permanentStats.maxHealth, level: 1, xp: 0,
+    nextXp: CONFIG.level.baseXp, coins: 0, kills: 0, pulseCooldown: permanentStats.batCooldown, pulseRange: CONFIG.pulse.range,
+    pulseDamage: permanentStats.batDamage, speedMultiplier: permanentStats.speedMultiplier, pickupMagnetMultiplier: permanentStats.pickupMagnetMultiplier,
+    coinMultiplier: permanentStats.coinMultiplier, bossSpawnCount: 0, bossEventsTriggered: [], batKnockback: 0 });
   resetAbilities(scene, state);
   spawnTimer = 0; worldMedkitTimer = CONFIG.medkit.worldFirstSpawn; pulseTimer = 0; pendingChoices = [];
 }
@@ -96,6 +99,13 @@ function startGame() {
 }
 
 function returnToMenu() { mode = 'menu'; setGameActionsVisible(false); updateBossHealthBar(null); document.body.classList.remove('paused'); showScreen('menu-screen'); updateMenuCoins(); }
+
+function openShop() {
+  mode = 'shop';
+  setGameActionsVisible(false);
+  document.body.classList.remove('paused');
+  showShop();
+}
 
 function pauseGame() {
   if (mode !== 'playing') return;
@@ -255,10 +265,15 @@ function createHitParticles(position) {
   }
 }
 
+function awardCoins(baseCoins) {
+  const safeBase = Math.max(0, Number(baseCoins) || 0);
+  return Math.max(0, Math.round(safeBase * state.coinMultiplier));
+}
+
 function doPulse() {
   createPulseVisual();
   damageZombies(scene, player.position, state.pulseRange, state.pulseDamage, (position, type, typeKey) => {
-    state.kills += 1; state.coins += type.coins; dropXp(scene, position, getXpReward(type.xp));
+    state.kills += 1; state.coins += awardCoins(type.coins); dropXp(scene, position, getXpReward(type.xp));
     maybeDropMedkit(position, type, typeKey);
   }, createHitParticles, state.batKnockback);
 }
@@ -454,6 +469,13 @@ function handleControllerMenus(delta) {
     return;
   }
 
+  if (mode === 'shop') {
+    if (vertical || horizontal) moveMenuSelection('shop', vertical || horizontal);
+    if (consumeGamepadPress('a')) activateMenuSelection('shop');
+    if (consumeGamepadPress('b')) returnToMenu();
+    return;
+  }
+
   if (mode === 'paused') {
     if (vertical || horizontal) moveMenuSelection('paused', vertical || horizontal);
     if (consumeGamepadPress('a')) activateMenuSelection('paused');
@@ -489,12 +511,9 @@ function tick() {
   if (mode === 'playing') {
     const previousElapsed = state.elapsed;
     state.elapsed += delta;
-    const savedSpeed = CONFIG.player.speed;
-    CONFIG.player.speed = savedSpeed * state.speedMultiplier;
     attackVisualTimer = Math.max(0, attackVisualTimer - delta);
     cameraShake = Math.max(0, cameraShake - delta);
-    updatePlayer(player, delta, attackVisualTimer, cameraControls.yaw);
-    CONFIG.player.speed = savedSpeed;
+    updatePlayer(player, delta, attackVisualTimer, cameraControls.yaw, state.speedMultiplier);
     spawnTimer -= delta; pulseTimer -= delta; worldMedkitTimer -= delta;
     trySpawnBossEvents(previousElapsed);
     if (spawnTimer <= 0) {
@@ -506,10 +525,10 @@ function tick() {
       scheduleNextWorldMedkit();
     }
     updateZombies(scene, player, delta, damagePlayer);
-    updatePickups(scene, player, delta, collectPickup);
+    updatePickups(scene, player, delta, collectPickup, state.pickupMagnetMultiplier);
     if (pulseTimer <= 0) { doPulse(); pulseTimer = state.pulseCooldown; }
     updateAbilities(scene, state, player, delta, (position, type, typeKey) => {
-      state.kills += 1; state.coins += type.coins; dropXp(scene, position, getXpReward(type.xp));
+      state.kills += 1; state.coins += awardCoins(type.coins); dropXp(scene, position, getXpReward(type.xp));
       maybeDropMedkit(position, type, typeKey);
     }, createHitParticles);
     if (state.health <= 0) endRun(false);

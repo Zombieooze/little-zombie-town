@@ -1,21 +1,32 @@
-import { getTotalCoins } from './save.js';
+import { buyPermanentUpgrade, getPermanentUpgradeLevels, getTotalCoins } from './save.js';
+import { PERMANENT_UPGRADES } from './permanent-upgrades.js';
 import { getAbilityDisplayName, MAX_ABILITY_LEVEL } from './abilities.js';
 
 const $ = (id) => document.getElementById(id);
-const screens = ['menu-screen', 'pause-screen', 'upgrade-screen', 'end-screen'];
+const screens = ['menu-screen', 'shop-screen', 'pause-screen', 'upgrade-screen', 'end-screen'];
 
 let selectedUpgradeIndex = 0;
 let selectedMenuIndex = 0;
 const menuGroups = {
-  menu: { root: 'menu-screen', selector: '#start-button, #menu-fullscreen-button:not(.hidden)' },
+  menu: { root: 'menu-screen', selector: '#start-button, #shop-button, #menu-fullscreen-button:not(.hidden)' },
+  shop: { root: 'shop-screen', selector: '#shop-back-button, .shop-buy-button:not(:disabled)' },
   paused: { root: 'pause-screen', selector: '#resume-button' },
   ended: { root: 'end-screen', selector: '#again-button, #menu-button' },
 };
 let toastTimer = null;
 let damageFlashTimer = null;
 
-export function initUI({ onStart, onUpgrade, onMenu, onPause, onResume, onFullscreen }) {
+export function initUI({ onStart, onUpgrade, onMenu, onShop, onPause, onResume, onFullscreen }) {
   $('start-button').addEventListener('click', onStart);
+  $('shop-button').addEventListener('click', onShop);
+  $('shop-back-button').addEventListener('click', onMenu);
+  $('shop-cards').addEventListener('click', (event) => {
+    const button = event.target.closest('[data-shop-upgrade]');
+    if (!button) return;
+    buyPermanentUpgrade(button.dataset.shopUpgrade);
+    renderShop();
+    updateMenuCoins();
+  });
   $('again-button').addEventListener('click', onStart);
   $('menu-button').addEventListener('click', onMenu);
   $('pause-button').addEventListener('click', onPause);
@@ -108,7 +119,7 @@ export function showScreen(name) {
     $(id).classList.toggle('active', id === name);
   });
   $('hud').classList.toggle('hidden', name === 'menu-screen' || name === 'end-screen');
-  const context = name === 'menu-screen' ? 'menu' : name === 'pause-screen' ? 'paused' : name === 'end-screen' ? 'ended' : null;
+  const context = name === 'menu-screen' ? 'menu' : name === 'shop-screen' ? 'shop' : name === 'pause-screen' ? 'paused' : name === 'end-screen' ? 'ended' : null;
   if (context) updateMenuSelection(context);
 }
 
@@ -116,6 +127,33 @@ export function hideOverlays() { screens.filter((id) => id !== 'menu-screen').fo
 export function setGameActionsVisible(visible) { $('game-actions').classList.toggle('hidden', !visible); }
 export function setPauseButtonVisible(visible) { $('pause-button').classList.toggle('hidden', !visible); }
 export function updateMenuCoins() { $('menu-total-coins').textContent = getTotalCoins(); }
+
+export function showShop() {
+  renderShop();
+  showScreen('shop-screen');
+}
+
+function renderShop() {
+  const totalCoins = getTotalCoins();
+  const levels = getPermanentUpgradeLevels();
+  $('shop-total-coins').textContent = totalCoins;
+  $('shop-cards').innerHTML = PERMANENT_UPGRADES.map((upgrade) => {
+    const level = levels[upgrade.id] ?? 0;
+    const maxLevel = upgrade.costs.length;
+    const isMaxed = level >= maxLevel;
+    const cost = isMaxed ? 0 : upgrade.costs[level];
+    const affordable = totalCoins >= cost;
+    const status = isMaxed ? 'MAX' : `${cost} coins`;
+    return `
+      <article class="shop-card">
+        <div class="shop-card-top"><h3>${upgrade.name}</h3><span>Lv. ${level}/${maxLevel}</span></div>
+        <p>${upgrade.description}</p>
+        <p class="shop-benefit">Current: ${upgrade.benefit(level)}</p>
+        <p class="shop-benefit">Next: ${isMaxed ? 'Fully upgraded' : upgrade.nextBenefit(level + 1)}</p>
+        <button class="shop-buy-button ${isMaxed ? 'maxed' : ''}" data-shop-upgrade="${upgrade.id}" ${isMaxed || !affordable ? 'disabled' : ''}>${isMaxed ? 'MAX' : `Buy · ${status}`}</button>
+      </article>`;
+  }).join('');
+}
 export function setMuted(muted) { $('hud-muted').classList.toggle('hidden', !muted); }
 
 export function showBossWarning(message = 'GRAVEBREAKER HAS AWAKENED!') {

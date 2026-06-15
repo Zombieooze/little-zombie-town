@@ -232,3 +232,21 @@ button.controller-selected:hover {
   .boss-health-bar { height: 14px; }
   .boss-warning { top: max(82px, calc(env(safe-area-inset-top) + 72px)); padding: 9px 12px; }
 }
+
+.shop-panel { width: min(980px, 96vw); max-height: min(88vh, 760px); overflow: auto; }
+.shop-cards { display: grid; grid-template-columns: repeat(3, minmax(190px, 1fr)); gap: 14px; margin: 18px 0; text-align: left; }
+.shop-card { padding: 16px; border: 2px solid var(--line); border-radius: 18px; background: linear-gradient(180deg, rgba(50, 39, 79, .96), rgba(29, 40, 55, .94)); box-shadow: 0 8px 0 rgba(0,0,0,.22); color: #eee8ff; }
+.shop-card-top { display: flex; align-items: start; justify-content: space-between; gap: 10px; }
+.shop-card h3 { margin: 0 0 8px; color: var(--gold); }
+.shop-card-top span { color: var(--mint); font-weight: 1000; white-space: nowrap; }
+.shop-benefit { margin: 8px 0; color: #d6d1ef; font-weight: 800; }
+.shop-buy-button { width: 100%; margin: 10px 0 0; background: linear-gradient(180deg, #ffd166, #ff9f1c); color: #35210a; box-shadow: 0 7px 0 #8b4f0c; }
+.shop-buy-button:disabled { cursor: not-allowed; transform: none; filter: grayscale(.35) brightness(.72); opacity: .72; }
+.shop-buy-button.maxed { background: linear-gradient(180deg, #b8ff84, #54d66f); color: #14321d; box-shadow: 0 7px 0 #246b3c; }
+
+@media (max-width: 820px), (max-height: 520px) {
+  .shop-panel { padding: 16px; }
+  .shop-cards { grid-template-columns: repeat(2, minmax(180px, 1fr)); gap: 10px; }
+  .shop-card { padding: 12px; font-size: .9rem; }
+}
+@media (max-width: 560px) { .shop-cards { grid-template-columns: 1fr; } }
