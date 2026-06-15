@@ -1,5 +1,5 @@
 export const CONFIG = {
-  arenaSize: 90,
+  arenaSize: 220,
   runDuration: 600,
   player: { speed: 9.68, sprintMultiplier: 1.55, maxHealth: 100, radius: 0.8, jumpVelocity: 8.4, gravity: 28, landingDip: 0.1 },
   pulse: { cooldown: 2.5, range: 5.2, damage: 35, visualDuration: 0.55 },
