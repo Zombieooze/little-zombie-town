@@ -51,14 +51,14 @@ System rules:
 
 All 8 planned abilities are implemented and can appear in the level-up card pool, while the player can still choose only 4 special abilities per run:
 
-1. **Spinning Sawblade:** A bright low-poly spinning scrap disc that auto-launches on cooldown, targets roughly the nearest zombie, damages enemies it touches, and scales from Level 1-10 through modest damage, cooldown, hit-radius, speed/lifetime, and volley-count upgrades.
-2. **Scrap Orbitals:** One or more visible low-poly scrap chunks orbit the player, spin automatically, and use contact/tick damage when orbiting chunks touch zombies. Scrap Orbitals scale from Level 1-10 through modest damage, orbital-count, orbital-speed, and hit-radius upgrades.
-3. **Electric Zapper:** An automatic chain-zap special ability that fires on cooldown, hits the nearest zombie in range, then gains more damage, faster recharge, longer range, and extra chain targets as it upgrades from Level 1-10. Electric Zapper counts toward the 4 special ability limit and uses the normal zombie damage/death/reward path so kills still award XP and coins.
-4. **Fire Bottle:** An automatic thrown area-damage special ability. It throws a small bottle toward the nearest zombie in range, or forward if no target is available, then creates a cartoon fire patch on the ground. Zombies in the patch take damage over time through the normal zombie damage/death/reward path. Fire Bottle counts toward the 4 special ability limit and upgrades from Level 1 to Level 10 through damage, duration, cooldown, radius, and extra-bottle improvements.
-5. **Nail Blaster:** An automatic fast ranged projectile special ability. It fires small gray nail/bolt projectiles at nearby zombies, counts toward the 4 special ability limit, and upgrades from Level 1 to Level 10 through damage, fire-rate, extra-projectile, spread, and piercing improvements. Nail Blaster uses the normal zombie damage/death/reward path so projectile kills still award XP and coins.
-6. **Shockwave Stomp:** An automatic circular crowd-control special ability that releases a short-lived shockwave around the player on cooldown. It damages nearby zombies, pushes them away from the player, counts toward the 4 special ability limit, and upgrades from Level 1 to Level 10 through damage, radius, recharge, knockback, and a final stronger panic-shockwave upgrade. Shockwave Stomp uses the normal zombie damage/death/reward path so kills still award XP and coins.
-7. **Bear Trap Toss:** An automatic ground-control special ability that drops low-poly scrap traps near the player or toward nearby zombies on cooldown. Traps sit on the ground for a limited lifetime, damage zombies that step into their trigger radius, and use the normal zombie damage/death/reward path so trap kills still award XP and coins. Bear Trap Toss counts toward the 4 special ability limit and upgrades from Level 1 to Level 10 through damage, lifetime, recharge, active-trap count, trigger radius, and a final scrap-burst explosion when triggered.
-8. **Junkyard Turret:** An automatic deployable turret special ability that builds a small temporary scrap turret near the player on cooldown. The turret holds an area by facing and shooting nearby zombies with scrap bolts, counts toward the 4 special ability limit, and upgrades from Level 1 to Level 10 through damage, fire-rate, range, duration, active-turret count, and stronger scrap fire. Junkyard Turret uses the normal zombie damage/death/reward path so turret kills still award XP and coins.
+1. **Rusty Sawblade:** A bright low-poly spinning scrap disc that auto-launches on cooldown, targets roughly the nearest zombie, damages enemies it touches, and scales from Level 1-10 through modest damage, cooldown, hit-radius, speed/lifetime, and volley-count upgrades.
+2. **Scrap Halo:** One or more visible low-poly scrap chunks orbit the player, spin automatically, and use contact/tick damage when orbiting chunks touch zombies. Scrap Halo scales from Level 1-10 through modest damage, orbital-count, orbital-speed, and hit-radius upgrades.
+3. **Car Battery Zapper:** An automatic chain-zap special ability that fires on cooldown, hits the nearest zombie in range, then gains more damage, faster recharge, longer range, and extra chain targets as it upgrades from Level 1-10. Car Battery Zapper counts toward the 4 special ability limit and uses the normal zombie damage/death/reward path so kills still award XP and coins.
+4. **Flame Bottle:** An automatic thrown area-damage special ability. It throws a small bottle toward the nearest zombie in range, or forward if no target is available, then creates a cartoon fire patch on the ground. Zombies in the patch take damage over time through the normal zombie damage/death/reward path. Flame Bottle counts toward the 4 special ability limit and upgrades from Level 1 to Level 10 through damage, duration, cooldown, radius, and extra-bottle improvements.
+5. **Nailgun Barrage:** An automatic fast ranged projectile special ability. It fires small gray nail/bolt projectiles at nearby zombies, counts toward the 4 special ability limit, and upgrades from Level 1 to Level 10 through damage, fire-rate, extra-projectile, spread, and piercing improvements. Nailgun Barrage uses the normal zombie damage/death/reward path so projectile kills still award XP and coins.
+6. **Pavement Slam:** An automatic circular crowd-control special ability that releases a short-lived shockwave around the player on cooldown. It damages nearby zombies, pushes them away from the player, counts toward the 4 special ability limit, and upgrades from Level 1 to Level 10 through damage, radius, recharge, knockback, and a final stronger panic-shockwave upgrade. Pavement Slam uses the normal zombie damage/death/reward path so kills still award XP and coins.
+7. **Snap Trap:** An automatic ground-control special ability that drops low-poly scrap traps near the player or toward nearby zombies on cooldown. Traps sit on the ground for a limited lifetime, damage zombies that step into their trigger radius, and use the normal zombie damage/death/reward path so trap kills still award XP and coins. Snap Trap counts toward the 4 special ability limit and upgrades from Level 1 to Level 10 through damage, lifetime, recharge, active-trap count, trigger radius, and a final scrap-burst explosion when triggered.
+8. **Scrap Turret:** An automatic deployable turret special ability that builds a small temporary scrap turret near the player on cooldown. The turret holds an area by facing and shooting nearby zombies with scrap bolts, counts toward the 4 special ability limit, and upgrades from Level 1 to Level 10 through damage, fire-rate, range, duration, active-turret count, and stronger scrap fire. Scrap Turret uses the normal zombie damage/death/reward path so turret kills still award XP and coins.
 
 With all 8 planned special abilities implemented, the 4-ability cap remains the build constraint: players can unlock only four of the eight in one run while already chosen abilities and passive upgrades keep appearing normally.
 
@@ -68,13 +68,13 @@ Passive run upgrades now use CubeBasher-style values with Little Zombie Town nam
 
 Current passive cards:
 
-- **First Aid Training:** +25 max HP and heal 25 immediately.
-- **Running Shoes:** +8% move speed.
+- **Scavenged Medkit:** +25 max HP and heal 25 immediately.
+- **Worn-Out Sneakers:** +8% move speed.
 - **Energy Drink:** +12% global player damage for the bat and player-created abilities where practical.
-- **Coffee Rush:** -8% weapon and ability cooldowns, with cooldowns clamped so timers stay safe.
+- **Canned Coffee:** -8% cooldowns, with cooldowns clamped so timers stay safe.
 - **Scrap Magnet:** +35% pickup radius for XP pickup/magnet behavior.
 
-Stamina, armor, crit, and regen passives were removed from the level-up pool for now to keep in-run choices cleaner while the sprint system remains simple and the map is still small. Special ability cards still exist separately from these passive cards, keep their own Level 1-10 progression, and still respect the 4-special-ability cap. Permanent upgrades and in-run passives stack additively or multiplicatively through run state: Power stacks with Energy Drink damage, Vitality with First Aid Training max HP, Swiftness with Running Shoes speed, and Magnetism with Scrap Magnet pickup radius.
+Stamina, armor, crit, and regen passives were removed from the level-up pool for now to keep in-run choices cleaner while the sprint system remains simple and the map is still small. Special ability cards still exist separately from these passive cards, keep their own Level 1-10 progression, and still respect the 4-special-ability cap. Permanent upgrades and in-run passives stack additively or multiplicatively through run state: Heavy Hitter stacks with Energy Drink damage, Survivor’s Grit with Scavenged Medkit max HP, Quick Feet with Worn-Out Sneakers speed, and Scrap Magnetism with Scrap Magnet pickup radius.
 
 ## Permanent Upgrade Lab
 
@@ -82,16 +82,19 @@ The main menu includes a CubeBasher-style **Upgrade Lab** for permanent upgrades
 
 Upgrade costs use the CubeBasher formula `Math.round(baseCost * Math.pow(1.75, currentLevel))`, where `currentLevel` is the level before purchase. Level 0 buying level 1 costs the base cost.
 
+
+This naming/theme pass only changed player-facing names and description wording; upgrade ids, save ids, effects, values, cooldowns, levels, and ability behavior were left unchanged.
+
 Permanent Upgrade Lab entries:
 
-- **Power** (`dmg`, 💪): max 10, base cost 30, +5% global player damage per level. This applies to the bat and player-created abilities/projectiles/traps where practical, but not enemy damage.
-- **Vitality** (`hp`, ❤️): max 10, base cost 25, +10 max HP per level.
-- **Swiftness** (`speed`, 👟): max 8, base cost 35, +3% move speed per level.
-- **Recovery** (`regen`, 🌿): max 8, base cost 40, +0.15 HP/sec regeneration per level, healing only up to max HP.
-- **Endurance** (`stamina`, ⚡): max 8, base cost 30, +12 max stamina per level. The value is saved and applied to run state so it is ready for stamina systems without changing current controls.
-- **Greed** (`gold`, 💰): max 8, base cost 45, +10% coins found per level. The multiplier is applied when enemies and rewards add run coins so the displayed run amount matches the saved total at run end.
-- **Magnetism** (`magnet`, 🧲): max 8, base cost 30, +8% pickup radius per level.
-- **Wisdom** (`xp`, 📘): max 8, base cost 50, +6% XP gained per level. XP rewards are multiplied before being added to the visible XP bar and level progression.
+- **Heavy Hitter** (`dmg`, 💪): max 10, base cost 30, +5% damage per level. This applies to the bat and player-created abilities/projectiles/traps where practical, but not enemy damage.
+- **Survivor’s Grit** (`hp`, ❤️): max 10, base cost 25, +10 max HP per level.
+- **Quick Feet** (`speed`, 👟): max 8, base cost 35, +3% move speed per level.
+- **Patch-Up** (`regen`, 🌿): max 8, base cost 40, +0.15 HP/sec regeneration per level, healing only up to max HP.
+- **Iron Lungs** (`stamina`, ⚡): max 8, base cost 30, +12 max stamina per level. The value is saved and applied to run state so it is ready for stamina systems without changing current controls.
+- **Looter’s Luck** (`gold`, 💰): max 8, base cost 45, +10% coins found per level. The multiplier is applied when enemies and rewards add run coins so the displayed run amount matches the saved total at run end.
+- **Scrap Magnetism** (`magnet`, 🧲): max 8, base cost 30, +8% pickup radius per level.
+- **Street Smarts** (`xp`, 📘): max 8, base cost 50, +6% XP gained per level. XP rewards are multiplied before being added to the visible XP bar and level progression.
 
 Old permanent upgrade save ids are migrated when possible: `maxHealth` to `hp`, `moveSpeed` to `speed`, `pickupMagnet` to `magnet`, `coinBonus` to `gold`, and `batDamage` to `dmg`. New upgrades without old equivalents start at 0, and all loaded levels are clamped to their new max levels.
 

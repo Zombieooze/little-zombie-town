@@ -15,10 +15,10 @@ export const PASSIVE_UPGRADE_VALUES = {
 };
 
 export const UPGRADES = [
-  { id: 'firstAidTraining', name: 'First Aid Training', description: '+25 Max HP and heal 25.' },
-  { id: 'runningShoes', name: 'Running Shoes', description: '+8% move speed.' },
+  { id: 'firstAidTraining', name: 'Scavenged Medkit', description: '+25 max HP and heal 25.' },
+  { id: 'runningShoes', name: 'Worn-Out Sneakers', description: '+8% move speed.' },
   { id: 'energyDrink', name: 'Energy Drink', description: '+12% damage.' },
-  { id: 'coffeeRush', name: 'Coffee Rush', description: '-8% weapon and ability cooldowns.' },
+  { id: 'coffeeRush', name: 'Canned Coffee', description: '-8% cooldowns.' },
   { id: 'scrapMagnet', name: 'Scrap Magnet', description: '+35% pickup radius.' },
 ];
 

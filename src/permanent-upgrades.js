@@ -1,14 +1,14 @@
 import { CONFIG } from './config.js';
 
 export const PERMANENT_UPGRADES = [
-  { id: 'dmg', emoji: '💪', name: 'Power', description: '+5% global player damage per level.', max: 10, baseCost: 30, effect: (level) => `+${level * 5}% damage`, nextEffect: () => '+5% damage' },
-  { id: 'hp', emoji: '❤️', name: 'Vitality', description: '+10 max HP per level.', max: 10, baseCost: 25, effect: (level) => `+${level * 10} max HP`, nextEffect: () => '+10 max HP' },
-  { id: 'speed', emoji: '👟', name: 'Swiftness', description: '+3% move speed per level.', max: 8, baseCost: 35, effect: (level) => `+${level * 3}% move speed`, nextEffect: () => '+3% move speed' },
-  { id: 'regen', emoji: '🌿', name: 'Recovery', description: '+0.15 HP/sec regen per level.', max: 8, baseCost: 40, effect: (level) => `+${(level * 0.15).toFixed(2)} HP/sec`, nextEffect: () => '+0.15 HP/sec' },
-  { id: 'stamina', emoji: '⚡', name: 'Endurance', description: '+12 max stamina per level.', max: 8, baseCost: 30, effect: (level) => `+${level * 12} max stamina`, nextEffect: () => '+12 max stamina' },
-  { id: 'gold', emoji: '💰', name: 'Greed', description: '+10% coins found per level.', max: 8, baseCost: 45, effect: (level) => `+${level * 10}% coins found`, nextEffect: () => '+10% coins found' },
-  { id: 'magnet', emoji: '🧲', name: 'Magnetism', description: '+8% pickup radius per level.', max: 8, baseCost: 30, effect: (level) => `+${level * 8}% pickup radius`, nextEffect: () => '+8% pickup radius' },
-  { id: 'xp', emoji: '📘', name: 'Wisdom', description: '+6% XP gained per level.', max: 8, baseCost: 50, effect: (level) => `+${level * 6}% XP gained`, nextEffect: () => '+6% XP gained' },
+  { id: 'dmg', emoji: '💪', name: 'Heavy Hitter', description: '+5% damage per level.', max: 10, baseCost: 30, effect: (level) => `+${level * 5}% damage`, nextEffect: () => '+5% damage' },
+  { id: 'hp', emoji: '❤️', name: 'Survivor’s Grit', description: '+10 max HP per level.', max: 10, baseCost: 25, effect: (level) => `+${level * 10} max HP`, nextEffect: () => '+10 max HP' },
+  { id: 'speed', emoji: '👟', name: 'Quick Feet', description: '+3% move speed per level.', max: 8, baseCost: 35, effect: (level) => `+${level * 3}% move speed`, nextEffect: () => '+3% move speed' },
+  { id: 'regen', emoji: '🌿', name: 'Patch-Up', description: '+0.15 HP/sec regen per level.', max: 8, baseCost: 40, effect: (level) => `+${(level * 0.15).toFixed(2)} HP/sec`, nextEffect: () => '+0.15 HP/sec' },
+  { id: 'stamina', emoji: '⚡', name: 'Iron Lungs', description: '+12 max stamina per level.', max: 8, baseCost: 30, effect: (level) => `+${level * 12} max stamina`, nextEffect: () => '+12 max stamina' },
+  { id: 'gold', emoji: '💰', name: 'Looter’s Luck', description: '+10% coins found per level.', max: 8, baseCost: 45, effect: (level) => `+${level * 10}% coins found`, nextEffect: () => '+10% coins found' },
+  { id: 'magnet', emoji: '🧲', name: 'Scrap Magnetism', description: '+8% pickup radius per level.', max: 8, baseCost: 30, effect: (level) => `+${level * 8}% pickup radius`, nextEffect: () => '+8% pickup radius' },
+  { id: 'xp', emoji: '📘', name: 'Street Smarts', description: '+6% XP gained per level.', max: 8, baseCost: 50, effect: (level) => `+${level * 6}% XP gained`, nextEffect: () => '+6% XP gained' },
 ];
 
 export const DEFAULT_PERMANENT_LEVELS = Object.fromEntries(PERMANENT_UPGRADES.map((upgrade) => [upgrade.id, 0]));
