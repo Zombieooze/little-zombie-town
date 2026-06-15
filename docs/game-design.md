@@ -116,6 +116,14 @@ The bat is the close-range emergency weapon. Its range/radius should stay fixed,
 - Use increased late-run spawn pressure plus light enemy health and damage scaling so the 12-minute test stays tense after the player levels up.
 - Use simple browser-friendly geometry only: boxes, cylinders, spheres, cones, low-poly primitives, flat colors, and no imported models or textures.
 
+## World Design Mode
+
+World Design Mode is a temporary map-inspection mode for polishing buildings, vehicles, trees, and props without enemy pressure. Open the game with `?design=1` in the URL, such as `http://10.0.0.71:8000/?design=1`, then press **Start Game** normally.
+
+When this query parameter is present, normal zombie spawning and Gravebreaker boss spawning are disabled for the run, and any enemies are cleared at run start through the normal reset path. Player movement, camera controls, jump, mobile controls, controller controls, collision, and world rendering continue to work so the arena can be inspected safely. The HUD shows a small **WORLD DESIGN MODE** banner while the mode is active.
+
+Without the `?design=1` query parameter, normal gameplay is unchanged: zombies spawn normally, Gravebreaker timed boss events spawn normally, timer-based win/loss behavior remains active, pickups work normally, and combat pressure stays enabled.
+
 ## Healing and pickups
 
 Medkits are the current basic healing system. They use simple low-poly red boxes with white crosses so they stay readable on the ground without external textures.
