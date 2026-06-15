@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
+import { findSafeSpawnPositionNear, resolveWorldCollision } from './world.js';
 
 const zombies = [];
 const slimeProjectiles = [];
@@ -832,17 +833,21 @@ export function getActiveBoss() {
 export function spawnBossZombie(scene, progress = {}) {
   if (!scene || getActiveBoss()) return null;
   const z = zombieMesh('boss', progress);
+  const bossType = ZOMBIE_TYPES.boss;
   const edge = Math.floor(Math.random() * 4), half = CONFIG.arenaSize / 2 + 2, roll = (Math.random() - .5) * CONFIG.arenaSize;
   z.position.set(edge < 2 ? (edge === 0 ? -half : half) : roll, 0, edge >= 2 ? (edge === 2 ? -half : half) : roll);
+  z.position.copy(findSafeSpawnPositionNear(z.position.x, z.position.z, bossType.radius ?? ZOMBIE_TYPES.boss.radius, 20));
   zombies.push(z); scene.add(z); return z;
 }
 
 export function spawnZombie(scene, progress = {}) {
   if (zombies.length >= getMaxAlive(progress.elapsed)) return null;
   const typeKey = chooseZombieType(progress);
+  const type = ZOMBIE_TYPES[typeKey] ?? ZOMBIE_TYPES.walker;
   const z = zombieMesh(typeKey, progress);
   const edge = Math.floor(Math.random() * 4), half = CONFIG.arenaSize / 2 + 2, roll = (Math.random() - .5) * CONFIG.arenaSize;
   z.position.set(edge < 2 ? (edge === 0 ? -half : half) : roll, 0, edge >= 2 ? (edge === 2 ? -half : half) : roll);
+  z.position.copy(findSafeSpawnPositionNear(z.position.x, z.position.z, type.radius ?? ZOMBIE_TYPES.walker.radius, 12));
   zombies.push(z); scene.add(z); return z;
 }
 
@@ -1159,6 +1164,7 @@ export function updateZombies(scene, player, delta, onDamage) {
 
     z.position.x += (dx / dist) * moveSpeed * moveSign * delta;
     z.position.z += (dz / dist) * moveSpeed * moveSign * delta;
+    resolveWorldCollision(z.position, type.radius ?? ZOMBIE_TYPES.walker.radius);
     z.rotation.y = Math.atan2(dx, dz) + ZOMBIE_VISUAL_FACING_OFFSET;
     updateZombieMovementAnimation(z, delta, isMoving);
     updateGravebreakerSlamAnimation(z, delta, dist);
