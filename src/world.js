@@ -503,7 +503,9 @@ function createResidentialHouse(scene, x, z, options = {}) {
   const g = new THREE.Group();
   assetPart(g, box(tw, h, td, color), [0, h / 2, 0]);
   assetPart(g, box(tw + town(.45), town(.28), td + town(.45), 0x4b3c33), [0, town(.14), 0]);
-  createPeakedRoof(g, tw, td, h, roofColor);
+  // A narrow top cap closes any daylight between the walls and the sloped roof planes.
+  assetPart(g, box(tw + town(.28), town(.34), td + town(.28), color), [0, h + town(.1), 0]);
+  createPeakedRoof(g, tw, td, h + town(.08), roofColor);
 
   const dims = [tw, h, td];
   const frontFace = front === 'south' ? 'right' : 'left';
@@ -519,8 +521,10 @@ function createResidentialHouse(scene, x, z, options = {}) {
     addResidentialWindow(g, dims, 'front', 0, town(4.45), true);
     addResidentialWindow(g, dims, 'rear', 0, town(4.45), false);
   }
-  assetPart(g, box(town(.85), town(1.25), town(.85), 0x4a3a33), [tw * .28, h + town(1.0), 0]);
-  addRustPatches(g, dims, twoStory ? 8 : 5, h + town(1.3), [tw, h, td]);
+  const chimneyX = front === 'south' ? -tw * .26 : tw * .24;
+  const chimneyZ = front === 'south' ? -td * .18 : td * .16;
+  assetPart(g, box(town(.78), town(1.15), town(.78), 0x4a3a33), [chimneyX, h + town(1.15), chimneyZ]);
+  addRustPatches(g, dims, twoStory ? 8 : 5, h + town(1.34), [tw, h, td]);
 
   g.position.set(town(x), 0, town(z));
   g.rotation.y = rotation;
@@ -530,27 +534,34 @@ function createResidentialHouse(scene, x, z, options = {}) {
 
 function addResidentialNeighborhood(scene) {
   // Small local streets and simple pedestrian connections inside the residential corner.
-  townRoadSlab(scene, -41, 40, 39, 7, COLORS.road);
-  townRoadSlab(scene, -53, 31, 7, 20, COLORS.road);
-  townSidewalkSlab(scene, -41, 35.4, 38, 2.1);
-  townSidewalkSlab(scene, -41, 44.6, 38, 2.1);
-  townSidewalkSlab(scene, -48.4, 31, 2.1, 19);
+  // The lane drops in from the main road, turns across the three lower homes, then rejoins the road system.
+  townRoadSlab(scene, -51, 23, 6, 30, COLORS.road);
+  townRoadSlab(scene, -41, 40, 40, 6.5, COLORS.road);
+  townRoadSlab(scene, -18, 40, 6, 22, COLORS.road);
+  townSidewalkSlab(scene, -55.2, 23, 1.8, 27);
+  townSidewalkSlab(scene, -46.8, 25, 1.8, 23);
+  townSidewalkSlab(scene, -41, 35.7, 38, 1.8);
+  townSidewalkSlab(scene, -41, 44.2, 38, 1.8);
+  townSidewalkSlab(scene, -21.8, 40, 1.8, 18);
 
   // Driveways and walkways stay flat/non-blocking so combat movement remains open.
-  [[-57, 42.2, 6, 9], [-29, 42.2, 6, 9], [-53, 28.5, 7, 8]].forEach(([x, z, w, d]) => townRoadSlab(scene, x, z, w, d, COLORS.pavement));
-  [[-56, 45.7, 2, 5], [-43, 45.7, 2, 4], [-28, 45.7, 2, 4], [-54, 34.2, 2, 4], [-34, 34.2, 2, 4]].forEach(([x, z, w, d]) => townSidewalkSlab(scene, x, z, w, d, COLORS.sidewalk));
+  [[-58, 41.2, 5.5, 7], [-29, 41.2, 5.5, 7], [-53, 30.5, 6, 6.5]].forEach(([x, z, w, d]) => townRoadSlab(scene, x, z, w, d, COLORS.pavement));
+  [[-56, 45.1, 1.8, 4], [-43, 44.9, 1.8, 4], [-28, 45.1, 1.8, 4], [-51, 31.5, 4, 1.7], [-34, 34.2, 2, 4]].forEach(([x, z, w, d]) => townSidewalkSlab(scene, x, z, w, d, COLORS.sidewalk));
 
-  createResidentialHouse(scene, -56, 52, { w: 9.5, d: 8.5, color: 0x7a5a48, boarded: true });
-  createResidentialHouse(scene, -43, 51, { w: 8.6, d: 8.0, color: 0x66725a, roofColor: 0x333247, boarded: false });
-  createResidentialHouse(scene, -28, 51, { w: 10.2, d: 8.8, color: 0x75624f, twoStory: true, boarded: true });
-  createResidentialHouse(scene, -55, 27, { w: 8.8, d: 8.3, color: 0x5f705e, boarded: true });
+  createResidentialHouse(scene, -56, 52, { w: 9.5, d: 8.5, color: 0x7a5a48, rotation: Math.PI, front: 'south', boarded: true });
+  createResidentialHouse(scene, -43, 51, { w: 8.6, d: 8.0, color: 0x66725a, roofColor: 0x333247, rotation: Math.PI, front: 'south', boarded: false });
+  createResidentialHouse(scene, -28, 52, { w: 10.2, d: 8.8, color: 0x75624f, twoStory: true, rotation: Math.PI, front: 'south', boarded: true });
+  createResidentialHouse(scene, -58, 27, { w: 8.8, d: 8.3, color: 0x5f705e, rotation: Math.PI / 2, boarded: true });
   createResidentialHouse(scene, -34, 28, { w: 9.2, d: 8.0, color: 0x6f5d6d, boarded: false });
 
-  createBurntSedan({ scene, position: [town(-58), 0, town(39.3)], rotation: Math.PI / 2 + .08, scale: town(.68) });
-  createBurntPickupTruck({ scene, position: [town(-30), 0, town(39.5)], rotation: Math.PI / 2 - .18, scale: town(.65) });
-  createBurntVan({ scene, position: [town(-53), 0, town(31)], rotation: -.08, scale: town(.58) });
-  createStreetTree({ scene, position: [town(-61), 0, town(56)], scale: town(.72) });
-  createStreetTree({ scene, position: [town(-23), 0, town(44)], scale: town(.68) });
+  createBurntSedan({ scene, position: [town(-57.5), 0, town(38.4)], rotation: Math.PI / 2 + .08, scale: town(.62) });
+  createBurntPickupTruck({ scene, position: [town(-24), 0, town(40.3)], rotation: -.14, scale: town(.6) });
+  createBurntVan({ scene, position: [town(-51.4), 0, town(29.5)], rotation: Math.PI / 2 - .18, scale: town(.54) });
+  createStreetTree({ scene, position: [town(-62), 0, town(56)], scale: town(.72) });
+  createStreetTree({ scene, position: [town(-21), 0, town(47)], scale: town(.68) });
+  createStreetTree({ scene, position: [town(-61), 0, town(35)], scale: town(.58) });
+  createStreetTree({ scene, position: [town(-39), 0, town(56)], scale: town(.6) });
+  createStreetTree({ scene, position: [town(-23), 0, town(28)], scale: town(.56) });
   addRubblePatch(scene, -39, 36, 4);
 }
 
