@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
+import { findSafeSpawnPositionNear } from './world.js';
 
 const pickups = [];
 const gemGeo = new THREE.OctahedronGeometry(.35, 0);
@@ -24,7 +25,8 @@ function createMedkitMesh() {
 export function resetPickups(scene) { pickups.splice(0).forEach((p) => scene.remove(p)); }
 export function dropXp(scene, position, value = CONFIG.zombie.types.walker.xp) {
   const gem = new THREE.Mesh(gemGeo, gemMat);
-  gem.position.copy(position); gem.position.y = .55; gem.userData = { kind: 'xp', value };
+  const safePosition = findSafeSpawnPositionNear(position.x, position.z, 0.35, 10);
+  gem.position.copy(safePosition); gem.position.y = .55; gem.userData = { kind: 'xp', value };
   pickups.push(gem); scene.add(gem);
 }
 
@@ -35,7 +37,8 @@ export function countActiveMedkits() {
 export function dropMedkit(scene, position, source = 'zombie') {
   if (countActiveMedkits() >= CONFIG.medkit.maxActive) return null;
   const medkit = createMedkitMesh();
-  medkit.position.copy(position);
+  const safePosition = findSafeSpawnPositionNear(position.x, position.z, 0.55, source === 'world' ? 32 : 14);
+  medkit.position.copy(safePosition);
   medkit.position.y = medkit.userData.baseY;
   medkit.userData = { ...medkit.userData, kind: 'medkit', source, healAmount: CONFIG.medkit.healAmount, age: Math.random() * Math.PI * 2 };
   pickups.push(medkit); scene.add(medkit);

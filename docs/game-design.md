@@ -28,7 +28,7 @@
 - **Spacebar** or an Xbox-style controller **A** button starts a quick, modest arcade jump only while grounded. Holding the jump input does not repeat jumps in midair.
 - The player keeps camera-relative steering while airborne, so pressing a new WASD direction during a jump changes the movement direction instead of locking the original takeoff direction.
 - Jumping is currently a movement-feel feature only: it does not grant invincibility, stomp damage, dodge frames, or special combat rules. Bat swings and special abilities can still operate while jumping.
-- Cars, placeholder buildings, district lots, and other town props still do not block movement in this foundation pass. Obstacle collision remains planned for a later dedicated pass.
+- World objects now support simple reusable X/Z colliders. Placeholder buildings register solid rectangle footprints, trees and larger round props can register circle colliders, and vehicles/large debris can opt into the same obstacle system without a physics engine. Player movement resolves against these colliders with simple push-out/slide behavior while preserving camera-relative controls, sprinting, jumping, mobile controls, and controller controls. Zombie movement remains intentionally direct and simple: zombies still try to move toward the player without navmesh or smart pathfinding, but their positions are pushed out of registered solid world objects when practical. Future no-roof/interior building passes can split buildings into multiple wall colliders with door gaps instead of using one solid footprint.
 
 ## Special ability system
 
@@ -123,7 +123,7 @@ Medkits are the current basic healing system. They use simple low-poly red boxes
 - A collected medkit heals a fixed amount while clamping the player to max health.
 - Every defeated zombie still drops its XP gem. Medkits are an extra rare drop and never replace XP.
 - Drop chances live near zombie type tuning: Walkers are rare, Runners/Little Zombies and Spitters are slightly more likely, and Brutes/Crushers/Mini Bosses are more rewarding without replacing XP drops.
-- World medkits begin appearing around **0:45**, then occasionally respawn near—but not directly on—the player, with small world and total active caps so healing remains helpful without flooding the arena.
+- World medkits begin appearing around **0:45**, then occasionally respawn near—but not directly on—the player, with small world and total active caps so healing remains helpful without flooding the arena. Medkits and practical pickup drops use the shared safe-spawn helper so they stay inside the 180 x 180 play area and avoid registered solid world objects such as buildings, vehicles, trees, fences, bushes, barriers, and large props as those colliders are added.
 
 ## Zombie progression
 

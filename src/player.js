@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
 import { consumePress, consumeGamepadPress, getMoveVector, isDown } from './input.js';
+import { resolveWorldCollision } from './world.js';
 
 const makeMat = (color) => new THREE.MeshStandardMaterial({ color, roughness: 0.82 });
 // Character art faces local -Z; movement rotation math points local +Z, so keep visuals flipped once here.
@@ -115,9 +116,7 @@ export function updatePlayer(player, delta, attackTimer = 0, cameraYaw = 0, spee
   const speed = CONFIG.player.speed * Math.max(0.1, speedMultiplier) * sprint;
   player.position.x += moveX * speed * delta;
   player.position.z += moveZ * speed * delta;
-  const limit = CONFIG.arenaSize / 2 - 2;
-  player.position.x = THREE.MathUtils.clamp(player.position.x, -limit, limit);
-  player.position.z = THREE.MathUtils.clamp(player.position.z, -limit, limit);
+  resolveWorldCollision(player.position, CONFIG.player.radius);
 
   const moving = Math.abs(input.x) + Math.abs(input.z) > 0;
   if (moving) player.rotation.y = Math.atan2(moveX, moveZ) + PLAYER_VISUAL_FACING_OFFSET;

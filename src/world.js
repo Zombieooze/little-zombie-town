@@ -33,6 +33,109 @@ const REFERENCE_ARENA_SIZE = 220;
 const TOWN_SCALE = CONFIG.arenaSize / REFERENCE_ARENA_SIZE;
 const town = (value) => value * TOWN_SCALE;
 
+const worldColliders = [];
+
+export function resetWorldColliders() {
+  worldColliders.length = 0;
+}
+
+export function getWorldColliders() {
+  return worldColliders;
+}
+
+export function registerWorldCollider(collider) {
+  if (!collider || !Number.isFinite(collider.x) || !Number.isFinite(collider.z)) return null;
+  const type = collider.type === 'circle' ? 'circle' : 'rect';
+  const normalized = type === 'circle'
+    ? { type, x: collider.x, z: collider.z, radius: Math.max(0, collider.radius ?? 0), label: collider.label ?? 'world' }
+    : { type, x: collider.x, z: collider.z, width: Math.max(0, collider.width ?? 0), depth: Math.max(0, collider.depth ?? 0), label: collider.label ?? 'world' };
+  worldColliders.push(normalized);
+  return normalized;
+}
+
+export function isPositionBlocked(x, z, radius = 0) {
+  return worldColliders.some((collider) => getColliderPushOut(x, z, radius, collider));
+}
+
+function getColliderPushOut(x, z, radius, collider) {
+  if (collider.type === 'circle') {
+    const dx = x - collider.x;
+    const dz = z - collider.z;
+    const minDist = (collider.radius ?? 0) + radius;
+    const dist = Math.hypot(dx, dz);
+    if (dist >= minDist) return null;
+    if (dist > 0.0001) return { x: (dx / dist) * (minDist - dist), z: (dz / dist) * (minDist - dist) };
+    return { x: minDist, z: 0 };
+  }
+
+  const halfW = collider.width / 2;
+  const halfD = collider.depth / 2;
+  const closestX = THREE.MathUtils.clamp(x, collider.x - halfW, collider.x + halfW);
+  const closestZ = THREE.MathUtils.clamp(z, collider.z - halfD, collider.z + halfD);
+  const dx = x - closestX;
+  const dz = z - closestZ;
+  const dist = Math.hypot(dx, dz);
+  if (dist > 0.0001 && dist < radius) return { x: (dx / dist) * (radius - dist), z: (dz / dist) * (radius - dist) };
+  if (x < collider.x - halfW || x > collider.x + halfW || z < collider.z - halfD || z > collider.z + halfD) return null;
+
+  const left = Math.abs(x - (collider.x - halfW));
+  const right = Math.abs((collider.x + halfW) - x);
+  const bottom = Math.abs(z - (collider.z - halfD));
+  const top = Math.abs((collider.z + halfD) - z);
+  const min = Math.min(left, right, bottom, top);
+  if (min === left) return { x: -(left + radius), z: 0 };
+  if (min === right) return { x: right + radius, z: 0 };
+  if (min === bottom) return { x: 0, z: -(bottom + radius) };
+  return { x: 0, z: top + radius };
+}
+
+export function resolveWorldCollision(position, radius = 0) {
+  if (!position) return position;
+  const limit = CONFIG.arenaSize / 2 - Math.max(0, radius);
+  position.x = THREE.MathUtils.clamp(position.x, -limit, limit);
+  position.z = THREE.MathUtils.clamp(position.z, -limit, limit);
+
+  for (let pass = 0; pass < 3; pass++) {
+    let moved = false;
+    for (const collider of worldColliders) {
+      const push = getColliderPushOut(position.x, position.z, radius, collider);
+      if (!push) continue;
+      position.x += push.x;
+      position.z += push.z;
+      position.x = THREE.MathUtils.clamp(position.x, -limit, limit);
+      position.z = THREE.MathUtils.clamp(position.z, -limit, limit);
+      moved = true;
+    }
+    if (!moved) break;
+  }
+  return position;
+}
+
+export function isPickupSpawnSafe(x, z, radius = 0.7) {
+  const limit = CONFIG.arenaSize / 2 - Math.max(1, radius);
+  return x >= -limit && x <= limit && z >= -limit && z <= limit && !isPositionBlocked(x, z, radius);
+}
+
+export function findSafeSpawnPositionNear(x, z, radius = 0.7, attempts = 24) {
+  const limit = CONFIG.arenaSize / 2 - Math.max(1, radius);
+  const candidate = new THREE.Vector3(THREE.MathUtils.clamp(x, -limit, limit), 0, THREE.MathUtils.clamp(z, -limit, limit));
+  if (isPickupSpawnSafe(candidate.x, candidate.z, radius)) return candidate;
+
+  for (let i = 0; i < attempts; i++) {
+    const ring = 1.5 + Math.floor(i / 8) * 2.2;
+    const angle = (i * 2.399963229728653) + Math.random() * 0.35;
+    candidate.set(
+      THREE.MathUtils.clamp(x + Math.cos(angle) * ring, -limit, limit),
+      0,
+      THREE.MathUtils.clamp(z + Math.sin(angle) * ring, -limit, limit),
+    );
+    if (isPickupSpawnSafe(candidate.x, candidate.z, radius)) return candidate.clone();
+  }
+  candidate.set(THREE.MathUtils.clamp(x, -limit, limit), 0, THREE.MathUtils.clamp(z, -limit, limit));
+  resolveWorldCollision(candidate, radius);
+  return candidate;
+}
+
 const makeMat = (color, roughness = 0.9) => new THREE.MeshStandardMaterial({ color, roughness });
 const box = (w, h, d, color) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), makeMat(color));
 
@@ -85,6 +188,7 @@ function building(scene, x, z, w, d, h, color = COLORS.buildingA) {
   const roof = box(w + 0.35, 0.22, d + 0.35, COLORS.roof);
   roof.position.set(x, h + 0.12, z);
   scene.add(base, roof);
+  registerWorldCollider({ type: 'rect', x, z, width: w, depth: d, label: 'building' });
 }
 
 function townBuilding(scene, x, z, w, d, h, color = COLORS.buildingA) {
@@ -243,6 +347,7 @@ function addTree(scene, x, z) {
   const trunk = box(.35, 1.8, .35, 0x3d2a24); trunk.position.y = .9; group.add(trunk);
   const crown = new THREE.Mesh(new THREE.ConeGeometry(1.5, 2.7, 7), makeMat(0x2f7d3c)); crown.position.y = 2.5; group.add(crown);
   group.position.set(town(x), 0, town(z)); scene.add(group);
+  registerWorldCollider({ type: 'circle', x: town(x), z: town(z), radius: town(1.05), label: 'tree' });
 }
 
 function addScrap(scene, cx, cz) {
@@ -251,6 +356,7 @@ function addScrap(scene, cx, cz) {
     s.position.set(town(cx + (Math.random() - .5) * 28), .18, town(cz + (Math.random() - .5) * 36));
     s.rotation.y = Math.random() * Math.PI;
     scene.add(s);
+    if (s.geometry.parameters.width >= 2.2 || s.geometry.parameters.depth >= 1.6) registerWorldCollider({ type: 'circle', x: s.position.x, z: s.position.z, radius: Math.max(s.geometry.parameters.width, s.geometry.parameters.depth) * .45, label: 'scrap' });
   }
 }
 
@@ -262,10 +368,12 @@ function addFillerCars(scene) {
     car.position.set((Math.random() - .5) * (CONFIG.arenaSize - 28), .35, (Math.random() - .5) * (CONFIG.arenaSize - 28));
     car.rotation.y = Math.random() * Math.PI;
     scene.add(car);
+    registerWorldCollider({ type: 'circle', x: car.position.x, z: car.position.z, radius: 1.65, label: 'vehicle' });
   }
 }
 
 export function createWorld(scene) {
+  resetWorldColliders();
   scene.background = new THREE.Color(0x111827);
   scene.fog = new THREE.Fog(0x111827, 64, 155);
   const hemi = new THREE.HemisphereLight(0xb8ffcf, 0x2a173d, 2.8);
