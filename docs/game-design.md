@@ -75,18 +75,18 @@ Current passive examples include:
 
 Future passive candidates, if added carefully later, include XP Magnet for larger pickup radius, Tough Jacket for damage reduction, and Lucky Loot for better drops or coin rewards.
 
-## Future permanent coin upgrades
+## Permanent coin shop
 
-A later **Upgrade Lab** can appear before starting a run or after death/victory. It should use coins and save purchases in localStorage, but this shop is not part of the current pass. Planned permanent upgrade directions:
+The main menu includes a **Coin Shop** for permanent upgrades bought with saved coins between runs. Coins are earned during each run, added to the saved total when the run ends, and then spent from the same saved total without resetting existing player balances. Permanent upgrade levels save separately in browser `localStorage`, load safely when save data is missing or old, and affect future runs only once at run reset so repeated starts do not stack bonuses onto base config values.
 
-- **Power:** More starting damage.
-- **Vitality:** More max health.
-- **Swiftness:** More movement speed.
-- **Recovery:** Slow health regeneration.
-- **Endurance:** Stamina, jump, or sprint support later.
-- **Greed:** More coins earned.
-- **Magnetism:** Larger pickup radius.
-- **Wisdom:** More XP gained.
+Permanent shop upgrades currently use five levels each and are tuned in `src/permanent-upgrades.js` so prices and values are easy to adjust:
+
+- **Max Health:** Increases starting max health for every future run.
+- **Move Speed:** Applies a small movement speed multiplier at run start.
+- **Bat Damage:** Multiplies base bat swing damage before in-run level-up upgrades are applied.
+- **Bat Cooldown:** Reduces the starting bat swing cooldown so swings recharge faster.
+- **Pickup Magnet:** Increases XP gem magnet range during the run.
+- **Coin Bonus:** Multiplies coins awarded from defeated zombies so displayed run coins match the amount saved at the end of the run.
 
 ## Bat design rule
 

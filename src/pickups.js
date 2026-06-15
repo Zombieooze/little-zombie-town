@@ -46,7 +46,7 @@ export function countWorldMedkits() {
   return pickups.filter((p) => p.userData.kind === 'medkit' && p.userData.source === 'world').length;
 }
 
-export function updatePickups(scene, player, delta, onCollect) {
+export function updatePickups(scene, player, delta, onCollect, magnetMultiplier = 1) {
   for (let i = pickups.length - 1; i >= 0; i--) {
     const pickup = pickups[i];
     pickup.userData.age = (pickup.userData.age ?? 0) + delta;
@@ -54,7 +54,8 @@ export function updatePickups(scene, player, delta, onCollect) {
     if (pickup.userData.kind === 'medkit') pickup.position.y = pickup.userData.baseY + Math.sin(pickup.userData.age * 3) * .12;
     const dx = player.position.x - pickup.position.x, dz = player.position.z - pickup.position.z;
     const dist = Math.hypot(dx, dz) || 1;
-    if (pickup.userData.kind === 'xp' && dist < CONFIG.xp.magnetRadius) {
+    const magnetRadius = CONFIG.xp.magnetRadius * Math.max(0.1, magnetMultiplier);
+    if (pickup.userData.kind === 'xp' && dist < magnetRadius) {
       pickup.position.x += (dx / dist) * CONFIG.xp.speed * delta;
       pickup.position.z += (dz / dist) * CONFIG.xp.speed * delta;
     }
