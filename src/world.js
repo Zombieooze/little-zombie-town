@@ -507,14 +507,119 @@ function addRubblePatch(scene, x, z, count = 7) {
   }
 }
 
-function addGasPumps(scene, x, z) {
-  townRoadSlab(scene, x, z, 20, 7, 0x5f6468);
-  townBuilding(scene, x - 10, z - 14, 18, 10, 3.2, 0x8b3d32);
-  for (const px of [x - 4, x + 5]) {
-    const pump = box(1.1, 1.6, .85, 0x9f2f26);
-    pump.position.set(town(px), .8, town(z));
-    scene.add(pump);
+function addGasStationSign(group, width, height, position) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256; canvas.height = 96;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#8b2d25';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#d9b64c';
+  ctx.fillRect(0, 0, canvas.width, 10);
+  ctx.fillRect(0, canvas.height - 10, canvas.width, 10);
+  ctx.font = 'bold 48px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#f4ead0';
+  ctx.strokeStyle = '#171717';
+  ctx.lineWidth = 6;
+  ctx.strokeText('GAS', canvas.width / 2, canvas.height / 2 + 2);
+  ctx.fillText('GAS', canvas.width / 2, canvas.height / 2 + 2);
+
+  const sign = new THREE.Mesh(
+    new THREE.BoxGeometry(width, height, .08),
+    new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(canvas), roughness: .88 }),
+  );
+  sign.position.set(...position);
+  group.add(sign);
+  return sign;
+}
+
+function addGasStationBuilding(scene, x, z) {
+  const g = new THREE.Group();
+  const w = town(23);
+  const d = town(12);
+  const h = 3.4;
+  const frontZ = d / 2 + .035;
+  const backZ = -d / 2 - .035;
+  const rightX = w / 2 + .035;
+
+  assetPart(g, box(w, h, d, 0x756c5d), [0, h / 2, 0]);
+  assetPart(g, box(w + town(1.2), .32, d + town(1.0), 0x2b2d42), [0, h + .16, 0]);
+  assetPart(g, box(w + town(1.7), .16, town(1.0), 0x8b2d25), [0, h + .46, frontZ]);
+  addGasStationSign(g, town(6.2), 1.25, [0, h + 1.13, frontZ + .05]);
+
+  // Small side restroom / water-closet bump-out.
+  const wcW = town(6.2);
+  const wcD = town(7.0);
+  assetPart(g, box(wcW, 2.55, wcD, 0x665f55), [w / 2 + wcW / 2 - town(.4), 1.275, -town(1.6)]);
+  assetPart(g, box(wcW + town(.5), .24, wcD + town(.45), 0x25283a), [w / 2 + wcW / 2 - town(.4), 2.67, -town(1.6)]);
+  assetPart(g, box(.09, 1.45, town(1.15), 0x3b2f24), [rightX + wcW - town(.4), .74, -town(1.6)]);
+
+  // Two front doors and a readable row of windows, with boarded/busted details.
+  for (const doorX of [-town(7.7), town(7.7)]) {
+    assetPart(g, box(town(2.0), 1.8, .11, 0x3b2f24), [doorX, .9, frontZ]);
+    assetPart(g, box(town(1.7), .22, .13, 0x6b5138), [doorX, 1.15, frontZ + .04], [0, 0, doorX < 0 ? .32 : -.32]);
   }
+  for (const [wx, color] of [[-4.2, 0x111111], [-1.4, 0x0b0d10], [1.4, 0x111111], [4.2, 0x0b0d10]]) {
+    assetPart(g, box(town(2.2), 1.05, .1, color), [town(wx), 1.95, frontZ]);
+  }
+  for (const bx of [-town(1.4), town(4.2)]) {
+    assetPart(g, box(town(2.45), .18, .14, 0x6b5138), [bx, 1.93, frontZ + .045], [0, 0, .28]);
+    assetPart(g, box(town(2.45), .18, .14, 0x6b5138), [bx, 2.12, frontZ + .045], [0, 0, -.25]);
+  }
+  for (const sx of [-town(8.4), town(8.9)]) assetPart(g, box(town(2.3), .52, .08, 0x050505), [sx, 2.0, backZ]);
+  addRustPatches(g, [w, h, d], 9, h + .36);
+
+  g.position.set(town(x), 0, town(z));
+  scene.add(g);
+  registerWorldCollider({ type: 'rect', x: town(x), z: town(z), width: w, depth: d, label: 'gas-station-building' });
+  registerWorldCollider({ type: 'rect', x: town(x) + w / 2 + wcW / 2 - town(.4), z: town(z - 1.6), width: wcW, depth: wcD, label: 'gas-station-restroom' });
+}
+
+function addGasStationCanopy(scene, x, z) {
+  const g = new THREE.Group();
+  const w = town(22);
+  const d = town(11);
+  assetPart(g, box(w, .42, d, 0x6f2930), [0, 4.25, 0]);
+  assetPart(g, box(w * .92, .18, d * .82, 0xddd1b4), [0, 4.55, 0]);
+  for (const px of [-8.6, 8.6]) for (const pz of [-4.0, 4.0]) {
+    const pillarX = town(px);
+    const pillarZ = town(pz);
+    assetPart(g, box(.42, 4.1, .42, 0x77736a), [pillarX, 2.05, pillarZ]);
+    registerWorldCollider({ type: 'circle', x: town(x) + pillarX, z: town(z) + pillarZ, radius: .42, label: 'gas-canopy-pillar' });
+  }
+  g.position.set(town(x), 0, town(z));
+  scene.add(g);
+}
+
+function addGasPump(scene, x, z, rotation = 0) {
+  const g = new THREE.Group();
+  assetPart(g, box(town(1.3), .16, town(1.1), 0x33373d), [0, .08, 0]);
+  assetPart(g, box(town(1.0), 1.5, town(.7), 0x9f2f26), [0, .9, 0]);
+  assetPart(g, box(town(.72), .34, town(.08), 0x111111), [0, 1.16, town(.39)]);
+  assetPart(g, box(town(.2), .58, town(.08), 0x252525), [town(.48), .74, town(.42)]);
+  assetPart(g, box(town(.12), .7, town(.12), 0x111111), [town(.72), .74, town(.2)], [0, 0, .2]);
+  g.position.set(town(x), 0, town(z));
+  g.rotation.y = rotation;
+  scene.add(g);
+  registerWorldCollider({ type: 'rect', x: town(x), z: town(z), width: town(1.35), depth: town(1.15), rotation, label: 'gas-pump' });
+}
+
+function addGasStation(scene, x, z) {
+  // Open paved forecourt with two clean road connections into the central roads.
+  townRoadSlab(scene, x, z - 2, 42, 34, COLORS.parking);
+  townRoadSlab(scene, x - 20, z - 11, 18, 8, COLORS.parking);
+  townRoadSlab(scene, x - 9, 18, 10, 20, COLORS.parking);
+  townRoadSlab(scene, 18, z - 8, 20, 10, COLORS.parking);
+  townStripe(scene, x - 9, 18, .35, 16, 0xcfd3d6);
+  townStripe(scene, 18, z - 8, 16, .35, 0xcfd3d6);
+
+  addGasStationBuilding(scene, x - 4, z + 10);
+  addGasStationCanopy(scene, x - 3, z - 6);
+  for (const [px, pz, rot] of [[x - 9, z - 6, 0], [x - 3, z - 6, 0], [x + 3, z - 6, 0], [x + 9, z - 6, 0]]) addGasPump(scene, px, pz, rot);
+
+  addRubblePatch(scene, x + 13, z + 8, 4);
+  addRubblePatch(scene, x - 16, z + 2, 3);
 }
 
 function addDistricts(scene) {
@@ -534,7 +639,7 @@ function addDistricts(scene) {
   townLotLabel(scene, 'RESIDENTIAL', -43, 20);
 
   // Gas / convenience store corner with one solid shop and non-blocking pump details.
-  addGasPumps(scene, 40, 42);
+  addGasStation(scene, 40, 42);
   createBurntRV({ scene, position: [town(55), 0, town(34)], rotation: -.08, scale: town(.74) });
   townLotLabel(scene, 'GAS', 38, 20);
 
