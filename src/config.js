@@ -26,6 +26,8 @@ export const CONFIG = {
     },
   },
   xp: { pickupRadius: 1.5, magnetRadius: 5.5, speed: 10 },
+  coin: { pickupRadius: 1.45, magnetRadius: 4.8, speed: 10.5 },
+  scrapRush: { dropChance: 0.008, pickupRadius: 1.65, speed: 26 },
   medkit: { healAmount: 25, pickupRadius: 1.7, worldFirstSpawn: 45, worldSpawnMin: 55, worldSpawnMax: 85, maxWorldActive: 3, maxActive: 6, spawnMinDistance: 10, spawnMaxDistance: 28 },
   level: { baseXp: 60, growth: 1.35, lateGrowth: 1.22, lateGrowthStartLevel: 10 },
   rewards: { xpMultiplierStartTime: 300, xpMultiplierPerMinute: 0.12, maxXpMultiplier: 1.55 },
