@@ -3,7 +3,7 @@
 ## Core loop
 
 1. Start a ten-minute run from the main menu.
-2. Move around a handcrafted 220 x 220 little-town map while zombies spawn at the edges.
+2. Move around a handcrafted 180 x 180 little-town map while zombies spawn at the edges.
 3. Let automatic fixed-range baseball bat swings clear nearby zombies in emergencies.
 4. Collect dropped XP gems from every defeated zombie.
 5. Grab medkits as the basic healing system when damage starts to pile up.
@@ -13,7 +13,7 @@
 ## First version scope
 
 - Static browser game with no build system or backend.
-- Handcrafted 220 x 220 low-poly town foundation using basic Three.js geometry, with procedural-style filler props kept only where safe.
+- Handcrafted 180 x 180 low-poly town foundation using basic Three.js geometry, with procedural-style filler props kept only where safe.
 - One readable procedural survivor character with WASD movement, sprinting, touch joystick support, Xbox-style controller support, and a quick arcade jump.
 - Survivor visual direction: red shirt or jacket, dark undershirt, blue pants, dark shoes, white/red/black cap, simple brown backpack, and wooden baseball bat. The survivor rises as a whole when jumping, tucks the legs slightly while airborne, and uses a small landing dip when returning to the ground.
 - Multiple simple procedural zombie types that all chase the player directly.
@@ -104,14 +104,14 @@ The bat is the close-range emergency weapon. Its range/radius should stay fixed,
 
 ## Current prototype target
 
-- Survive **10 minutes** on a **220 x 220** playable town map centered around the origin.
+- Survive **10 minutes** on a **180 x 180** playable town map centered around the origin, roughly spanning -90 to +90 on X/Z.
 - The world now uses a handcrafted town foundation layout instead of the old simple arena/testing-field feel.
-- The 220 x 220 town foundation layout has been rearranged to more closely match the approved top-down town plan, with roads and districts treated as one unified blockout instead of separate placements.
-- Current districts are blocked in as readable top-down zones: Downtown, Park Zone, School Zone, Residential Zone, Apartment/Townhouse Zone, Police Station lot, Fire Station lot, Industrial/Junkyard, Gas Station, and an extra southeast housing block.
+- The town foundation was compressed from 220 x 220 to 180 x 180 for tighter, more action-focused 10-minute gameplay while keeping the approved reference layout readable. The compressed layout has been rearranged to more closely match the approved top-down town plan, with roads and districts treated as one unified blockout instead of separate placements.
+- Current districts are blocked in as readable top-down zones: Downtown, Park Zone, School Zone, Residential Zone, Apartment/Townhouse Zone, Police Station area, Fire Station area, Industrial/Junkyard zone, Gas Station zone, and an extra southeast housing block.
 - Roads use a central downtown cross/intersection, north/south collector streets, east/west service streets, sidewalks, parking lots, park paths, grass lawns, paved civic lots, a school field/play area, and rough junkyard/dirt surfaces so districts are distinguishable before the final art pass.
-- The 220 x 220 town foundation layout has been cleaned up with an explicit visual surface layer order: base ground, district/grass/dirt/junk surfaces, road/parking/pavement lots, sidewalks/paths/curbs, and top-level road markings. This keeps roads, sidewalks, parking lots, grass, junkyard surfaces, and district slabs from fighting or flickering against each other.
+- The 180 x 180 town foundation layout keeps the existing clean surface layering system with an explicit visual surface layer order: base ground, district/grass/dirt/junk surfaces, road/parking/pavement lots, sidewalks/paths/curbs, and top-level road markings. This keeps roads, sidewalks, parking lots, grass, junkyard surfaces, and district slabs from fighting or flickering against each other.
 - Sidewalks are segmented beside major roads with gaps at intersections, while crosswalks use separate road-marking strips so sidewalks do not cut through road lanes.
-- Placeholder block buildings and lot markers are intentionally simple in this pass; detailed section-by-section building passes, open-roof/walls-only building remodels, debris polish, loot crates, and detailed interiors are planned for later.
+- Placeholder block buildings and lot markers are intentionally simple in this pass; detailed district passes, section-by-section building passes, open-roof/walls-only building remodels, debris polish, loot crates, and detailed interiors are planned for later.
 - Keep the first playable loop approachable: enemies pressure the player, but there is enough room to kite zombies and collect XP.
 - Use increased late-run spawn pressure plus light enemy health and damage scaling so the 10-minute test stays tense after the player levels up.
 - Use simple browser-friendly geometry only: boxes, cylinders, spheres, cones, low-poly primitives, flat colors, and no imported models or textures.

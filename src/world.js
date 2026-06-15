@@ -29,6 +29,9 @@ const SURFACE_Y = {
 };
 
 const SURFACE_THICKNESS = 0.04;
+const REFERENCE_ARENA_SIZE = 220;
+const TOWN_SCALE = CONFIG.arenaSize / REFERENCE_ARENA_SIZE;
+const town = (value) => value * TOWN_SCALE;
 
 const makeMat = (color, roughness = 0.9) => new THREE.MeshStandardMaterial({ color, roughness });
 const box = (w, h, d, color) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), makeMat(color));
@@ -56,12 +59,36 @@ function stripe(scene, x, z, w, d, color = COLORS.roadMarking) {
   return slab(scene, x, z, w, d, color, SURFACE_Y.marking);
 }
 
+function townSlab(scene, x, z, w, d, color, y = SURFACE_Y.zone) {
+  return slab(scene, town(x), town(z), town(w), town(d), color, y);
+}
+
+function townDistrictDetailSlab(scene, x, z, w, d, color) {
+  return townSlab(scene, x, z, w, d, color, SURFACE_Y.detail);
+}
+
+function townRoadSlab(scene, x, z, w, d, color = COLORS.road) {
+  return townSlab(scene, x, z, w, d, color, SURFACE_Y.road);
+}
+
+function townSidewalkSlab(scene, x, z, w, d, color = COLORS.sidewalk) {
+  return townSlab(scene, x, z, w, d, color, SURFACE_Y.sidewalk);
+}
+
+function townStripe(scene, x, z, w, d, color = COLORS.roadMarking) {
+  return townSlab(scene, x, z, w, d, color, SURFACE_Y.marking);
+}
+
 function building(scene, x, z, w, d, h, color = COLORS.buildingA) {
   const base = box(w, h, d, color);
   base.position.set(x, h / 2, z);
   const roof = box(w + 0.35, 0.22, d + 0.35, COLORS.roof);
   roof.position.set(x, h + 0.12, z);
   scene.add(base, roof);
+}
+
+function townBuilding(scene, x, z, w, d, h, color = COLORS.buildingA) {
+  building(scene, town(x), town(z), town(w), town(d), h, color);
 }
 
 function lotLabel(scene, text, x, z) {
@@ -77,26 +104,30 @@ function lotLabel(scene, text, x, z) {
   ctx.fillText(text, 128, 40);
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true }));
   sprite.position.set(x, 1.7, z);
-  sprite.scale.set(7, 1.75, 1);
+  sprite.scale.set(7 * TOWN_SCALE, 1.75 * TOWN_SCALE, 1);
   scene.add(sprite);
+}
+
+function townLotLabel(scene, text, x, z) {
+  lotLabel(scene, text, town(x), town(z));
 }
 
 function addRoadNetwork(scene) {
   // Reference-map street grid: downtown is the center block, with north/south collectors and
   // east/west streets that deliberately frame the surrounding district lots.
   [
-    [0, 0, CONFIG.arenaSize, 10],
-    [0, 0, 10, CONFIG.arenaSize],
-    [-55, 0, 8, CONFIG.arenaSize],
-    [55, 0, 8, CONFIG.arenaSize],
+    [0, 0, REFERENCE_ARENA_SIZE, 10],
+    [0, 0, 10, REFERENCE_ARENA_SIZE],
+    [-55, 0, 8, REFERENCE_ARENA_SIZE],
+    [55, 0, 8, REFERENCE_ARENA_SIZE],
     [82, 20, 8, 118],
-    [0, 56, CONFIG.arenaSize, 8],
-    [0, -56, CONFIG.arenaSize, 8],
+    [0, 56, REFERENCE_ARENA_SIZE, 8],
+    [0, -56, REFERENCE_ARENA_SIZE, 8],
     [-82, 32, 8, 48],
     [82, -48, 8, 54],
     [0, 88, 126, 7],
     [0, -88, 126, 7],
-  ].forEach(([x, z, w, d]) => roadSlab(scene, x, z, w, d));
+  ].forEach(([x, z, w, d]) => townRoadSlab(scene, x, z, w, d));
 
   // Sidewalk shoulders are segmented so they stay beside roads and leave clean road space at intersections.
   const horizontalSidewalks = [
@@ -118,92 +149,92 @@ function addRoadNetwork(scene) {
     [60.5, -86, 1.4, 42], [60.5, -26, 1.4, 38], [60.5, 26, 1.4, 38], [60.5, 86, 1.4, 42],
     [76.5, -45, 1.4, 38], [87.5, -45, 1.4, 38], [76.5, 28, 1.4, 54], [87.5, 28, 1.4, 54],
   ];
-  [...horizontalSidewalks, ...verticalSidewalks].forEach(([x, z, w, d]) => sidewalkSlab(scene, x, z, w, d));
+  [...horizontalSidewalks, ...verticalSidewalks].forEach(([x, z, w, d]) => townSidewalkSlab(scene, x, z, w, d));
 
   for (let i = -96; i <= 96; i += 16) {
-    stripe(scene, i, 0, 5, 0.25);
-    stripe(scene, 0, i, 0.25, 5);
+    townStripe(scene, i, 0, 5, 0.25);
+    townStripe(scene, 0, i, 0.25, 5);
   }
 
   // Simple crosswalks mark intersections without using sidewalk slabs across the road lanes.
   [-55, 0, 55, 82].forEach((x) => {
-    stripe(scene, x - 2.5, 0, 0.35, 7, 0xcfd3d6);
-    stripe(scene, x + 2.5, 0, 0.35, 7, 0xcfd3d6);
+    townStripe(scene, x - 2.5, 0, 0.35, 7, 0xcfd3d6);
+    townStripe(scene, x + 2.5, 0, 0.35, 7, 0xcfd3d6);
   });
   [-88, -56, 0, 56, 88].forEach((z) => {
-    stripe(scene, 0, z - 2.5, 7, 0.35, 0xcfd3d6);
-    stripe(scene, 0, z + 2.5, 7, 0.35, 0xcfd3d6);
+    townStripe(scene, 0, z - 2.5, 7, 0.35, 0xcfd3d6);
+    townStripe(scene, 0, z + 2.5, 7, 0.35, 0xcfd3d6);
   });
 }
 
 function addDistricts(scene) {
   // Downtown core: centered at the main cross and ringed by the collector streets.
-  roadSlab(scene, 0, 0, 48, 44, COLORS.pavement);
-  [[-16,-14,9,10,5],[0,-15,10,8,4],[16,-12,8,12,5],[-16,14,8,11,4],[3,15,14,8,5],[18,12,7,10,4]].forEach((b, i) => building(scene, ...b, i % 2 ? COLORS.buildingA : COLORS.buildingB));
-  stripe(scene, 0, 0, 9, 9, 0x6b7280);
-  lotLabel(scene, 'DOWNTOWN', 0, 4);
+  townRoadSlab(scene, 0, 0, 48, 44, COLORS.pavement);
+  [[-16,-14,9,10,5],[0,-15,10,8,4],[16,-12,8,12,5],[-16,14,8,11,4],[3,15,14,8,5],[18,12,7,10,4]].forEach((b, i) => townBuilding(scene, ...b, i % 2 ? COLORS.buildingA : COLORS.buildingB));
+  townStripe(scene, 0, 0, 9, 9, 0x6b7280);
+  townLotLabel(scene, 'DOWNTOWN', 0, 4);
 
   // Park northwest with open green space, paths, and trees against the west/north roads.
-  slab(scene, -83, 78, 45, 50, COLORS.grassAlt);
-  sidewalkSlab(scene, -83, 78, 41, 4, COLORS.path);
-  sidewalkSlab(scene, -83, 78, 4, 42, COLORS.path);
-  districtDetailSlab(scene, -91, 68, 17, 11, 0x3b5d36);
+  townSlab(scene, -83, 78, 45, 50, COLORS.grassAlt);
+  townSidewalkSlab(scene, -83, 78, 41, 4, COLORS.path);
+  townSidewalkSlab(scene, -83, 78, 4, 42, COLORS.path);
+  townDistrictDetailSlab(scene, -91, 68, 17, 11, 0x3b5d36);
   for (let i = 0; i < 14; i++) addTree(scene, -101 + (i % 5) * 10, 58 + Math.floor(i / 5) * 13);
-  lotLabel(scene, 'PARK', -84, 82);
+  townLotLabel(scene, 'PARK', -84, 82);
 
   // School campus north-center, anchored between the west and east collectors with a field on the road side.
-  slab(scene, 0, 78, 78, 48, COLORS.schoolField);
-  roadSlab(scene, -14, 78, 34, 24, COLORS.pavement);
-  districtDetailSlab(scene, 24, 78, 24, 30, 0x355f31);
-  building(scene, -16, 79, 22, 14, 3.5, 0x7b6656);
-  building(scene, 4, 68, 12, 8, 3.1, 0x7b6656);
-  lotLabel(scene, 'SCHOOL', 0, 95);
+  townSlab(scene, 0, 78, 78, 48, COLORS.schoolField);
+  townRoadSlab(scene, -14, 78, 34, 24, COLORS.pavement);
+  townDistrictDetailSlab(scene, 24, 78, 24, 30, 0x355f31);
+  townBuilding(scene, -16, 79, 22, 14, 3.5, 0x7b6656);
+  townBuilding(scene, 4, 68, 12, 8, 3.1, 0x7b6656);
+  townLotLabel(scene, 'SCHOOL', 0, 95);
 
   // Residential neighborhood northeast in gridded blocks served by the east and north roads.
-  slab(scene, 82, 77, 48, 48, COLORS.grassAlt);
+  townSlab(scene, 82, 77, 48, 48, COLORS.grassAlt);
   for (let r = 0; r < 2; r++) for (let c = 0; c < 3; c++) {
     const x = 65 + c * 17, z = 66 + r * 20;
-    districtDetailSlab(scene, x, z + 4, 10, 7, COLORS.grass);
-    sidewalkSlab(scene, x - 5, z + 4, 2, 9, COLORS.pavement);
-    building(scene, x, z + 4, 7, 6, 2.6, COLORS.house);
+    townDistrictDetailSlab(scene, x, z + 4, 10, 7, COLORS.grass);
+    townSidewalkSlab(scene, x - 5, z + 4, 2, 9, COLORS.pavement);
+    townBuilding(scene, x, z + 4, 7, 6, 2.6, COLORS.house);
   }
-  lotLabel(scene, 'RESIDENTIAL', 82, 98);
+  townLotLabel(scene, 'RESIDENTIAL', 82, 98);
 
   // Apartment/townhouse block west-mid with its parking lot directly tied to the west street.
-  slab(scene, -83, -14, 48, 46, COLORS.grassAlt);
-  roadSlab(scene, -75, -12, 22, 30, COLORS.parking);
-  [-99, -88, -66].forEach((x) => building(scene, x, -19, 8, 20, 4.2, 0x60546a));
-  for (let z = -25; z <= 3; z += 7) stripe(scene, -75, z, 6, 0.25, 0xcfd3d6);
-  lotLabel(scene, 'APARTMENTS', -84, 8);
+  townSlab(scene, -83, -14, 48, 46, COLORS.grassAlt);
+  townRoadSlab(scene, -75, -12, 22, 30, COLORS.parking);
+  [-99, -88, -66].forEach((x) => townBuilding(scene, x, -19, 8, 20, 4.2, 0x60546a));
+  for (let z = -25; z <= 3; z += 7) townStripe(scene, -75, z, 6, 0.25, 0xcfd3d6);
+  townLotLabel(scene, 'APARTMENTS', -84, 8);
 
   // Police and fire are separate civic lots on the east side, each fronting a deliberate service road.
-  roadSlab(scene, 84, 18, 36, 24, COLORS.pavement);
-  building(scene, 78, 19, 15, 10, 3.2, 0x4d6178);
-  lotLabel(scene, 'POLICE', 84, 31);
-  roadSlab(scene, 84, -31, 36, 24, COLORS.pavement);
-  building(scene, 77, -31, 17, 10, 3.1, 0x8b3d32);
-  roadSlab(scene, 93, -31, 7, 14, 0xa32929);
-  lotLabel(scene, 'FIRE', 84, -17);
+  townRoadSlab(scene, 84, 18, 36, 24, COLORS.pavement);
+  townBuilding(scene, 78, 19, 15, 10, 3.2, 0x4d6178);
+  townLotLabel(scene, 'POLICE', 84, 31);
+  townRoadSlab(scene, 84, -31, 36, 24, COLORS.pavement);
+  townBuilding(scene, 77, -31, 17, 10, 3.1, 0x8b3d32);
+  townRoadSlab(scene, 93, -31, 7, 14, 0xa32929);
+  townLotLabel(scene, 'FIRE', 84, -17);
 
   // Industrial/junkyard southwest with rough dirt and scrap kept behind the bottom/west roads.
-  slab(scene, -83, -84, 50, 46, COLORS.junk);
-  districtDetailSlab(scene, -83, -84, 42, 34, COLORS.dirt);
+  townSlab(scene, -83, -84, 50, 46, COLORS.junk);
+  townDistrictDetailSlab(scene, -83, -84, 42, 34, COLORS.dirt);
   addScrap(scene, -83, -84);
-  lotLabel(scene, 'JUNKYARD', -83, -65);
+  townLotLabel(scene, 'JUNKYARD', -83, -65);
 
   // Gas station south-center along the lower east/west street, with parking and pumps near the road.
-  roadSlab(scene, 10, -82, 42, 42, COLORS.parking);
-  building(scene, 4, -82, 13, 9, 2.4, 0x72634a);
-  roadSlab(scene, 22, -76, 13, 7, 0x9a2f2f);
-  for (let x = -4; x <= 24; x += 7) stripe(scene, x, -65, 0.25, 6, 0xcfd3d6);
-  lotLabel(scene, 'GAS', 10, -62);
+  townRoadSlab(scene, 10, -82, 42, 42, COLORS.parking);
+  townBuilding(scene, 4, -82, 13, 9, 2.4, 0x72634a);
+  townRoadSlab(scene, 22, -76, 13, 7, 0x9a2f2f);
+  for (let x = -4; x <= 24; x += 7) townStripe(scene, x, -65, 0.25, 6, 0xcfd3d6);
+  townLotLabel(scene, 'GAS', 10, -62);
 
   // Extra southeast housing keeps the lower-right reference block readable without becoming a detailed pass.
-  slab(scene, 82, -82, 48, 48, COLORS.grassAlt);
+  townSlab(scene, 82, -82, 48, 48, COLORS.grassAlt);
   for (let r = 0; r < 2; r++) for (let c = 0; c < 3; c++) {
     const x = 66 + c * 16, z = -96 + r * 20;
-    districtDetailSlab(scene, x, z + 4, 10, 7, COLORS.grass);
-    building(scene, x, z + 4, 7, 6, 2.4, COLORS.house);
+    townDistrictDetailSlab(scene, x, z + 4, 10, 7, COLORS.grass);
+    townBuilding(scene, x, z + 4, 7, 6, 2.4, COLORS.house);
   }
 }
 
@@ -211,13 +242,13 @@ function addTree(scene, x, z) {
   const group = new THREE.Group();
   const trunk = box(.35, 1.8, .35, 0x3d2a24); trunk.position.y = .9; group.add(trunk);
   const crown = new THREE.Mesh(new THREE.ConeGeometry(1.5, 2.7, 7), makeMat(0x2f7d3c)); crown.position.y = 2.5; group.add(crown);
-  group.position.set(x, 0, z); scene.add(group);
+  group.position.set(town(x), 0, town(z)); scene.add(group);
 }
 
 function addScrap(scene, cx, cz) {
   for (let i = 0; i < 20; i++) {
     const s = box(1 + Math.random() * 2, .25 + Math.random() * .65, .6 + Math.random() * 1.8, i % 2 ? 0x7a6f64 : 0x57534e);
-    s.position.set(cx + (Math.random() - .5) * 28, .18, cz + (Math.random() - .5) * 36);
+    s.position.set(town(cx + (Math.random() - .5) * 28), .18, town(cz + (Math.random() - .5) * 36));
     s.rotation.y = Math.random() * Math.PI;
     scene.add(s);
   }
@@ -228,7 +259,7 @@ function addFillerCars(scene) {
     const car = new THREE.Group();
     car.add(box(2.6, .55, 1.35, i % 2 ? 0x8ecae6 : 0xef476f));
     const top = box(1.35, .55, 1, 0x2b2d42); top.position.y = .55; car.add(top);
-    car.position.set((Math.random() - .5) * 160, .35, (Math.random() - .5) * 160);
+    car.position.set((Math.random() - .5) * (CONFIG.arenaSize - 28), .35, (Math.random() - .5) * (CONFIG.arenaSize - 28));
     car.rotation.y = Math.random() * Math.PI;
     scene.add(car);
   }
@@ -236,7 +267,7 @@ function addFillerCars(scene) {
 
 export function createWorld(scene) {
   scene.background = new THREE.Color(0x111827);
-  scene.fog = new THREE.Fog(0x111827, 78, 185);
+  scene.fog = new THREE.Fog(0x111827, 64, 155);
   const hemi = new THREE.HemisphereLight(0xb8ffcf, 0x2a173d, 2.8);
   const sun = new THREE.DirectionalLight(0xc6b7ff, 2.6);
   sun.position.set(10, 22, 8);
