@@ -539,14 +539,14 @@ function addGasStationBuilding(scene, x, z) {
   const w = town(23);
   const d = town(12);
   const h = 3.4;
-  const frontZ = d / 2 + .035;
-  const backZ = -d / 2 - .035;
+  const roadFrontZ = -d / 2 - .035;
+  const rearZ = d / 2 + .035;
   const rightX = w / 2 + .035;
 
   assetPart(g, box(w, h, d, 0x756c5d), [0, h / 2, 0]);
   assetPart(g, box(w + town(1.2), .32, d + town(1.0), 0x2b2d42), [0, h + .16, 0]);
-  assetPart(g, box(w + town(1.7), .16, town(1.0), 0x8b2d25), [0, h + .46, frontZ]);
-  addGasStationSign(g, town(6.2), 1.25, [0, h + 1.13, frontZ + .05]);
+  assetPart(g, box(w + town(1.7), .16, town(1.0), 0x8b2d25), [0, h + .46, roadFrontZ]);
+  addGasStationSign(g, town(6.2), 1.25, [0, h + 1.13, roadFrontZ - .05]);
 
   // Small side restroom / water-closet bump-out.
   const wcW = town(6.2);
@@ -557,17 +557,17 @@ function addGasStationBuilding(scene, x, z) {
 
   // Two front doors and a readable row of windows, with boarded/busted details.
   for (const doorX of [-town(7.7), town(7.7)]) {
-    assetPart(g, box(town(2.0), 1.8, .11, 0x3b2f24), [doorX, .9, frontZ]);
-    assetPart(g, box(town(1.7), .22, .13, 0x6b5138), [doorX, 1.15, frontZ + .04], [0, 0, doorX < 0 ? .32 : -.32]);
+    assetPart(g, box(town(2.0), 1.8, .11, 0x3b2f24), [doorX, .9, roadFrontZ]);
+    assetPart(g, box(town(1.7), .22, .13, 0x6b5138), [doorX, 1.15, roadFrontZ - .04], [0, 0, doorX < 0 ? .32 : -.32]);
   }
   for (const [wx, color] of [[-4.2, 0x111111], [-1.4, 0x0b0d10], [1.4, 0x111111], [4.2, 0x0b0d10]]) {
-    assetPart(g, box(town(2.2), 1.05, .1, color), [town(wx), 1.95, frontZ]);
+    assetPart(g, box(town(2.2), 1.05, .1, color), [town(wx), 1.95, roadFrontZ]);
   }
   for (const bx of [-town(1.4), town(4.2)]) {
-    assetPart(g, box(town(2.45), .18, .14, 0x6b5138), [bx, 1.93, frontZ + .045], [0, 0, .28]);
-    assetPart(g, box(town(2.45), .18, .14, 0x6b5138), [bx, 2.12, frontZ + .045], [0, 0, -.25]);
+    assetPart(g, box(town(2.45), .18, .14, 0x6b5138), [bx, 1.93, roadFrontZ - .045], [0, 0, .28]);
+    assetPart(g, box(town(2.45), .18, .14, 0x6b5138), [bx, 2.12, roadFrontZ - .045], [0, 0, -.25]);
   }
-  for (const sx of [-town(8.4), town(8.9)]) assetPart(g, box(town(2.3), .52, .08, 0x050505), [sx, 2.0, backZ]);
+  for (const sx of [-town(8.4), town(8.9)]) assetPart(g, box(town(2.3), .52, .08, 0x050505), [sx, 2.0, rearZ]);
   addRustPatches(g, [w, h, d], 9, h + .36);
 
   g.position.set(town(x), 0, town(z));
@@ -625,7 +625,7 @@ function addGasStation(scene, x, z) {
 function addDistricts(scene) {
   // Four simple themed corners around the central road crossing.
   townSlab(scene, -38, 38, 44, 44, COLORS.grassAlt);
-  townSlab(scene, 38, 38, 44, 44, COLORS.parking);
+  townSlab(scene, 38, 38, 44, 44, COLORS.grassAlt);
   townSlab(scene, -38, -38, 44, 44, COLORS.grassAlt);
   townSlab(scene, 38, -38, 44, 44, COLORS.junk);
 
