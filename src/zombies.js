@@ -20,6 +20,16 @@ const GRAVEBREAKER_SLAM = {
 
 function material(color) { return new THREE.MeshStandardMaterial({ color, roughness: 0.85 }); }
 
+const tempSlamRingWorldScale = new THREE.Vector3(1, 1, 1);
+
+function getSlamWarningWorldRadius(ring) {
+  if (!ring) return GRAVEBREAKER_SLAM.warningRadius;
+  ring.updateWorldMatrix(true, false);
+  ring.getWorldScale(tempSlamRingWorldScale);
+  const outerRadius = ring.geometry?.parameters?.outerRadius ?? 1;
+  return outerRadius * Math.max(Math.abs(tempSlamRingWorldScale.x), Math.abs(tempSlamRingWorldScale.y));
+}
+
 function createGravebreakerSlamWarningRing() {
   const ringMaterial = new THREE.MeshBasicMaterial({
     color: 0xff3a18,
@@ -33,6 +43,7 @@ function createGravebreakerSlamWarningRing() {
   ring.position.y = .035;
   ring.visible = false;
   ring.userData.baseRadius = GRAVEBREAKER_SLAM.warningRadius;
+  ring.userData.currentWarningWorldRadius = GRAVEBREAKER_SLAM.warningRadius;
   return ring;
 }
 
@@ -999,6 +1010,7 @@ function updateGravebreakerSlamAnimation(zombie, delta, distanceToPlayer) {
     const visibleRadius = (ring.userData.baseRadius ?? GRAVEBREAKER_SLAM.warningRadius) * pulse;
     ring.scale.setScalar(visibleRadius);
     ring.userData.currentWarningRadius = visibleRadius;
+    ring.userData.currentWarningWorldRadius = getSlamWarningWorldRadius(ring);
     ring.material.opacity = THREE.MathUtils.clamp(.18 + progress * .32 + impactFlash * .28, 0, .78) * (1 - recovery);
     ring.visible = zombie.userData.slamTimer > 0 && !recovery;
   }
@@ -1156,8 +1168,9 @@ export function updateZombies(scene, player, delta, onDamage) {
       && (GRAVEBREAKER_SLAM.duration - z.userData.slamTimer) >= GRAVEBREAKER_SLAM.impactTime) {
       z.userData.slamHasDealtDamage = true;
       const impactDistance = Math.hypot(player.position.x - z.position.x, player.position.z - z.position.z);
-      const visibleImpactRadius = z.userData.slamWarningRing?.userData?.currentWarningRadius ?? GRAVEBREAKER_SLAM.warningRadius;
-      if (impactDistance <= visibleImpactRadius) {
+      const visibleImpactRadius = z.userData.slamWarningRing?.userData?.currentWarningWorldRadius ?? GRAVEBREAKER_SLAM.warningRadius;
+      const playerRadiusTolerance = CONFIG.player.radius ?? 0;
+      if (impactDistance <= visibleImpactRadius + playerRadiusTolerance) {
         damagePlayer(GRAVEBREAKER_SLAM.damage);
       }
     }
