@@ -445,6 +445,115 @@ function townBuilding(scene, x, z, w, d, h, color = COLORS.buildingA) {
   building(scene, town(x), town(z), town(w), town(d), h, color);
 }
 
+function createPeakedRoof(group, w, d, baseY, color = COLORS.roof, orientation = 'z') {
+  const roofWidth = w + town(1.2);
+  const roofDepth = d + town(1.1);
+  const rise = town(2.1);
+  const pitch = Math.atan2(rise, orientation === 'z' ? roofDepth / 2 : roofWidth / 2);
+  const rafterLength = Math.hypot(orientation === 'z' ? roofDepth / 2 : roofWidth / 2, rise);
+  const thickness = town(.36);
+  const left = orientation === 'z'
+    ? box(roofWidth, thickness, rafterLength, color)
+    : box(rafterLength, thickness, roofDepth, color);
+  const right = orientation === 'z'
+    ? box(roofWidth, thickness, rafterLength, color)
+    : box(rafterLength, thickness, roofDepth, color);
+
+  if (orientation === 'z') {
+    left.position.set(0, baseY + rise / 2, -roofDepth / 4);
+    right.position.set(0, baseY + rise / 2, roofDepth / 4);
+    left.rotation.x = -pitch;
+    right.rotation.x = pitch;
+  } else {
+    left.position.set(-roofWidth / 4, baseY + rise / 2, 0);
+    right.position.set(roofWidth / 4, baseY + rise / 2, 0);
+    left.rotation.z = pitch;
+    right.rotation.z = -pitch;
+  }
+  const ridge = orientation === 'z'
+    ? box(roofWidth + town(.3), town(.24), town(.28), 0x1f2133)
+    : box(town(.28), town(.24), roofDepth + town(.3), 0x1f2133);
+  ridge.position.set(0, baseY + rise + town(.06), 0);
+  group.add(left, right, ridge);
+}
+
+function addResidentialDoor(group, w, d, front, x = 0) {
+  const z = front === 'south' ? d / 2 + town(.045) : -d / 2 - town(.045);
+  assetPart(group, box(town(1.7), town(2.4), town(.12), 0x3b2f24), [x, town(1.2), z]);
+  assetPart(group, box(town(1.9), town(.22), town(.14), 0x6b5138), [x, town(1.45), z + (front === 'south' ? town(.05) : -town(.05))], [0, 0, -.3]);
+}
+
+function addResidentialWindow(group, dims, face, xOrZ, y, boarded = false) {
+  addSurfaceBox(group, dims, face, [xOrZ, 0, y], town(1.8), town(1.15), 0x08090c, town(.06));
+  if (boarded) addBoardedPlanks(group, dims, face, xOrZ, y, town(2.0), 3);
+  else {
+    addSurfaceBox(group, dims, face, [xOrZ, 0, y], town(.12), town(1.12), 0x3f4548, town(.07));
+    addSurfaceBox(group, dims, face, [xOrZ, 0, y], town(1.75), town(.12), 0x3f4548, town(.07));
+  }
+}
+
+function createResidentialHouse(scene, x, z, options = {}) {
+  const {
+    w = 9.5, d = 8.5, color = COLORS.house, twoStory = false, rotation = 0, front = 'south',
+    roofColor = COLORS.roof, boarded = true,
+  } = options;
+  const tw = town(w);
+  const td = town(d);
+  const h = town(twoStory ? 5.8 : 3.35);
+  const g = new THREE.Group();
+  assetPart(g, box(tw, h, td, color), [0, h / 2, 0]);
+  assetPart(g, box(tw + town(.45), town(.28), td + town(.45), 0x4b3c33), [0, town(.14), 0]);
+  createPeakedRoof(g, tw, td, h, roofColor);
+
+  const dims = [tw, h, td];
+  const frontFace = front === 'south' ? 'right' : 'left';
+  const backFace = front === 'south' ? 'left' : 'right';
+  addResidentialDoor(g, tw, td, front, -tw * .22);
+  addResidentialWindow(g, dims, frontFace, tw * .22, town(2.1), boarded);
+  addResidentialWindow(g, dims, backFace, 0, town(2.0), true);
+  addResidentialWindow(g, dims, 'front', -td * .22, town(2.0), false);
+  addResidentialWindow(g, dims, 'rear', td * .22, town(2.0), true);
+  if (twoStory) {
+    addResidentialWindow(g, dims, frontFace, -tw * .20, town(4.55), false);
+    addResidentialWindow(g, dims, frontFace, tw * .24, town(4.55), true);
+    addResidentialWindow(g, dims, 'front', 0, town(4.45), true);
+    addResidentialWindow(g, dims, 'rear', 0, town(4.45), false);
+  }
+  assetPart(g, box(town(.85), town(1.25), town(.85), 0x4a3a33), [tw * .28, h + town(1.0), 0]);
+  addRustPatches(g, dims, twoStory ? 8 : 5, h + town(1.3), [tw, h, td]);
+
+  g.position.set(town(x), 0, town(z));
+  g.rotation.y = rotation;
+  scene.add(g);
+  registerWorldCollider({ type: 'rect', x: town(x), z: town(z), width: tw, depth: td, rotation, label: twoStory ? 'two-story-residential-house' : 'residential-house' });
+}
+
+function addResidentialNeighborhood(scene) {
+  // Small local streets and simple pedestrian connections inside the residential corner.
+  townRoadSlab(scene, -41, 40, 39, 7, COLORS.road);
+  townRoadSlab(scene, -53, 31, 7, 20, COLORS.road);
+  townSidewalkSlab(scene, -41, 35.4, 38, 2.1);
+  townSidewalkSlab(scene, -41, 44.6, 38, 2.1);
+  townSidewalkSlab(scene, -48.4, 31, 2.1, 19);
+
+  // Driveways and walkways stay flat/non-blocking so combat movement remains open.
+  [[-57, 42.2, 6, 9], [-29, 42.2, 6, 9], [-53, 28.5, 7, 8]].forEach(([x, z, w, d]) => townRoadSlab(scene, x, z, w, d, COLORS.pavement));
+  [[-56, 45.7, 2, 5], [-43, 45.7, 2, 4], [-28, 45.7, 2, 4], [-54, 34.2, 2, 4], [-34, 34.2, 2, 4]].forEach(([x, z, w, d]) => townSidewalkSlab(scene, x, z, w, d, COLORS.sidewalk));
+
+  createResidentialHouse(scene, -56, 52, { w: 9.5, d: 8.5, color: 0x7a5a48, boarded: true });
+  createResidentialHouse(scene, -43, 51, { w: 8.6, d: 8.0, color: 0x66725a, roofColor: 0x333247, boarded: false });
+  createResidentialHouse(scene, -28, 51, { w: 10.2, d: 8.8, color: 0x75624f, twoStory: true, boarded: true });
+  createResidentialHouse(scene, -55, 27, { w: 8.8, d: 8.3, color: 0x5f705e, boarded: true });
+  createResidentialHouse(scene, -34, 28, { w: 9.2, d: 8.0, color: 0x6f5d6d, boarded: false });
+
+  createBurntSedan({ scene, position: [town(-58), 0, town(39.3)], rotation: Math.PI / 2 + .08, scale: town(.68) });
+  createBurntPickupTruck({ scene, position: [town(-30), 0, town(39.5)], rotation: Math.PI / 2 - .18, scale: town(.65) });
+  createBurntVan({ scene, position: [town(-53), 0, town(31)], rotation: -.08, scale: town(.58) });
+  createStreetTree({ scene, position: [town(-61), 0, town(56)], scale: town(.72) });
+  createStreetTree({ scene, position: [town(-23), 0, town(44)], scale: town(.68) });
+  addRubblePatch(scene, -39, 36, 4);
+}
+
 
 function lotLabel(scene, text, x, z) {
   const canvas = document.createElement('canvas');
@@ -629,13 +738,8 @@ function addDistricts(scene) {
   townSlab(scene, -38, -38, 44, 44, COLORS.grassAlt);
   townSlab(scene, 38, -38, 44, 44, COLORS.junk);
 
-  // Residential corner: three solid boarded houses with open lawns and driveways.
-  townBuilding(scene, -50, 48, 11, 9, 3.0, 0x7a5a48);
-  townBuilding(scene, -34, 50, 11, 9, 3.0, 0x66725a);
-  townBuilding(scene, -50, 29, 12, 10, 3.2, 0x5f705e);
-  [[-50, 39, 5, 12], [-34, 40, 5, 13], [-42, 23, 14, 5]].forEach(([x, z, w, d]) => townRoadSlab(scene, x, z, w, d, COLORS.pavement));
-  createStreetTree({ scene, position: [town(-58), 0, town(56)], scale: town(.82) });
-  createBurntSedan({ scene, position: [town(-42), 0, town(38)], rotation: Math.PI / 2 + .08, scale: town(.72) });
+  // Residential corner: compact abandoned neighborhood with low-poly peaked-roof homes.
+  addResidentialNeighborhood(scene);
   townLotLabel(scene, 'RESIDENTIAL', -43, 20);
 
   // Gas / convenience store corner with one solid shop and non-blocking pump details.
