@@ -139,6 +139,107 @@ export function findSafeSpawnPositionNear(x, z, radius = 0.7, attempts = 24) {
 const makeMat = (color, roughness = 0.9) => new THREE.MeshStandardMaterial({ color, roughness });
 const box = (w, h, d, color) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), makeMat(color));
 
+
+
+const ASSET_MATS = {
+  black: makeMat(0x111111), charcoal: makeMat(0x252525), darkMetal: makeMat(0x3f4548), rust: makeMat(0x8a4b2f),
+  fadedBlue: makeMat(0x55706a), fadedTan: makeMat(0x8a806d), fadedGreen: makeMat(0x506a55), concrete: makeMat(0x77736a),
+  orange: makeMat(0xc96f24), white: makeMat(0xe8dfcf), red: makeMat(0x9f2f26), yellow: makeMat(0xd9b64c),
+  wood: makeMat(0x6b5138), deadWood: makeMat(0x5a5147), leaf: makeMat(0x55603f), leafDark: makeMat(0x3f4a31),
+  trash: makeMat(0x1f1f23), signGreen: makeMat(0x276047), signBlue: makeMat(0x315a86), metal: makeMat(0x8b8f89),
+};
+
+function assetPart(group, mesh, position = [0, 0, 0], rotation = [0, 0, 0]) {
+  mesh.position.set(...position);
+  mesh.rotation.set(...rotation);
+  group.add(mesh);
+  return mesh;
+}
+
+function applyAssetPlacement(group, options = {}) {
+  const { position = [0, 0, 0], rotation = 0, scale = 1 } = options;
+  const [x, y = 0, z = 0] = Array.isArray(position) ? position : [position.x ?? 0, position.y ?? 0, position.z ?? 0];
+  group.position.set(x, y, z);
+  group.rotation.y = rotation;
+  group.scale.setScalar(scale);
+  return group;
+}
+
+function finishAsset(group, options, collider) {
+  applyAssetPlacement(group, options);
+  if (options.scene) options.scene.add(group);
+  if (options.collide !== false && collider) {
+    const scale = options.scale ?? 1;
+    const x = group.position.x;
+    const z = group.position.z;
+    if (collider.type === 'circle') registerWorldCollider({ ...collider, x, z, radius: collider.radius * scale });
+    else registerWorldCollider({ ...collider, x, z, width: collider.width * scale, depth: collider.depth * scale });
+  }
+  return group;
+}
+
+function createBurntVehicle(options = {}, kind = 'sedan') {
+  const dims = { sedan: [3.8, .75, 1.7], van: [4.5, 1.35, 1.95], pickup: [4.3, .85, 1.85], rv: [5.2, 1.65, 2.2] }[kind];
+  const color = { sedan: 0x4a4a42, van: 0x6b665c, pickup: 0x52675d, rv: 0x8a806d }[kind];
+  const g = new THREE.Group();
+  assetPart(g, box(dims[0], dims[1], dims[2], color), [0, dims[1] / 2 + .28, 0]);
+  if (kind === 'pickup') assetPart(g, box(1.4, .62, dims[2] * .92, 0x35463e), [-.85, 1.05, 0]);
+  else assetPart(g, box(dims[0] * .52, .7, dims[2] * .9, 0x303236), [-.25, dims[1] + .55, 0]);
+  if (kind === 'rv') assetPart(g, box(1.1, 1.25, dims[2] * .9, 0x7c6f5f), [1.25, 1.18, 0]);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) assetPart(g, new THREE.Mesh(new THREE.CylinderGeometry(.34, .34, .28, 10), ASSET_MATS.black), [sx * dims[0] * .34, .35, sz * dims[2] * .54], [Math.PI / 2, 0, 0]);
+  for (let i = 0; i < 6; i++) assetPart(g, box(.08, .04, dims[2] + .08, i % 2 ? 0x2d2b28 : 0x8a4b2f), [-dims[0] * .4 + i * dims[0] * .16, dims[1] + .93, 0]);
+  assetPart(g, box(dims[0] * .82, .08, .08, 0x8a4b2f), [0, dims[1] + .08, -dims[2] * .51]);
+  return finishAsset(g, options, { type: 'circle', radius: Math.max(dims[0], dims[2]) * .48, label: `burnt-${kind}` });
+}
+
+export const createBurntSedan = (options = {}) => createBurntVehicle(options, 'sedan');
+export const createBurntVan = (options = {}) => createBurntVehicle(options, 'van');
+export const createBurntPickupTruck = (options = {}) => createBurntVehicle(options, 'pickup');
+export const createBurntRV = (options = {}) => createBurntVehicle(options, 'rv');
+
+function createPostSign(options = {}, type = 'stop') {
+  const g = new THREE.Group();
+  assetPart(g, box(.18, 1.8, .18, 0x686868), [0, .9, 0]);
+  if (type === 'lamp') { assetPart(g, box(.22, 2.6, .22, 0x35383a), [0, 1.3, 0]); assetPart(g, box(1.0, .16, .18, 0x35383a), [.4, 2.55, 0]); assetPart(g, box(.58, .18, .42, 0xfff1bf), [.86, 2.42, 0]); }
+  else if (type === 'street') { assetPart(g, box(1.5, .32, .08, 0x276047), [0, 1.75, 0]); assetPart(g, box(1.35, .28, .08, 0x276047), [0, 1.35, 0], [0, Math.PI / 2, 0]); }
+  else if (type === 'bus') assetPart(g, box(.75, .9, .08, 0x315a86), [0, 1.65, 0]);
+  else assetPart(g, new THREE.Mesh(new THREE.CylinderGeometry(.55, .55, .08, 8), ASSET_MATS.red), [0, 1.75, 0], [Math.PI / 2, 0, Math.PI / 8]);
+  return finishAsset(g, options, ['lamp','street','bus','stop'].includes(type) ? { type: 'circle', radius: .28, label: `${type}-post` } : null);
+}
+export const createLampPost = (options = {}) => createPostSign(options, 'lamp');
+export const createStopSign = (options = {}) => createPostSign(options, 'stop');
+export const createStreetSign = (options = {}) => createPostSign(options, 'street');
+export const createBusStopSign = (options = {}) => createPostSign(options, 'bus');
+
+export function createConcreteBarrier(options = {}) { const g = new THREE.Group(); assetPart(g, box(2.8, .9, .55, 0x77736a), [0,.45,0]); assetPart(g, box(2.5,.12,.08,0xd9b64c), [0,.68,-.3]); return finishAsset(g, options, { type:'circle', radius:1.45, label:'concrete-barrier'}); }
+export function createTrafficCone(options = {}) { const g=new THREE.Group(); assetPart(g, box(.8,.08,.8,0xc96f24), [0,.04,0]); assetPart(g, new THREE.Mesh(new THREE.ConeGeometry(.34,1.0,6), ASSET_MATS.orange), [0,.58,0]); assetPart(g, box(.55,.12,.55,0xe8dfcf), [0,.36,0]); return finishAsset(g, options, null); }
+export function createRoadBarricade(options = {}) { const g=new THREE.Group(); for (const y of [.75,1.35]) assetPart(g, box(2.6,.24,.16, y>.8?0xe8dfcf:0xc96f24), [0,y,0]); for (const x of [-1.1,1.1]) assetPart(g, box(.18,1.4,.18,0x5a5147), [x,.7,0]); return finishAsset(g, options, {type:'circle', radius:1.35, label:'road-barricade'}); }
+export function createUtilityPole(options = {}) { const g=new THREE.Group(); assetPart(g, box(.28,3.0,.28,0x6b5138), [0,1.5,0]); assetPart(g, box(1.8,.18,.18,0x6b5138), [0,2.65,0]); assetPart(g, new THREE.Mesh(new THREE.CylinderGeometry(.22,.22,.55,8), ASSET_MATS.metal), [-.55,1.6,0]); return finishAsset(g, options, {type:'circle', radius:.32, label:'utility-pole'}); }
+export function createFireHydrant(options = {}) { const g=new THREE.Group(); assetPart(g,new THREE.Mesh(new THREE.CylinderGeometry(.23,.28,.85,8),ASSET_MATS.red),[0,.43,0]); assetPart(g,new THREE.Mesh(new THREE.SphereGeometry(.28,8,6),ASSET_MATS.red),[0,.9,0]); assetPart(g,box(.9,.18,.18,0x7a2c25),[0,.55,0]); return finishAsset(g, options, null); }
+
+function createTreeAsset(options={}, kind='street') { const g=new THREE.Group(); const trunkColor=kind==='burnt'?0x1f1f1f:(kind==='dead'?0x5a5147:0x4a3326); assetPart(g, box(.45,2.2,.45,trunkColor), [0,1.1,0]); for(let i=0;i<5;i++) assetPart(g, box(.16,1.2,.16,trunkColor), [Math.sin(i)*.45,2.0+i*.13,Math.cos(i)*.45], [.45,0,i]); if(kind==='street') for(const p of [[0,3,0],[-.75,2.55,.15],[.72,2.55,.05]]) assetPart(g,new THREE.Mesh(new THREE.DodecahedronGeometry(.85,0),ASSET_MATS.leaf),p); return finishAsset(g, options, {type:'circle', radius: kind==='street'?1.05:.7, label:`${kind}-tree`}); }
+export const createStreetTree=(options={})=>createTreeAsset(options,'street'); export const createDeadTree=(options={})=>createTreeAsset(options,'dead'); export const createBurntTree=(options={})=>createTreeAsset(options,'burnt');
+export function createBush(options={}) { const g=new THREE.Group(); for(const p of [[0,.45,0],[-.45,.38,.1],[.45,.38,-.1]]) assetPart(g,new THREE.Mesh(new THREE.DodecahedronGeometry(.55,0),ASSET_MATS.leafDark),p); return finishAsset(g, options, null); }
+export function createHedge(options={}) { const g=new THREE.Group(); for(let i=-2;i<=2;i++) assetPart(g,new THREE.Mesh(new THREE.DodecahedronGeometry(.55,0),ASSET_MATS.leafDark),[i*.45,.55,0]); return finishAsset(g, options, {type:'rect', width:2.7, depth:.8, label:'hedge'}); }
+export function createMailbox(options={}) { const g=new THREE.Group(); assetPart(g,box(.18,1,.18,0x6b5138),[0,.5,0]); assetPart(g,box(.85,.42,.48,0x5f6970),[0,1.14,0]); assetPart(g,box(.08,.35,.28,0x9f2f26),[.48,1.34,0]); return finishAsset(g, options, null); }
+export function createWoodFenceSection(options={}) { const g=new THREE.Group(); for(let x=-1.2;x<=1.2;x+=.6) assetPart(g,box(.18,1.25,.12,0x6b5138),[x,.62,0]); for(const y of [.45,.9]) assetPart(g,box(3,.16,.16,0x6b5138),[0,y,0]); return finishAsset(g, options, {type:'rect', width:3, depth:.35, label:'wood-fence'}); }
+export function createChainLinkFence(options={}) { const g=new THREE.Group(); for(const x of [-1.4,1.4]) assetPart(g,box(.16,1.55,.16,0x686868),[x,.78,0]); for(let i=-5;i<=5;i++) assetPart(g,box(.04,1.55,.04,0x9ca3af),[i*.26,.8,0],[0,0,.65]); assetPart(g,box(3,.08,.08,0x9ca3af),[0,1.5,0]); return finishAsset(g, options, {type:'rect', width:3, depth:.3, label:'chain-link-fence'}); }
+export function createBench(options={}) { const g=new THREE.Group(); assetPart(g,box(2,.18,.45,0x55603f),[0,.55,0]); assetPart(g,box(2,.18,.35,0x55603f),[0,.95,.25],[-.25,0,0]); for(const x of [-.75,.75]) assetPart(g,box(.16,.55,.16,0x5a5147),[x,.28,0]); return finishAsset(g, options, {type:'rect', width:2.1, depth:.75, label:'bench'}); }
+export function createPicnicTable(options={}) { const g=new THREE.Group(); assetPart(g,box(2.2,.18,.8,0x6b5138),[0,.8,0]); for(const z of [-.75,.75]) assetPart(g,box(2.1,.16,.35,0x6b5138),[0,.48,z]); for(const x of [-.8,.8]) assetPart(g,box(.16,.75,.16,0x5a5147),[x,.38,0],[0,0,.25]); return finishAsset(g, options, {type:'rect', width:2.4, depth:1.9, label:'picnic-table'}); }
+export function createPlanter(options={}) { const g=new THREE.Group(); assetPart(g,box(2.3,.55,.9,0x77736a),[0,.28,0]); assetPart(g,box(1.9,.12,.55,0x3f2f20),[0,.62,0]); for(let i=0;i<5;i++) assetPart(g,box(.08,.65,.08,0x55603f),[-.8+i*.4,.95,0]); return finishAsset(g, options, {type:'rect', width:2.3, depth:.9, label:'planter'}); }
+export function createWoodenShed(options={}) { const g=new THREE.Group(); assetPart(g,box(2.4,1.8,2,0x8a806d),[0,.9,0]); assetPart(g,box(2.7,.28,2.25,0x5a3328),[0,1.95,0]); assetPart(g,box(.75,1.2,.08,0x6b5138),[-.45,.72,-1.04]); return finishAsset(g, options, {type:'rect', width:2.5, depth:2.1, label:'wooden-shed'}); }
+
+export function createDumpster(options={}) { const g=new THREE.Group(); assetPart(g,box(2.5,1.1,1.45,0x315c50),[0,.65,0]); assetPart(g,box(2.6,.18,1.55,0x252525),[0,1.3,0]); return finishAsset(g, options, {type:'rect', width:2.6, depth:1.55, label:'dumpster'}); }
+export function createGarbageBags(options={}) { const g=new THREE.Group(); for(const p of [[0,.35,0],[-.45,.3,.2],[.45,.28,-.15]]) assetPart(g,new THREE.Mesh(new THREE.DodecahedronGeometry(.42,0),ASSET_MATS.trash),p); return finishAsset(g, options, null); }
+export function createTirePile(options={}) { const g=new THREE.Group(); for(const p of [[0,.25,0],[-.55,.25,.15],[.5,.25,-.15],[0,.72,0]]) assetPart(g,new THREE.Mesh(new THREE.TorusGeometry(.34,.12,6,12),ASSET_MATS.black),p,[Math.PI/2,0,0]); return finishAsset(g, options, null); }
+function createStack(options={}, kind='barrel') { const g=new THREE.Group(); for(let i=0;i<5;i++){ const x=(i%3-1)*.55, z=Math.floor(i/3)*.55; const y=i>2?.95:.45; const mesh=kind==='crate'?box(.75,.75,.75,0x8a6a45):new THREE.Mesh(new THREE.CylinderGeometry(.28,.28,.85,10), i%2?ASSET_MATS.rust:ASSET_MATS.fadedBlue); assetPart(g,mesh,[x,y,z]); } return finishAsset(g, options, {type:'circle', radius:1.05, label:`${kind}-stack`}); }
+export const createBarrelStack=(options={})=>createStack(options,'barrel'); export const createCrateStack=(options={})=>createStack(options,'crate');
+function createDebrisPile(options={}, kind='scrap') { const g=new THREE.Group(); const colors=kind==='wood'?[0x6b5138,0x5a5147]:[0x57534e,0x8a4b2f,0x77736a]; for(let i=0;i<9;i++) { const angle=i*.78; const dist=.18+(i%4)*.28; assetPart(g,box(.35+(i%3)*.25,.12,.25+(i%4)*.14,colors[i%colors.length]),[Math.cos(angle)*dist,.1+i*.025,Math.sin(angle)*dist],[0,angle,0]); } return finishAsset(g, options, kind==='junk'?{type:'circle',radius:1.2,label:'junk-pile'}:null); }
+export const createScrapPile=(options={})=>createDebrisPile(options,'scrap'); export const createWoodDebris=(options={})=>createDebrisPile(options,'wood'); export const createJunkPile=(options={})=>createDebrisPile(options,'junk');
+export function createTrashCan(options={}) { const g=new THREE.Group(); assetPart(g,new THREE.Mesh(new THREE.CylinderGeometry(.35,.42,.95,10),ASSET_MATS.metal),[0,.48,0]); assetPart(g,new THREE.Mesh(new THREE.CylinderGeometry(.38,.32,.16,10),ASSET_MATS.darkMetal),[0,1.02,0]); return finishAsset(g, options, null); }
+export function createPlaygroundSlide(options={}) { const g=new THREE.Group(); assetPart(g,box(.75,.12,2.4,0xb84e36),[0,.65,0],[.55,0,0]); assetPart(g,box(.12,1.4,.12,0x3f4548),[-.42,.7,-.75]); assetPart(g,box(.12,1.4,.12,0x3f4548),[.42,.7,-.75]); return finishAsset(g, options, {type:'rect', width:1.1, depth:2.4, label:'playground-slide'}); }
+export function createPlaygroundSwings(options={}) { const g=new THREE.Group(); for(const x of [-1.2,1.2]) { assetPart(g,box(.12,2.2,.12,0x6b5138),[x,1.1,-.55],[0,0,.22*x]); assetPart(g,box(.12,2.2,.12,0x6b5138),[x,1.1,.55],[0,0,-.22*x]); } assetPart(g,box(2.8,.14,.14,0x6b5138),[0,2.15,0]); for(const x of [-.55,.55]) assetPart(g,box(.55,.08,.35,0x252525),[x,.55,0]); return finishAsset(g, options, {type:'rect', width:3, depth:1.4, label:'playground-swings'}); }
+
 function slab(scene, x, z, w, d, color, y = SURFACE_Y.zone) {
   const mesh = box(w, SURFACE_THICKNESS, d, color);
   mesh.position.set(x, y, z);
@@ -343,11 +444,7 @@ function addDistricts(scene) {
 }
 
 function addTree(scene, x, z) {
-  const group = new THREE.Group();
-  const trunk = box(.35, 1.8, .35, 0x3d2a24); trunk.position.y = .9; group.add(trunk);
-  const crown = new THREE.Mesh(new THREE.ConeGeometry(1.5, 2.7, 7), makeMat(0x2f7d3c)); crown.position.y = 2.5; group.add(crown);
-  group.position.set(town(x), 0, town(z)); scene.add(group);
-  registerWorldCollider({ type: 'circle', x: town(x), z: town(z), radius: town(1.05), label: 'tree' });
+  createStreetTree({ scene, position: [town(x), 0, town(z)], scale: town(1) });
 }
 
 function addScrap(scene, cx, cz) {
@@ -360,16 +457,20 @@ function addScrap(scene, cx, cz) {
   }
 }
 
-function addFillerCars(scene) {
-  for (let i = 0; i < 18; i++) {
-    const car = new THREE.Group();
-    car.add(box(2.6, .55, 1.35, i % 2 ? 0x8ecae6 : 0xef476f));
-    const top = box(1.35, .55, 1, 0x2b2d42); top.position.y = .55; car.add(top);
-    car.position.set((Math.random() - .5) * (CONFIG.arenaSize - 28), .35, (Math.random() - .5) * (CONFIG.arenaSize - 28));
-    car.rotation.y = Math.random() * Math.PI;
-    scene.add(car);
-    registerWorldCollider({ type: 'circle', x: car.position.x, z: car.position.z, radius: 1.65, label: 'vehicle' });
-  }
+function addAssetPackSamples(scene) {
+  const samples = [
+    [createBurntSedan, -18, -5, .2], [createBurntVan, 35, 4, Math.PI / 2], [createBurntPickupTruck, 17, -55, -.1],
+    [createLampPost, -8, 8, 0], [createStopSign, 8, 8, Math.PI / 4], [createStreetSign, -58, 8, 0],
+    [createConcreteBarrier, -89, -61, .08], [createRoadBarricade, -75, -61, .2], [createUtilityPole, 61, -44, 0], [createFireHydrant, 70, -17, 0],
+    [createDeadTree, -95, 67, 0], [createBurntTree, -76, -73, 0], [createHedge, 72, 59, Math.PI / 2],
+    [createWoodFenceSection, 90, 64, 0], [createChainLinkFence, -94, -62, 0], [createBench, -84, 73, 0], [createPicnicTable, -72, 82, .15],
+    [createMailbox, 68, 88, 0], [createPlanter, 6, 8, 0], [createWoodenShed, 99, -76, 0],
+    [createDumpster, -68, -91, .1], [createGarbageBags, -71, -88, 0], [createTirePile, -90, -81, 0], [createScrapPile, -83, -91, 0],
+    [createBarrelStack, -99, -88, 0], [createCrateStack, -77, -76, 0], [createWoodDebris, -91, -71, 0], [createTrashCan, 42, 7, 0],
+    [createBusStopSign, -50, 48, 0], [createPlaygroundSlide, -30, 79, .2], [createPlaygroundSwings, -37, 88, 0], [createJunkPile, -66, -86, 0],
+    [createTrafficCone, 25, -65, 0], [createBurntRV, 28, -87, Math.PI / 2], [createBush, 95, 88, 0],
+  ];
+  samples.forEach(([factory, x, z, rotation]) => factory({ scene, position: [town(x), 0, town(z)], rotation, scale: town(1) }));
 }
 
 export function createWorld(scene) {
@@ -387,5 +488,5 @@ export function createWorld(scene) {
 
   addRoadNetwork(scene);
   addDistricts(scene);
-  addFillerCars(scene);
+  addAssetPackSamples(scene);
 }
