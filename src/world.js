@@ -19,18 +19,41 @@ const COLORS = {
   roof: 0x2b2d42,
 };
 
+const SURFACE_Y = {
+  ground: 0,
+  zone: 0.022,
+  detail: 0.034,
+  road: 0.052,
+  sidewalk: 0.078,
+  marking: 0.108,
+};
+
+const SURFACE_THICKNESS = 0.04;
+
 const makeMat = (color, roughness = 0.9) => new THREE.MeshStandardMaterial({ color, roughness });
 const box = (w, h, d, color) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), makeMat(color));
 
-function slab(scene, x, z, w, d, color, y = 0.035) {
-  const mesh = box(w, 0.05, d, color);
+function slab(scene, x, z, w, d, color, y = SURFACE_Y.zone) {
+  const mesh = box(w, SURFACE_THICKNESS, d, color);
   mesh.position.set(x, y, z);
   scene.add(mesh);
   return mesh;
 }
 
+function districtDetailSlab(scene, x, z, w, d, color) {
+  return slab(scene, x, z, w, d, color, SURFACE_Y.detail);
+}
+
+function roadSlab(scene, x, z, w, d, color = COLORS.road) {
+  return slab(scene, x, z, w, d, color, SURFACE_Y.road);
+}
+
+function sidewalkSlab(scene, x, z, w, d, color = COLORS.sidewalk) {
+  return slab(scene, x, z, w, d, color, SURFACE_Y.sidewalk);
+}
+
 function stripe(scene, x, z, w, d, color = COLORS.roadMarking) {
-  return slab(scene, x, z, w, d, color, 0.075);
+  return slab(scene, x, z, w, d, color, SURFACE_Y.marking);
 }
 
 function building(scene, x, z, w, d, h, color = COLORS.buildingA) {
@@ -60,34 +83,58 @@ function lotLabel(scene, text, x, z) {
 
 function addRoadNetwork(scene) {
   // Major cross-town roads through downtown plus side connectors.
-  [[0, 0, CONFIG.arenaSize, 10], [0, 0, 10, CONFIG.arenaSize], [-55, 0, 8, 156], [55, 0, 8, 156], [0, -56, 126, 8], [0, 56, 126, 8], [-82, 31, 8, 78], [82, -34, 8, 88], [-34, -84, 66, 7], [34, 84, 66, 7]].forEach(([x, z, w, d]) => slab(scene, x, z, w, d, COLORS.road));
+  [[0, 0, CONFIG.arenaSize, 10], [0, 0, 10, CONFIG.arenaSize], [-55, 0, 8, 156], [55, 0, 8, 156], [0, -56, 126, 8], [0, 56, 126, 8], [-82, 31, 8, 78], [82, -34, 8, 88], [-34, -84, 66, 7], [34, 84, 66, 7]].forEach(([x, z, w, d]) => roadSlab(scene, x, z, w, d));
 
-  // Sidewalk shoulders on major roads.
-  [[0, -7, CONFIG.arenaSize, 2], [0, 7, CONFIG.arenaSize, 2], [-7, 0, 2, CONFIG.arenaSize], [7, 0, 2, CONFIG.arenaSize], [-55, 5.5, 12, 1.4], [-55, -5.5, 12, 1.4], [55, 5.5, 12, 1.4], [55, -5.5, 12, 1.4], [0, -50.5, 126, 1.4], [0, -61.5, 126, 1.4], [0, 50.5, 126, 1.4], [0, 61.5, 126, 1.4]].forEach(([x, z, w, d]) => slab(scene, x, z, w, d, COLORS.sidewalk, 0.065));
+  // Sidewalk shoulders are segmented so they stay beside roads and leave clean road space at intersections.
+  const horizontalSidewalks = [
+    [-87, -7, 46, 2], [-24, -7, 38, 2], [24, -7, 38, 2], [87, -7, 46, 2],
+    [-87, 7, 46, 2], [-24, 7, 38, 2], [24, 7, 38, 2], [87, 7, 46, 2],
+    [-29, -50.5, 42, 1.4], [29, -50.5, 42, 1.4], [-29, -61.5, 42, 1.4], [29, -61.5, 42, 1.4],
+    [-29, 50.5, 42, 1.4], [29, 50.5, 42, 1.4], [-29, 61.5, 42, 1.4], [29, 61.5, 42, 1.4],
+    [-34, -79.5, 42, 1.2], [-34, -88.5, 42, 1.2], [34, 79.5, 42, 1.2], [34, 88.5, 42, 1.2],
+  ];
+  const verticalSidewalks = [
+    [-7, -87, 2, 46], [-7, -24, 2, 38], [-7, 24, 2, 38], [-7, 87, 2, 46],
+    [7, -87, 2, 46], [7, -24, 2, 38], [7, 24, 2, 38], [7, 87, 2, 46],
+    [-49.5, -30, 1.4, 42], [-60.5, -30, 1.4, 42], [-49.5, 30, 1.4, 42], [-60.5, 30, 1.4, 42],
+    [49.5, -30, 1.4, 42], [60.5, -30, 1.4, 42], [49.5, 30, 1.4, 42], [60.5, 30, 1.4, 42],
+    [-76.5, 31, 1.4, 46], [-87.5, 31, 1.4, 46], [76.5, -34, 1.4, 52], [87.5, -34, 1.4, 52],
+  ];
+  [...horizontalSidewalks, ...verticalSidewalks].forEach(([x, z, w, d]) => sidewalkSlab(scene, x, z, w, d));
 
   for (let i = -96; i <= 96; i += 16) {
     stripe(scene, i, 0, 5, 0.25);
     stripe(scene, 0, i, 0.25, 5);
   }
+
+  // Simple crosswalks mark intersections without using sidewalk slabs across the road lanes.
+  [-55, 0, 55].forEach((x) => {
+    stripe(scene, x - 2.5, 0, 0.35, 7, 0xcfd3d6);
+    stripe(scene, x + 2.5, 0, 0.35, 7, 0xcfd3d6);
+  });
+  [-56, 0, 56].forEach((z) => {
+    stripe(scene, 0, z - 2.5, 7, 0.35, 0xcfd3d6);
+    stripe(scene, 0, z + 2.5, 7, 0.35, 0xcfd3d6);
+  });
 }
 
 function addDistricts(scene) {
   // Downtown core.
-  slab(scene, 0, 0, 42, 42, COLORS.pavement, 0.04);
+  roadSlab(scene, 0, 0, 42, 42, COLORS.pavement);
   [[-15,-15,9,10,5],[0,-16,10,8,4],[16,-13,8,12,5],[-15,14,8,11,4],[3,15,14,8,5],[18,13,7,10,4]].forEach((b, i) => building(scene, ...b, i % 2 ? COLORS.buildingA : COLORS.buildingB));
   lotLabel(scene, 'DOWNTOWN', 0, 0);
 
   // Park northwest with crossing paths.
   slab(scene, -76, 70, 50, 42, COLORS.grassAlt);
-  slab(scene, -76, 70, 48, 4, COLORS.path, 0.07);
-  slab(scene, -76, 70, 4, 40, COLORS.path, 0.07);
+  sidewalkSlab(scene, -76, 70, 48, 4, COLORS.path);
+  sidewalkSlab(scene, -76, 70, 4, 40, COLORS.path);
   for (let i = 0; i < 14; i++) addTree(scene, -98 + (i % 5) * 11, 53 + Math.floor(i / 5) * 13);
   lotLabel(scene, 'PARK', -76, 70);
 
   // School campus northeast.
   slab(scene, 73, 68, 54, 40, COLORS.schoolField);
-  slab(scene, 61, 70, 25, 20, COLORS.pavement);
-  slab(scene, 89, 68, 19, 25, 0x355f31);
+  roadSlab(scene, 61, 70, 25, 20, COLORS.pavement);
+  districtDetailSlab(scene, 89, 68, 19, 25, 0x355f31);
   building(scene, 56, 70, 18, 12, 3.5, 0x7b6656);
   lotLabel(scene, 'SCHOOL', 73, 68);
 
@@ -95,23 +142,23 @@ function addDistricts(scene) {
   slab(scene, -75, -68, 52, 50, COLORS.grassAlt);
   for (let r = 0; r < 2; r++) for (let c = 0; c < 3; c++) {
     const x = -96 + c * 20, z = -82 + r * 24;
-    slab(scene, x, z + 6, 12, 8, COLORS.grass);
-    slab(scene, x, z - 1, 4, 8, COLORS.pavement);
+    districtDetailSlab(scene, x, z + 6, 12, 8, COLORS.grass);
+    sidewalkSlab(scene, x, z - 1, 4, 8, COLORS.pavement);
     building(scene, x, z + 6, 7, 6, 2.6, COLORS.house);
   }
   lotLabel(scene, 'RESIDENTIAL', -75, -68);
 
   // Denser apartments/townhomes southeast.
-  slab(scene, 68, -75, 48, 45, COLORS.parking);
+  roadSlab(scene, 68, -75, 48, 45, COLORS.parking);
   [-10, 5, 20].forEach((offset) => building(scene, 68 + offset, -76, 8, 25, 4.5, 0x60546a));
   for (let x = 48; x <= 88; x += 8) stripe(scene, x, -55, 0.25, 6, 0xcfd3d6);
   lotLabel(scene, 'APARTMENTS', 68, -75);
 
   // Civic, industrial, gas districts.
-  slab(scene, -28, 68, 30, 22, COLORS.pavement); building(scene, -31, 69, 14, 10, 3.2, 0x4d6178); lotLabel(scene, 'POLICE', -28, 68);
-  slab(scene, 28, 68, 30, 22, COLORS.pavement); building(scene, 26, 69, 16, 10, 3.1, 0x8b3d32); lotLabel(scene, 'FIRE', 28, 68);
-  slab(scene, -86, -5, 36, 48, COLORS.junk); slab(scene, -87, -4, 28, 36, COLORS.dirt, 0.06); addScrap(scene, -86, -5); lotLabel(scene, 'JUNKYARD', -86, -5);
-  slab(scene, 86, 21, 34, 28, COLORS.parking); building(scene, 92, 25, 11, 8, 2.4, 0x72634a); slab(scene, 78, 17, 10, 7, 0x9a2f2f, 0.09); lotLabel(scene, 'GAS', 86, 21);
+  roadSlab(scene, -28, 68, 30, 22, COLORS.pavement); building(scene, -31, 69, 14, 10, 3.2, 0x4d6178); lotLabel(scene, 'POLICE', -28, 68);
+  roadSlab(scene, 28, 68, 30, 22, COLORS.pavement); building(scene, 26, 69, 16, 10, 3.1, 0x8b3d32); lotLabel(scene, 'FIRE', 28, 68);
+  slab(scene, -86, -5, 36, 48, COLORS.junk); districtDetailSlab(scene, -87, -4, 28, 36, COLORS.dirt); addScrap(scene, -86, -5); lotLabel(scene, 'JUNKYARD', -86, -5);
+  roadSlab(scene, 86, 21, 34, 28, COLORS.parking); building(scene, 92, 25, 11, 8, 2.4, 0x72634a); roadSlab(scene, 78, 17, 10, 7, 0x9a2f2f); lotLabel(scene, 'GAS', 86, 21);
   slab(scene, 83, -5, 32, 22, COLORS.grassAlt); building(scene, 77, -6, 7, 6, 2.4, COLORS.house); building(scene, 91, -5, 7, 6, 2.4, COLORS.house);
 }
 
