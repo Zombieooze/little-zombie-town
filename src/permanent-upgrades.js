@@ -1,14 +1,14 @@
 import { CONFIG } from './config.js';
 
-const COSTS = [25, 60, 120, 225, 400];
-
 export const PERMANENT_UPGRADES = [
-  { id: 'maxHealth', name: 'Max Health', description: 'Begin each run tougher.', unit: 'HP', costs: COSTS, valuePerLevel: 10, benefit: (level) => `+${level * 10} starting max health`, nextBenefit: () => '+10 max health' },
-  { id: 'moveSpeed', name: 'Move Speed', description: 'Move through town a little faster.', unit: '%', costs: COSTS, valuePerLevel: 0.04, benefit: (level) => `+${Math.round(level * 4)}% movement speed`, nextBenefit: () => '+4% move speed' },
-  { id: 'batDamage', name: 'Bat Damage', description: 'Hit zombies harder with each swing.', unit: '%', costs: COSTS, valuePerLevel: 0.08, benefit: (level) => `+${Math.round(level * 8)}% bat damage`, nextBenefit: () => '+8% bat damage' },
-  { id: 'batCooldown', name: 'Bat Cooldown', description: 'Recharge bat swings faster.', unit: '%', costs: COSTS, valuePerLevel: 0.05, benefit: (level) => `${Math.round(level * 5)}% faster bat recharge`, nextBenefit: () => '5% faster recharge' },
-  { id: 'pickupMagnet', name: 'Pickup Magnet', description: 'Pull XP gems from farther away.', unit: '%', costs: COSTS, valuePerLevel: 0.12, benefit: (level) => `+${Math.round(level * 12)}% pickup magnet`, nextBenefit: () => '+12% magnet radius' },
-  { id: 'coinBonus', name: 'Coin Bonus', description: 'Earn more coins from defeated zombies.', unit: '%', costs: COSTS, valuePerLevel: 0.10, benefit: (level) => `+${Math.round(level * 10)}% coins earned`, nextBenefit: () => '+10% coins earned' },
+  { id: 'dmg', emoji: '💪', name: 'Power', description: '+5% global player damage per level.', max: 10, baseCost: 30, effect: (level) => `+${level * 5}% damage`, nextEffect: () => '+5% damage' },
+  { id: 'hp', emoji: '❤️', name: 'Vitality', description: '+10 max HP per level.', max: 10, baseCost: 25, effect: (level) => `+${level * 10} max HP`, nextEffect: () => '+10 max HP' },
+  { id: 'speed', emoji: '👟', name: 'Swiftness', description: '+3% move speed per level.', max: 8, baseCost: 35, effect: (level) => `+${level * 3}% move speed`, nextEffect: () => '+3% move speed' },
+  { id: 'regen', emoji: '🌿', name: 'Recovery', description: '+0.15 HP/sec regen per level.', max: 8, baseCost: 40, effect: (level) => `+${(level * 0.15).toFixed(2)} HP/sec`, nextEffect: () => '+0.15 HP/sec' },
+  { id: 'stamina', emoji: '⚡', name: 'Endurance', description: '+12 max stamina per level.', max: 8, baseCost: 30, effect: (level) => `+${level * 12} max stamina`, nextEffect: () => '+12 max stamina' },
+  { id: 'gold', emoji: '💰', name: 'Greed', description: '+10% coins found per level.', max: 8, baseCost: 45, effect: (level) => `+${level * 10}% coins found`, nextEffect: () => '+10% coins found' },
+  { id: 'magnet', emoji: '🧲', name: 'Magnetism', description: '+8% pickup radius per level.', max: 8, baseCost: 30, effect: (level) => `+${level * 8}% pickup radius`, nextEffect: () => '+8% pickup radius' },
+  { id: 'xp', emoji: '📘', name: 'Wisdom', description: '+6% XP gained per level.', max: 8, baseCost: 50, effect: (level) => `+${level * 6}% XP gained`, nextEffect: () => '+6% XP gained' },
 ];
 
 export const DEFAULT_PERMANENT_LEVELS = Object.fromEntries(PERMANENT_UPGRADES.map((upgrade) => [upgrade.id, 0]));
@@ -17,21 +17,39 @@ export function getPermanentUpgrade(id) {
   return PERMANENT_UPGRADES.find((upgrade) => upgrade.id === id);
 }
 
+export function getPermanentUpgradeCost(upgrade, currentLevel) {
+  return Math.round(upgrade.baseCost * Math.pow(1.75, currentLevel));
+}
+
 export function clampPermanentLevels(levels = {}) {
   return Object.fromEntries(PERMANENT_UPGRADES.map((upgrade) => {
     const raw = Number.parseInt(levels?.[upgrade.id] ?? 0, 10);
-    return [upgrade.id, Math.max(0, Math.min(upgrade.costs.length, Number.isFinite(raw) ? raw : 0))];
+    return [upgrade.id, Math.max(0, Math.min(upgrade.max, Number.isFinite(raw) ? raw : 0))];
   }));
+}
+
+export function migratePermanentLevels(levels = {}) {
+  const migrated = { ...levels };
+  const mappings = { maxHealth: 'hp', moveSpeed: 'speed', pickupMagnet: 'magnet', coinBonus: 'gold', batDamage: 'dmg' };
+  for (const [oldId, newId] of Object.entries(mappings)) {
+    if (migrated[newId] == null && migrated[oldId] != null) migrated[newId] = migrated[oldId];
+  }
+  return clampPermanentLevels(migrated);
 }
 
 export function calculatePermanentStats(levels = {}) {
   const safe = clampPermanentLevels(levels);
   return {
-    maxHealth: CONFIG.player.maxHealth + safe.maxHealth * 10,
-    speedMultiplier: 1 + safe.moveSpeed * 0.04,
-    batDamage: CONFIG.pulse.damage * (1 + safe.batDamage * 0.08),
-    batCooldown: CONFIG.pulse.cooldown * Math.max(0.1, 1 - safe.batCooldown * 0.05),
-    pickupMagnetMultiplier: 1 + safe.pickupMagnet * 0.12,
-    coinMultiplier: 1 + safe.coinBonus * 0.10,
+    maxHealth: CONFIG.player.maxHealth + safe.hp * 10,
+    speedMultiplier: 1 + safe.speed * 0.03,
+    damageMultiplier: 1 + safe.dmg * 0.05,
+    pulseDamage: CONFIG.pulse.damage * (1 + safe.dmg * 0.05),
+    pulseCooldown: CONFIG.pulse.cooldown,
+    healthRegen: safe.regen * 0.15,
+    maxStamina: safe.stamina * 12,
+    stamina: safe.stamina * 12,
+    pickupMagnetMultiplier: 1 + safe.magnet * 0.08,
+    coinMultiplier: 1 + safe.gold * 0.10,
+    xpMultiplier: 1 + safe.xp * 0.06,
   };
 }

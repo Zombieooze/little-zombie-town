@@ -372,6 +372,11 @@ export function updateAbilities(scene, state, player, delta, onKilled, onHit) {
   if (isAbilityUnlocked(state, 'junkyardTurret')) updateJunkyardTurret(scene, state, player, delta, onKilled, onHit);
 }
 
+
+function playerDamage(state, amount) {
+  return amount * Math.max(0, state.damageMultiplier || 1);
+}
+
 function disposeObjectTree(object) {
   object.traverse?.((part) => {
     part.geometry?.dispose?.();
@@ -488,7 +493,7 @@ function updateJunkyardTurret(scene, state, player, delta, onKilled, onHit) {
       const type = CONFIG.zombie.types[zombie.userData.typeKey] ?? CONFIG.zombie.types.walker;
       const dist = Math.hypot(bolt.mesh.position.x - zombie.position.x, bolt.mesh.position.z - zombie.position.z);
       if (dist <= turretAbility.hitRadius + type.radius) {
-        damageZombie(scene, zombie, bolt.mesh.position, turretAbility.damage, onKilled, onHit);
+        damageZombie(scene, zombie, bolt.mesh.position, playerDamage(state, turretAbility.damage), onKilled, onHit);
         removeTurretBolt(scene, bolt);
         return false;
       }
@@ -579,11 +584,11 @@ function placeBearTrap(scene, state, player) {
   bearTrap.traps.push({ mesh, life: bearTrap.lifetime, snapTimer: 0 });
 }
 
-function triggerBearTrap(scene, bearTrap, trap, zombie, onKilled, onHit) {
+function triggerBearTrap(scene, state, bearTrap, trap, zombie, onKilled, onHit) {
   const position = trap.mesh.position.clone();
-  damageZombie(scene, zombie, position, bearTrap.damage, onKilled, onHit);
+  damageZombie(scene, zombie, position, playerDamage(state, bearTrap.damage), onKilled, onHit);
   if (bearTrap.burstDamage > 0 && bearTrap.burstRadius > 0) {
-    damageZombies(scene, position, bearTrap.burstRadius, bearTrap.burstDamage, onKilled, onHit);
+    damageZombies(scene, position, bearTrap.burstRadius, playerDamage(state, bearTrap.burstDamage), onKilled, onHit);
   }
   addBearTrapEffect(scene, bearTrap, position, bearTrap.burstRadius);
   removeBearTrap(scene, trap);
@@ -624,7 +629,7 @@ function updateBearTrapToss(scene, state, player, delta, onKilled, onHit) {
       const hitRange = bearTrap.triggerRadius + type.radius;
       const dist = Math.hypot(trap.mesh.position.x - zombie.position.x, trap.mesh.position.z - zombie.position.z);
       if (dist <= hitRange) {
-        triggerBearTrap(scene, bearTrap, trap, zombie, onKilled, onHit);
+        triggerBearTrap(scene, state, bearTrap, trap, zombie, onKilled, onHit);
         return false;
       }
     }
@@ -680,7 +685,7 @@ function fireShockwaveStomp(scene, state, player, onKilled, onHit) {
   const stomp = state.abilities.shockwaveStomp;
   const origin = player.position.clone();
   addShockwaveEffect(scene, stomp, origin);
-  damageZombies(scene, origin, stomp.radius, stomp.damage, onKilled, onHit, stomp.knockback);
+  damageZombies(scene, origin, stomp.radius, playerDamage(state, stomp.damage), onKilled, onHit, stomp.knockback);
 }
 
 function updateShockwaveEffects(scene, stomp, delta) {
@@ -763,7 +768,7 @@ function updateSawblades(scene, state, player, delta, onKilled, onHit) {
     blade.mesh.rotation.z += delta * 18;
     blade.mesh.rotation.y += delta * 7;
     if (blade.hitTimer <= 0) {
-      damageZombies(scene, blade.mesh.position, saw.hitRadius, saw.damage, onKilled, onHit);
+      damageZombies(scene, blade.mesh.position, saw.hitRadius, playerDamage(state, saw.damage), onKilled, onHit);
       blade.hitTimer = .18;
     }
     if (blade.life <= 0) { scene.remove(blade.mesh); return false; }
@@ -832,7 +837,7 @@ function updateNailBlaster(scene, state, player, delta, onKilled, onHit) {
       if (dist > hitRange) continue;
       nail.hitZombies.add(zombie);
       nail.hitsLeft -= 1;
-      damageZombie(scene, zombie, nail.mesh.position, blaster.damage, onKilled, onHit);
+      damageZombie(scene, zombie, nail.mesh.position, playerDamage(state, blaster.damage), onKilled, onHit);
       if (nail.hitsLeft <= 0) break;
     }
     if (nail.life <= 0 || nail.hitsLeft <= 0) { removeNail(scene, nail); return false; }
@@ -914,7 +919,7 @@ function fireElectricZapper(scene, state, player, onKilled, onHit) {
   }
   addZapperEffect(scene, state, links, hitPositions);
   hitZombies.forEach((zombie, index) => {
-    if (getZombies().includes(zombie)) damageZombie(scene, zombie, index === 0 ? player.position : hitPositions[index - 1], zapper.damage, onKilled, onHit);
+    if (getZombies().includes(zombie)) damageZombie(scene, zombie, index === 0 ? player.position : hitPositions[index - 1], playerDamage(state, zapper.damage), onKilled, onHit);
   });
 }
 
@@ -1040,7 +1045,7 @@ function updateFireBottle(scene, state, player, delta, onKilled, onHit) {
     patch.mesh.scale.setScalar(.85 + .15 * Math.sin(state.elapsed * 9));
     patch.mesh.traverse((part) => { if (part.material) part.material.opacity = Math.min(part.material.opacity, fade); });
     if (patch.tickTimer <= 0) {
-      damageZombies(scene, patch.mesh.position, fire.radius, fire.damage, onKilled, onHit);
+      damageZombies(scene, patch.mesh.position, fire.radius, playerDamage(state, fire.damage), onKilled, onHit);
       patch.tickTimer = fire.tickInterval;
     }
     if (patch.life <= 0) { removeFirePatch(scene, patch); return false; }
@@ -1078,11 +1083,11 @@ function updateOrbitals(scene, state, player, delta, onKilled, onHit) {
     const angle = orbital.angle + (index / orbital.meshes.length) * Math.PI * 2;
     mesh.position.set(player.position.x + Math.cos(angle) * orbital.radius, 1.05, player.position.z + Math.sin(angle) * orbital.radius);
     mesh.rotation.x += delta * 4; mesh.rotation.y += delta * 6;
-    damageZombiesTouchedByOrbital(scene, mesh.position, orbital, onKilled, onHit);
+    damageZombiesTouchedByOrbital(scene, mesh.position, orbital, onKilled, onHit, state.damageMultiplier);
   });
 }
 
-function damageZombiesTouchedByOrbital(scene, position, orbital, onKilled, onHit) {
+function damageZombiesTouchedByOrbital(scene, position, orbital, onKilled, onHit, damageMultiplier = 1) {
   for (const zombie of [...getZombies()]) {
     if (orbital.recentHits.has(zombie)) continue;
     const type = CONFIG.zombie.types[zombie.userData.typeKey] ?? CONFIG.zombie.types.walker;
@@ -1090,6 +1095,6 @@ function damageZombiesTouchedByOrbital(scene, position, orbital, onKilled, onHit
     const dist = Math.hypot(position.x - zombie.position.x, position.z - zombie.position.z);
     if (dist > hitRange) continue;
     orbital.recentHits.set(zombie, orbital.hitCooldown);
-    damageZombie(scene, zombie, position, orbital.damage, onKilled, onHit);
+    damageZombie(scene, zombie, position, orbital.damage * Math.max(0, damageMultiplier || 1), onKilled, onHit);
   }
 }

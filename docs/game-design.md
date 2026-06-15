@@ -75,18 +75,24 @@ Current passive examples include:
 
 Future passive candidates, if added carefully later, include XP Magnet for larger pickup radius, Tough Jacket for damage reduction, and Lucky Loot for better drops or coin rewards.
 
-## Permanent coin shop
+## Permanent Upgrade Lab
 
-The main menu includes a **Coin Shop** for permanent upgrades bought with saved coins between runs. Coins are earned during each run, added to the saved total when the run ends, and then spent from the same saved total without resetting existing player balances. Permanent upgrade levels save separately in browser `localStorage`, load safely when save data is missing or old, and affect future runs only once at run reset so repeated starts do not stack bonuses onto base config values.
+The main menu includes a CubeBasher-style **Upgrade Lab** for permanent upgrades bought with saved coins between runs. Coins are earned during each run, added to the saved total when the run ends, and then spent from the same saved total without resetting existing player balances. Permanent upgrade levels save separately in browser `localStorage`, load safely when save data is missing or malformed, and affect future runs only once at run reset so repeated starts do not stack bonuses onto base config values.
 
-Permanent shop upgrades currently use five levels each and are tuned in `src/permanent-upgrades.js` so prices and values are easy to adjust:
+Upgrade costs use the CubeBasher formula `Math.round(baseCost * Math.pow(1.75, currentLevel))`, where `currentLevel` is the level before purchase. Level 0 buying level 1 costs the base cost.
 
-- **Max Health:** Increases starting max health for every future run.
-- **Move Speed:** Applies a small movement speed multiplier at run start.
-- **Bat Damage:** Multiplies base bat swing damage before in-run level-up upgrades are applied.
-- **Bat Cooldown:** Reduces the starting bat swing cooldown so swings recharge faster.
-- **Pickup Magnet:** Increases XP gem magnet range during the run.
-- **Coin Bonus:** Multiplies coins awarded from defeated zombies so displayed run coins match the amount saved at the end of the run.
+Permanent Upgrade Lab entries:
+
+- **Power** (`dmg`, 💪): max 10, base cost 30, +5% global player damage per level. This applies to the bat and player-created abilities/projectiles/traps where practical, but not enemy damage.
+- **Vitality** (`hp`, ❤️): max 10, base cost 25, +10 max HP per level.
+- **Swiftness** (`speed`, 👟): max 8, base cost 35, +3% move speed per level.
+- **Recovery** (`regen`, 🌿): max 8, base cost 40, +0.15 HP/sec regeneration per level, healing only up to max HP.
+- **Endurance** (`stamina`, ⚡): max 8, base cost 30, +12 max stamina per level. The value is saved and applied to run state so it is ready for stamina systems without changing current controls.
+- **Greed** (`gold`, 💰): max 8, base cost 45, +10% coins found per level. The multiplier is applied when enemies and rewards add run coins so the displayed run amount matches the saved total at run end.
+- **Magnetism** (`magnet`, 🧲): max 8, base cost 30, +8% pickup radius per level.
+- **Wisdom** (`xp`, 📘): max 8, base cost 50, +6% XP gained per level. XP rewards are multiplied before being added to the visible XP bar and level progression.
+
+Old permanent upgrade save ids are migrated when possible: `maxHealth` to `hp`, `moveSpeed` to `speed`, `pickupMagnet` to `magnet`, `coinBonus` to `gold`, and `batDamage` to `dmg`. New upgrades without old equivalents start at 0, and all loaded levels are clamped to their new max levels.
 
 ## Bat design rule
 
