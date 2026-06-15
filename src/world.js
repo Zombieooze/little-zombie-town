@@ -304,7 +304,7 @@ function townBuilding(scene, x, z, w, d, h, color = COLORS.buildingA) {
 function createOpenHouse(scene, spec) {
   const {
     x, z, w, d, color = 0x65735b, wallHeight = 3.0, story = 1, door = 'south', garage = false,
-    rooms = [], rotation = 0, furniture = true,
+    rotation = 0, furniture = true,
   } = spec;
   const g = new THREE.Group();
   const wallT = town(0.75);
@@ -324,14 +324,23 @@ function createOpenHouse(scene, spec) {
     registerWorldCollider({ type: 'rect', x: wx, z: wz, width: Math.abs(Math.cos(rotation)) > .5 ? ww : dd, depth: Math.abs(Math.cos(rotation)) > .5 ? dd : ww, label: name });
     return mesh;
   }
-  function addWindow(lx, lz, side='south') {
-    const horiz = side === 'south' || side === 'north';
-    const win = box(town(2.0), town(0.08), town(1.05), 0x9fb6bd);
-    win.position.set(lx, town(2.0), lz);
-    win.rotation.y = horiz ? 0 : Math.PI / 2;
-    g.add(win);
-    const frame = box(town(2.25), town(0.12), town(1.28), trim);
-    frame.position.copy(win.position); frame.position.y -= town(.02); frame.rotation.copy(win.rotation); g.add(frame); g.add(win);
+  function addWindow(lx, lz, side = 'south') {
+    const onNorthSouthWall = side === 'south' || side === 'north';
+    const frame = box(
+      onNorthSouthWall ? town(2.25) : town(0.12),
+      town(1.28),
+      onNorthSouthWall ? town(0.12) : town(2.25),
+      trim,
+    );
+    const glass = box(
+      onNorthSouthWall ? town(2.0) : town(0.08),
+      town(1.05),
+      onNorthSouthWall ? town(0.08) : town(2.0),
+      0x9fb6bd,
+    );
+    frame.position.set(lx, town(1.9), lz);
+    glass.position.set(lx, town(1.9), lz);
+    g.add(frame, glass);
   }
 
   const frontGap = garage ? town(6.2) : town(3.4);
@@ -352,10 +361,10 @@ function createOpenHouse(scene, spec) {
     addLocalWall('residential-wall', halfW - wallT/2, halfD/2 + sideGap/4, wallT, halfD - sideGap/2);
   } else addLocalWall('residential-wall', halfW - wallT/2, 0, wallT, td);
 
-  rooms.forEach(([lx, lz, ww, dd]) => addLocalWall('residential-interior-wall', town(lx), town(lz), town(ww), town(dd), th * .72, 0x8b927d));
-  addWindow(-tw*.24, halfD + town(.04), 'south'); addWindow(tw*.28, -halfD - town(.04), 'north');
-  addWindow(-halfW - town(.04), -td*.18, 'west'); addWindow(halfW + town(.04), td*.18, 'east');
-  if (story === 2) { addWindow(tw*.18, halfD + town(.04), 'south'); addWindow(halfW + town(.04), -td*.22, 'east'); }
+  // Keep residential interiors as clean, readable open shells; furniture/debris imply room use later.
+  addWindow(-tw * .24, halfD - wallT - town(.03), 'south'); addWindow(tw * .28, -halfD + wallT + town(.03), 'north');
+  addWindow(-halfW + wallT + town(.03), -td * .18, 'west'); addWindow(halfW - wallT - town(.03), td * .18, 'east');
+  if (story === 2) { addWindow(tw * .18, halfD - wallT - town(.03), 'south'); addWindow(halfW - wallT - town(.03), -td * .22, 'east'); }
   if (furniture) {
     assetPart(g, box(town(2.1), town(.55), town(1.1), 0x40546c), [-tw*.2, town(.35), -td*.18]);
     assetPart(g, box(town(1.4), town(.5), town(1.4), 0x6b5138), [tw*.25, town(.3), td*.15]);
@@ -381,11 +390,11 @@ function addResidentialZone(scene) {
   [[66,66,13,13],[99,66,13,13],[66,91,13,14],[99,91,13,14],[82,95,15,12]].forEach(([x,z,w,d]) => townDistrictDetailSlab(scene,x,z,w,d,COLORS.grass));
   [[72,66,4,12],[92,66,4,12],[72,90,4,10],[92,90,4,10],[82,89,4,13]].forEach(([x,z,w,d]) => townRoadSlab(scene,x,z,w,d,COLORS.pavement));
 
-  createOpenHouse(scene, { x:64.5, z:64, w:12, d:10, color:0x66725a, door:'east', rooms:[[0,0,8,.65],[-2.2,1.8,.65,4]], furniture:true });
-  createOpenHouse(scene, { x:100, z:64, w:13, d:10, color:0x6f684f, door:'west', garage:true, rooms:[[1.5,0,.65,8]], furniture:true });
-  createOpenHouse(scene, { x:64, z:91, w:12, d:12, color:0x7c765f, story:2, door:'east', rooms:[[0,-1,8,.65],[-2,2,.65,4]], furniture:true });
-  createOpenHouse(scene, { x:100, z:91, w:13, d:12, color:0x5f705e, door:'west', rooms:[[0,0,9,.65],[2.5,-2,.65,4]], furniture:true });
-  createOpenHouse(scene, { x:82, z:98, w:15, d:9, color:0x6d7b62, story:2, door:'south', rooms:[[0,0,10,.65],[-3,0,.65,5],[3,0,.65,5]], furniture:false });
+  createOpenHouse(scene, { x:64.5, z:64, w:12, d:10, color:0x66725a, door:'east', furniture:true });
+  createOpenHouse(scene, { x:100, z:64, w:13, d:10, color:0x6f684f, door:'west', garage:true, furniture:true });
+  createOpenHouse(scene, { x:64, z:91, w:12, d:12, color:0x7c765f, story:2, door:'east', furniture:true });
+  createOpenHouse(scene, { x:100, z:91, w:13, d:12, color:0x5f705e, door:'west', furniture:true });
+  createOpenHouse(scene, { x:82, z:98, w:15, d:9, color:0x6d7b62, story:2, door:'south', furniture:false });
 
   // Lot boundaries and yard details, leaving breaks at sidewalks and doors.
   addFenceLine(scene, [[58,58,0],[62,58,0],[98,58,0],[102,58,0],[58,73,0],[62,73,0],[98,73,0],[102,73,0],[58,84,0],[62,84,0],[98,84,0],[102,84,0],[58,105,0],[62,105,0],[98,105,0],[102,105,0]]);
