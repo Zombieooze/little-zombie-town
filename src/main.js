@@ -70,7 +70,7 @@ setControllerStatusCallback(showControllerMessage);
 initInput();
 initCameraControls();
 createWorld(scene);
-initUI({ onStart: startGame, onUpgrade: chooseUpgrade, onMenu: returnToMenu, onShop: openShop, onPause: pauseGame, onResume: resumeGame, onFullscreen: requestGameFullscreen });
+initUI({ onStart: startGame, onUpgrade: chooseUpgrade, onMenu: returnToMenu, onShop: openShop, onPause: pauseGame, onResume: resumeGame, onRestart: restartRun, onFullscreen: requestGameFullscreen });
 document.getElementById('design-mode-banner')?.classList.toggle('hidden', !isDesignMode);
 showScreen('menu-screen');
 
@@ -99,6 +99,11 @@ function startGame() {
   document.getElementById('hud').classList.remove('hidden');
   setGameActionsVisible(true); setPauseButtonVisible(true); document.body.classList.remove('paused');
   mode = 'playing';
+}
+
+function restartRun() {
+  if (mode !== 'paused') return;
+  startGame();
 }
 
 function returnToMenu() { mode = 'menu'; setGameActionsVisible(false); updateBossHealthBar(null); document.body.classList.remove('paused'); showScreen('menu-screen'); updateMenuCoins(); }
