@@ -1,7 +1,7 @@
 export const CONFIG = {
   arenaSize: 130,
   runDuration: 1800,
-  player: { speed: 8.0, sprintMultiplier: 1.65, maxHealth: 100, damageMultiplier: 1.10, critChance: 0.05, radius: 0.8, jumpVelocity: 8.4, gravity: 28, landingDip: 0.1 },
+  player: { speed: 8.0, sprintMultiplier: 1.65, maxHealth: 100, damageMultiplier: 1.0, critChance: 0.05, radius: 0.8, jumpVelocity: 8.4, gravity: 28, landingDip: 0.1 },
   pulse: { cooldown: 2.5, range: 5.2, damage: 35, visualDuration: 0.55 },
   zombie: {
     spawnEvery: 1.25, maxAlive: 48, hitCooldown: 0.8,
