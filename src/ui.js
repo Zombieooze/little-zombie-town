@@ -157,6 +157,10 @@ export function showDamageFlash() {
   damageFlashTimer = setTimeout(() => flash.classList.remove('active'), 430);
 }
 
+export function setLowHealthWarning(active) {
+  $('low-health-warning')?.classList.toggle('active', active);
+}
+
 export function showControllerMessage(message) {
   const toast = $('controller-toast');
   toast.textContent = message;
@@ -168,7 +172,7 @@ export function showControllerMessage(message) {
 function getMenuButtons(context) {
   const group = menuGroups[context];
   if (!group) return [];
-  return [...$(group.root).querySelectorAll(group.selector)].filter((button) => button.offsetParent !== null);
+  return [...$(group.root).querySelectorAll(group.selector)].filter((button) => button.offsetParent !== null && !button.disabled);
 }
 
 export function moveMenuSelection(context, direction) {
@@ -185,7 +189,9 @@ export function activateMenuSelection(context) {
 }
 
 function updateMenuSelection(context) {
-  Object.keys(menuGroups).forEach((key) => getMenuButtons(key).forEach((button) => button.classList.remove('controller-selected')));
+  Object.values(menuGroups).forEach((group) => {
+    $(group.root).querySelectorAll(group.selector).forEach((button) => button.classList.remove('controller-selected'));
+  });
   const buttons = getMenuButtons(context);
   if (!buttons.length) return;
   selectedMenuIndex = Math.min(selectedMenuIndex, buttons.length - 1);
