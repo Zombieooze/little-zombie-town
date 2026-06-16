@@ -37,4 +37,4 @@ No backend, build step, npm install, database, or framework is required.
 
 ## Goal
 
-Survive until the timer reaches **3:00**. Defeat zombies with automatic defense pulses, collect XP gems, pick upgrades, and earn coins that are saved in your browser with `localStorage`.
+Survive until the timer reaches **30:00**. Defeat zombies with automatic defense pulses, collect XP gems, pick upgrades, and earn coins that are saved in your browser with `localStorage`.
