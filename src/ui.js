@@ -184,12 +184,24 @@ export function activateMenuSelection(context) {
   if (button) button.click();
 }
 
+function clearMenuSelectionClasses() {
+  document.querySelectorAll('button.controller-selected').forEach((button) => button.classList.remove('controller-selected'));
+}
+
 function updateMenuSelection(context) {
-  Object.keys(menuGroups).forEach((key) => getMenuButtons(key).forEach((button) => button.classList.remove('controller-selected')));
+  clearMenuSelectionClasses();
   const buttons = getMenuButtons(context);
   if (!buttons.length) return;
-  selectedMenuIndex = Math.min(selectedMenuIndex, buttons.length - 1);
-  buttons[selectedMenuIndex].classList.add('controller-selected');
+  selectedMenuIndex = Math.max(0, Math.min(selectedMenuIndex, buttons.length - 1));
+  const selected = buttons[selectedMenuIndex];
+  selected.classList.add('controller-selected');
+  if (selected.focus) selected.focus({ preventScroll: true });
+}
+
+export function resetMenuSelection(context) {
+  selectedMenuIndex = 0;
+  if (context) updateMenuSelection(context);
+  else clearMenuSelectionClasses();
 }
 
 export function moveUpgradeSelection(direction) {
@@ -215,14 +227,14 @@ function updateUpgradeSelection() {
 }
 
 export function showScreen(name) {
-  selectedMenuIndex = 0;
+  resetMenuSelection(null);
   screens.forEach((id) => {
     $(id).classList.toggle('hidden', id !== name);
     $(id).classList.toggle('active', id === name);
   });
   $('hud').classList.toggle('hidden', name === 'menu-screen' || name === 'end-screen');
   const context = name === 'menu-screen' ? 'menu' : name === 'shop-screen' ? 'shop' : name === 'pause-screen' ? 'paused' : name === 'end-screen' ? 'ended' : null;
-  if (context) updateMenuSelection(context);
+  if (context) requestAnimationFrame(() => resetMenuSelection(context));
 }
 
 export function hideOverlays() { screens.filter((id) => id !== 'menu-screen').forEach((id) => { $(id).classList.add('hidden'); $(id).classList.remove('active'); }); }
@@ -255,6 +267,7 @@ function renderShop() {
         <button class="shop-buy-button ${isMaxed ? 'maxed' : ''}" data-shop-upgrade="${upgrade.id}" ${isMaxed || !affordable ? 'disabled' : ''}>${isMaxed ? 'MAXED' : `Buy · ${cost}`}</button>
       </article>`;
   }).join('');
+  requestAnimationFrame(() => resetMenuSelection('shop'));
 }
 export function setMuted(muted) { $('hud-muted').classList.toggle('hidden', !muted); }
 
