@@ -7,6 +7,8 @@ const STORAGE_KEYS = {
 const DEFAULTS = { sfx: 0.75, music: 0.45, muted: false };
 const OUTPUT_GAIN = { sfx: 2.475, music: 2.325 };
 const gates = new Map();
+const DEBUG_AUDIO = false;
+let currentMusicTrack = 'none';
 let audioContext = null;
 let masterGain = null;
 let sfxGain = null;
@@ -91,7 +93,7 @@ let gameplayMusicFadeGain = null;
 let gameplayDelay = null;
 let gameplayMusicDucked = false;
 
-const BOSS_BPM = 128;
+const BOSS_BPM = 138;
 const BOSS_BEAT = 60 / BOSS_BPM;
 const BOSS_STEP = BOSS_BEAT / 2;
 const BOSS_STEPS = 32;
@@ -105,8 +107,8 @@ const BOSS_MUSIC_LAYERS = {
   accents: true,
 };
 const BOSS_SEQUENCE = {
-  bass: [49, null, 49, 49, 55, null, 49, null, 43.65, null, 43.65, 49, 41.2, null, 43.65, null, 49, null, 49, 49, 55, null, 58.27, null, 65.41, null, 58.27, 55, 49, null, 43.65, null],
-  pulse: [98, null, null, 98, null, 110, null, null, 87.31, null, null, 98, null, 82.41, null, null, 98, null, null, 98, null, 110, null, 116.54, null, 130.81, null, 116.54, 98, null, 87.31, null],
+  bass: [49, 49, null, 49, 55, 49, 49, null, 43.65, 43.65, null, 49, 41.2, 43.65, 49, null, 49, 49, null, 49, 55, 49, 58.27, null, 65.41, 58.27, null, 55, 49, 49, 43.65, null],
+  pulse: [98, null, 98, 98, null, 110, null, null, 87.31, null, null, 98, null, 82.41, null, null, 98, null, null, 98, null, 110, null, 116.54, null, 130.81, null, 116.54, 98, null, 87.31, null],
   pad: [0, null, null, null, null, null, null, null, 1, null, null, null, null, null, null, null, 2, null, null, null, null, null, null, null, 3, null, null, null, null, null, null, null],
   accents: [null, null, null, null, 196, null, null, null, null, null, 174.61, null, null, null, null, 155.56, null, null, null, null, 196, null, 207.65, null, null, null, 233.08, null, null, 196, null, null],
 };
@@ -122,6 +124,20 @@ let bossMusicNextStep = 0;
 let bossMusicNextTime = 0;
 let bossMusicFadeGain = null;
 let bossMusicDucked = false;
+
+function debugAudio(...args) {
+  if (DEBUG_AUDIO) console.debug('[audio]', ...args);
+}
+
+function setCurrentMusicTrack(track) {
+  if (currentMusicTrack === track) return;
+  currentMusicTrack = track;
+  debugAudio('music track ->', track);
+}
+
+export function getCurrentMusicTrack() {
+  return currentMusicTrack;
+}
 
 function clamp01(value, fallback) {
   const number = Number(value);
@@ -510,7 +526,10 @@ function runMenuScheduler() {
 
 export function startMenuMusic() {
   const ctx = ensureContext();
-  if (!ctx || menuMusicPlaying) return;
+  if (!ctx) return;
+  stopGameplayMusic(0.25);
+  stopBossMusic(0.25);
+  if (menuMusicPlaying) { setCurrentMusicTrack('menu'); return; }
   menuMusicPlaying = true;
   menuMusicNextStep = 0;
   menuMusicNextTime = ctx.currentTime + 0.08;
@@ -521,11 +540,16 @@ export function startMenuMusic() {
   }
   runMenuScheduler();
   menuMusicTimer = setInterval(runMenuScheduler, 100);
+  setCurrentMusicTrack('menu');
 }
 
 export function stopMenuMusic(fadeSeconds = 0.45) {
   const ctx = ensureContext();
-  if (!ctx || !menuMusicPlaying) return;
+  if (!ctx) return;
+  if (!menuMusicPlaying) {
+    if (currentMusicTrack === 'menu') setCurrentMusicTrack('none');
+    return;
+  }
   menuMusicPlaying = false;
   if (menuMusicTimer) clearInterval(menuMusicTimer);
   menuMusicTimer = null;
@@ -551,7 +575,7 @@ function scheduleGameplayKick(time, strong = false) {
   osc.frequency.setValueAtTime(strong ? 82 : 74, time);
   osc.frequency.exponentialRampToValueAtTime(36, time + 0.2);
   amp.gain.setValueAtTime(0.0001, time);
-  amp.gain.exponentialRampToValueAtTime(strong ? 0.19 : 0.135, time + 0.016);
+  amp.gain.exponentialRampToValueAtTime(strong ? 0.23 : 0.155, time + 0.016);
   amp.gain.exponentialRampToValueAtTime(0.0001, time + 0.34);
   connectGameplayVoice(osc, amp);
   osc.start(time);
@@ -572,7 +596,7 @@ function scheduleGameplaySnare(time) {
   filter.type = 'bandpass';
   filter.frequency.value = 1180;
   filter.Q.value = 0.8;
-  amp.gain.setValueAtTime(0.075, time);
+  amp.gain.setValueAtTime(0.095, time);
   amp.gain.exponentialRampToValueAtTime(0.0001, time + duration);
   source.connect(filter);
   connectGameplayVoice(filter, amp);
@@ -593,7 +617,7 @@ function scheduleGameplayHat(time, accent = false) {
   source.buffer = buffer;
   filter.type = 'highpass';
   filter.frequency.value = accent ? 4300 : 5400;
-  amp.gain.setValueAtTime(accent ? 0.034 : 0.019, time);
+  amp.gain.setValueAtTime(accent ? 0.048 : 0.027, time);
   amp.gain.exponentialRampToValueAtTime(0.0001, time + duration);
   source.connect(filter);
   connectGameplayVoice(filter, amp);
@@ -616,7 +640,7 @@ function scheduleGameplayBass(time, freq, strong = false) {
   filter.frequency.setValueAtTime(strong ? 175 : 145, time);
   filter.Q.value = 1.6;
   amp.gain.setValueAtTime(0.0001, time);
-  amp.gain.exponentialRampToValueAtTime(strong ? 0.28 : 0.21, time + 0.035);
+  amp.gain.exponentialRampToValueAtTime(strong ? 0.34 : 0.245, time + 0.035);
   amp.gain.setTargetAtTime(0.0001, time + GAMEPLAY_STEP * 1.2, 0.18);
   osc.connect(filter);
   sub.connect(filter);
@@ -638,7 +662,7 @@ function scheduleGameplayPulse(time, freq) {
   filter.type = 'lowpass';
   filter.frequency.value = 115;
   amp.gain.setValueAtTime(0.0001, time);
-  amp.gain.linearRampToValueAtTime(0.055, time + 0.08);
+  amp.gain.linearRampToValueAtTime(0.085, time + 0.08);
   amp.gain.setTargetAtTime(0.0001, time + GAMEPLAY_BEAT * 1.6, 0.4);
   osc.connect(filter);
   connectGameplayVoice(filter, amp);
@@ -686,7 +710,7 @@ function scheduleGameplayPad(time, chordIndex) {
     filter.frequency.value = 240;
     filter.Q.value = 0.5;
     amp.gain.setValueAtTime(0.0001, time);
-    amp.gain.linearRampToValueAtTime(0.032, time + 0.75);
+    amp.gain.linearRampToValueAtTime(0.0452, time + 0.75);
     amp.gain.setTargetAtTime(0.0001, time + GAMEPLAY_BEAT * 3.4, 0.7);
     osc.connect(filter);
     connectGameplayVoice(filter, amp);
@@ -709,7 +733,7 @@ function scheduleGameplayPercussion(time) {
   filter.type = 'bandpass';
   filter.frequency.value = 1450;
   filter.Q.value = 1.1;
-  amp.gain.setValueAtTime(0.018, time);
+  amp.gain.setValueAtTime(0.032, time);
   amp.gain.exponentialRampToValueAtTime(0.0001, time + duration);
   source.connect(filter);
   connectGameplayVoice(filter, amp);
@@ -753,11 +777,11 @@ function scheduleGameplayLoopStep(step, time) {
     scheduleGameplayHat(time, index % 8 === 7);
   }
 
-  if (GAMEPLAY_MUSIC_LAYERS.gameplayPercussion && (index % 16 === 6 || index % 16 === 14)) scheduleGameplayPercussion(time);
+  if (GAMEPLAY_MUSIC_LAYERS.gameplayPercussion && (index % 8 === 2 || index % 16 === 6 || index % 16 === 14)) scheduleGameplayPercussion(time);
 
   // GAMEPLAY ADDED BASS/PULSE
   if (GAMEPLAY_MUSIC_LAYERS.bass) scheduleGameplayBass(time, GAMEPLAY_SEQUENCE.bass[index], index % 16 === 0);
-  if (GAMEPLAY_MUSIC_LAYERS.gameplayPulse && index % 8 === 4) {
+  if (GAMEPLAY_MUSIC_LAYERS.gameplayPulse && (index % 8 === 4 || index % 16 === 10)) {
     const root = GAMEPLAY_SEQUENCE.bass[Math.floor(index / 8) * 8] || MENU_SEQUENCE.bass[Math.floor(index / 8) * 8];
     scheduleGameplayPulse(time, root);
   }
@@ -779,11 +803,15 @@ function runGameplayScheduler() {
   }
 }
 
-export function startGameplayMusic() {
+export function startGameplayMusic({ force = false } = {}) {
   const ctx = ensureContext();
   if (!ctx) return;
+  if (!force && (bossMusicPlaying || currentMusicTrack === 'boss')) {
+    debugAudio('blocked gameplay start while boss music is active');
+    return;
+  }
   stopMenuMusic(0.35);
-  if (gameplayMusicPlaying) return;
+  if (gameplayMusicPlaying) { setCurrentMusicTrack('gameplay'); return; }
   gameplayMusicPlaying = true;
   gameplayMusicDucked = false;
   gameplayMusicNextStep = 0;
@@ -791,15 +819,20 @@ export function startGameplayMusic() {
   if (gameplayMusicFadeGain) {
     gameplayMusicFadeGain.gain.cancelScheduledValues(ctx.currentTime);
     gameplayMusicFadeGain.gain.setValueAtTime(gameplayMusicFadeGain.gain.value, ctx.currentTime);
-    gameplayMusicFadeGain.gain.linearRampToValueAtTime(1, ctx.currentTime + 0.55);
+    gameplayMusicFadeGain.gain.linearRampToValueAtTime(1, ctx.currentTime + 0.45);
   }
   runGameplayScheduler();
   gameplayMusicTimer = setInterval(runGameplayScheduler, 100);
+  setCurrentMusicTrack('gameplay');
 }
 
 export function stopGameplayMusic(fadeSeconds = 0.35) {
   const ctx = ensureContext();
-  if (!ctx || !gameplayMusicPlaying) return;
+  if (!ctx) return;
+  if (!gameplayMusicPlaying) {
+    if (currentMusicTrack === 'gameplay') setCurrentMusicTrack('none');
+    return;
+  }
   gameplayMusicPlaying = false;
   if (gameplayMusicTimer) clearInterval(gameplayMusicTimer);
   gameplayMusicTimer = null;
@@ -835,7 +868,7 @@ function scheduleBossKick(time, strong = false) {
   osc.frequency.setValueAtTime(strong ? 96 : 82, time);
   osc.frequency.exponentialRampToValueAtTime(34, time + 0.18);
   amp.gain.setValueAtTime(0.0001, time);
-  amp.gain.exponentialRampToValueAtTime(strong ? 0.24 : 0.18, time + 0.012);
+  amp.gain.exponentialRampToValueAtTime(strong ? 0.34 : 0.245, time + 0.012);
   amp.gain.exponentialRampToValueAtTime(0.0001, time + 0.28);
   connectBossVoice(osc, amp);
   osc.start(time); osc.stop(time + 0.3);
@@ -853,7 +886,7 @@ function scheduleBossSnare(time, accent = false) {
   const filter = ctx.createBiquadFilter();
   source.buffer = buffer;
   filter.type = 'bandpass'; filter.frequency.value = accent ? 1380 : 1080; filter.Q.value = 0.9;
-  amp.gain.setValueAtTime(accent ? 0.12 : 0.095, time);
+  amp.gain.setValueAtTime(accent ? 0.17 : 0.125, time);
   amp.gain.exponentialRampToValueAtTime(0.0001, time + duration);
   source.connect(filter); connectBossVoice(filter, amp);
   source.start(time); source.stop(time + duration + 0.01);
@@ -871,7 +904,7 @@ function scheduleBossHat(time, accent = false) {
   const filter = ctx.createBiquadFilter();
   source.buffer = buffer;
   filter.type = 'highpass'; filter.frequency.value = accent ? 4700 : 6200;
-  amp.gain.setValueAtTime(accent ? 0.036 : 0.022, time);
+  amp.gain.setValueAtTime(accent ? 0.058 : 0.034, time);
   amp.gain.exponentialRampToValueAtTime(0.0001, time + duration);
   source.connect(filter); connectBossVoice(filter, amp);
   source.start(time); source.stop(time + duration + 0.01);
@@ -888,7 +921,7 @@ function scheduleBossBass(time, freq, strong = false) {
   osc.frequency.setValueAtTime(freq, time); sub.frequency.setValueAtTime(freq / 2, time);
   filter.type = 'lowpass'; filter.frequency.setValueAtTime(strong ? 190 : 150, time); filter.Q.value = 2.2;
   amp.gain.setValueAtTime(0.0001, time);
-  amp.gain.exponentialRampToValueAtTime(strong ? 0.24 : 0.19, time + 0.025);
+  amp.gain.exponentialRampToValueAtTime(strong ? 0.34 : 0.255, time + 0.025);
   amp.gain.setTargetAtTime(0.0001, time + BOSS_STEP * 0.82, 0.09);
   osc.connect(filter); sub.connect(filter); connectBossVoice(filter, amp);
   osc.start(time); sub.start(time); osc.stop(time + BOSS_STEP * 1.2); sub.stop(time + BOSS_STEP * 1.2);
@@ -902,7 +935,7 @@ function scheduleBossPulse(time, freq) {
   const filter = ctx.createBiquadFilter();
   osc.type = 'square'; osc.frequency.setValueAtTime(freq, time);
   filter.type = 'lowpass'; filter.frequency.setValueAtTime(320, time); filter.frequency.exponentialRampToValueAtTime(180, time + BOSS_STEP * 0.85); filter.Q.value = 1.4;
-  amp.gain.setValueAtTime(0.0001, time); amp.gain.linearRampToValueAtTime(0.05, time + 0.018); amp.gain.setTargetAtTime(0.0001, time + BOSS_STEP * 0.65, 0.08);
+  amp.gain.setValueAtTime(0.0001, time); amp.gain.linearRampToValueAtTime(0.085, time + 0.018); amp.gain.setTargetAtTime(0.0001, time + BOSS_STEP * 0.65, 0.08);
   osc.connect(filter); connectBossVoice(filter, amp);
   osc.start(time); osc.stop(time + BOSS_STEP);
 }
@@ -917,7 +950,7 @@ function scheduleBossPad(time, chordIndex) {
     const filter = ctx.createBiquadFilter();
     osc.type = index === 1 ? 'triangle' : 'sine'; osc.frequency.setValueAtTime(freq, time); osc.detune.value = (index - 1) * 6;
     filter.type = 'lowpass'; filter.frequency.value = 210; filter.Q.value = 0.65;
-    amp.gain.setValueAtTime(0.0001, time); amp.gain.linearRampToValueAtTime(0.026, time + 0.5); amp.gain.setTargetAtTime(0.0001, time + BOSS_BEAT * 3.1, 0.58);
+    amp.gain.setValueAtTime(0.0001, time); amp.gain.linearRampToValueAtTime(0.04, time + 0.5); amp.gain.setTargetAtTime(0.0001, time + BOSS_BEAT * 3.1, 0.58);
     osc.connect(filter); connectBossVoice(filter, amp); osc.start(time); osc.stop(time + BOSS_BEAT * 3.8);
   });
 }
@@ -930,7 +963,7 @@ function scheduleBossAccent(time, freq) {
   const filter = ctx.createBiquadFilter();
   osc.type = 'triangle'; osc.frequency.setValueAtTime(freq, time); osc.detune.value = -7;
   filter.type = 'bandpass'; filter.frequency.value = 820; filter.Q.value = 1.8;
-  amp.gain.setValueAtTime(0.0001, time); amp.gain.linearRampToValueAtTime(0.03, time + 0.035); amp.gain.exponentialRampToValueAtTime(0.0001, time + 0.26);
+  amp.gain.setValueAtTime(0.0001, time); amp.gain.linearRampToValueAtTime(0.045, time + 0.035); amp.gain.exponentialRampToValueAtTime(0.0001, time + 0.26);
   osc.connect(filter); connectBossVoice(filter, amp); osc.start(time); osc.stop(time + 0.3);
 }
 
@@ -971,8 +1004,8 @@ export function startBossMusic() {
   const ctx = ensureContext();
   if (!ctx) return;
   stopMenuMusic(0.25);
-  stopGameplayMusic(0.45);
-  if (bossMusicPlaying) return;
+  stopGameplayMusic(0.18);
+  if (bossMusicPlaying) { setCurrentMusicTrack('boss'); return; }
   bossMusicPlaying = true;
   bossMusicDucked = false;
   bossMusicNextStep = 0;
@@ -980,15 +1013,20 @@ export function startBossMusic() {
   if (bossMusicFadeGain) {
     bossMusicFadeGain.gain.cancelScheduledValues(ctx.currentTime);
     bossMusicFadeGain.gain.setValueAtTime(bossMusicFadeGain.gain.value, ctx.currentTime);
-    bossMusicFadeGain.gain.linearRampToValueAtTime(1, ctx.currentTime + 0.45);
+    bossMusicFadeGain.gain.linearRampToValueAtTime(1.12, ctx.currentTime + 0.28);
   }
   runBossScheduler();
   bossMusicTimer = setInterval(runBossScheduler, 100);
+  setCurrentMusicTrack('boss');
 }
 
 export function stopBossMusic(fadeSeconds = 0.35) {
   const ctx = ensureContext();
-  if (!ctx || !bossMusicPlaying) return;
+  if (!ctx) return;
+  if (!bossMusicPlaying) {
+    if (currentMusicTrack === 'boss') setCurrentMusicTrack('none');
+    return;
+  }
   bossMusicPlaying = false;
   if (bossMusicTimer) clearInterval(bossMusicTimer);
   bossMusicTimer = null;
@@ -998,15 +1036,20 @@ export function stopBossMusic(fadeSeconds = 0.35) {
     bossMusicFadeGain.gain.setValueAtTime(bossMusicFadeGain.gain.value, ctx.currentTime);
     bossMusicFadeGain.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + fadeSeconds);
   }
+  if (currentMusicTrack === 'boss') setCurrentMusicTrack('none');
 }
 
 export function switchToBossMusic() {
   startBossMusic();
 }
 
-export function switchToGameplayMusic() {
+export function switchToGameplayMusic({ bossActive = false } = {}) {
+  if (bossActive) {
+    debugAudio('blocked gameplay switch while a boss is active');
+    return;
+  }
   stopBossMusic(0.35);
-  startGameplayMusic();
+  startGameplayMusic({ force: true });
 }
 
 export function setBossMusicDucked(ducked) {
@@ -1016,6 +1059,53 @@ export function setBossMusicDucked(ducked) {
   bossMusicFadeGain.gain.cancelScheduledValues(ctx.currentTime);
   bossMusicFadeGain.gain.setValueAtTime(bossMusicFadeGain.gain.value, ctx.currentTime);
   bossMusicFadeGain.gain.linearRampToValueAtTime(bossMusicDucked ? 0.25 : 1, ctx.currentTime + 0.28);
+}
+
+
+function playBossSpawnSting() {
+  const ctx = ensureContext();
+  if (!ctx || settings.muted || settings.sfx <= 0) return;
+  const start = ctx.currentTime;
+  const out = sfxGain;
+  const scheduleTone = (offset, freq, endFreq, duration, gain, type = 'sawtooth') => {
+    const osc = ctx.createOscillator();
+    const amp = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+    const t = start + offset;
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), t + duration);
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1800, t);
+    filter.frequency.exponentialRampToValueAtTime(520, t + duration);
+    amp.gain.setValueAtTime(0.0001, t);
+    amp.gain.exponentialRampToValueAtTime(gain, t + 0.018);
+    amp.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+    osc.connect(filter).connect(amp).connect(out);
+    osc.start(t);
+    osc.stop(t + duration + 0.04);
+  };
+  scheduleTone(0, 185, 740, 0.34, 0.18, 'square');
+  scheduleTone(0.18, 247, 988, 0.38, 0.16, 'sawtooth');
+  scheduleTone(0.5, 82, 37, 0.58, 0.26, 'sawtooth');
+  scheduleTone(0.58, 123.47, 61.74, 0.42, 0.14, 'triangle');
+  const duration = 0.42;
+  const buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * duration), ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+  const source = ctx.createBufferSource();
+  const amp = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+  const t = start + 0.5;
+  source.buffer = buffer;
+  filter.type = 'bandpass';
+  filter.frequency.value = 620;
+  filter.Q.value = 0.8;
+  amp.gain.setValueAtTime(0.18, t);
+  amp.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+  source.connect(filter).connect(amp).connect(out);
+  source.start(t);
+  source.stop(t + duration + 0.02);
 }
 
 const sounds = {
@@ -1028,7 +1118,8 @@ const sounds = {
   medkitPickup: () => { tone({ freq: 520, endFreq: 780, duration: .11, gain: .07, type: 'triangle' }); setTimeout(() => tone({ freq: 700, endFreq: 980, duration: .1, gain: .055, type: 'triangle' }), 55); },
   scrapRushPickup: () => { tone({ freq: 320, endFreq: 860, duration: .22, gain: .09, type: 'sawtooth' }); noise({ duration: .14, gain: .045, filter: 2200 }); },
   levelUp: () => [0, 80, 165].forEach((ms, i) => setTimeout(() => tone({ freq: [520, 780, 1040][i], endFreq: [700, 980, 1380][i], duration: .16, gain: .075, type: 'triangle' }), ms)),
-  bossWarning: () => { tone({ freq: 95, endFreq: 62, duration: .5, gain: .13, type: 'sawtooth' }); setTimeout(() => tone({ freq: 155, endFreq: 95, duration: .28, gain: .1, type: 'square' }), 140); },
+  bossWarning: () => { if (gate('bossWarning', 1.2)) playBossSpawnSting(); },
+  bossSpawnSting: () => { if (gate('bossSpawnSting', 1.2)) playBossSpawnSting(); },
   bossSlam: () => { if (gate('bossSlam', .5)) { tone({ freq: 90, endFreq: 38, duration: .34, gain: .16, type: 'sine' }); noise({ duration: .18, gain: .08, filter: 220, type: 'lowpass' }); } },
   spitterShot: () => { if (gate('spitterShot', .18)) { tone({ freq: 430, endFreq: 260, duration: .11, gain: .055, type: 'sawtooth' }); noise({ duration: .06, gain: .035, filter: 1500 }); } },
   slimeSplat: () => { if (gate('slimeSplat', .12)) noise({ duration: .08, gain: .055, filter: 740, type: 'lowpass' }); },
