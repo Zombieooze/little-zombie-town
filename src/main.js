@@ -30,6 +30,7 @@ let healFloaters = [];
 let attackVisualTimer = 0;
 let cameraShake = 0;
 let pendingChoices = [];
+let pendingLevelUps = 0;
 let controllerNavCooldown = 0;
 const cameraControls = {
   yaw: Math.atan2(CONFIG.camera.offset.x, CONFIG.camera.offset.z),
@@ -62,7 +63,7 @@ const cameraLimits = {
 const state = {
   elapsed: 0, health: 100, maxHealth: 100, level: 1, xp: 0, nextXp: CONFIG.level.baseXp,
   coins: 0, kills: 0, pulseCooldown: CONFIG.pulse.cooldown, pulseRange: CONFIG.pulse.range,
-  pulseDamage: CONFIG.pulse.damage, damageMultiplier: 1, speedMultiplier: 1, pickupMagnetMultiplier: 1, coinMultiplier: 1, xpMultiplier: 1, healthRegen: 0, maxStamina: 0, stamina: 0, bossSpawnCount: 0, bossEventsTriggered: [], batKnockback: 0, cooldownMultiplier: 1, damageReduction: 0, critChance: 0, sprintSpeedMultiplier: 1, staminaRegenMultiplier: 1, passiveUpgradeCounts: {},
+  pulseDamage: CONFIG.pulse.damage, damageMultiplier: 1, speedMultiplier: 1, pickupMagnetMultiplier: 1, coinMultiplier: 1, xpMultiplier: 1, healthRegen: 0, maxStamina: 0, stamina: 0, bossSpawnCount: 0, bossEventsTriggered: [], batKnockback: 0, cooldownMultiplier: 1, damageReduction: 0, critChance: CONFIG.player.critChance, sprintSpeedMultiplier: 1, staminaRegenMultiplier: 1, passiveUpgradeCounts: {},
 };
 
 setControllerStatusCallback(showControllerMessage);
@@ -78,9 +79,9 @@ function resetState() {
   Object.assign(state, { elapsed: 0, health: permanentStats.maxHealth, maxHealth: permanentStats.maxHealth, level: 1, xp: 0,
     nextXp: CONFIG.level.baseXp, coins: 0, kills: 0, pulseCooldown: permanentStats.pulseCooldown, pulseRange: CONFIG.pulse.range,
     pulseDamage: CONFIG.pulse.damage, damageMultiplier: permanentStats.damageMultiplier, speedMultiplier: permanentStats.speedMultiplier, pickupMagnetMultiplier: permanentStats.pickupMagnetMultiplier,
-    coinMultiplier: permanentStats.coinMultiplier, xpMultiplier: permanentStats.xpMultiplier, healthRegen: permanentStats.healthRegen, maxStamina: permanentStats.maxStamina, stamina: permanentStats.stamina, bossSpawnCount: 0, bossEventsTriggered: [], batKnockback: 0, cooldownMultiplier: 1, damageReduction: 0, critChance: 0, sprintSpeedMultiplier: 1, staminaRegenMultiplier: 1, passiveUpgradeCounts: {} });
+    coinMultiplier: permanentStats.coinMultiplier, xpMultiplier: permanentStats.xpMultiplier, healthRegen: permanentStats.healthRegen, maxStamina: permanentStats.maxStamina, stamina: permanentStats.stamina, bossSpawnCount: 0, bossEventsTriggered: [], batKnockback: 0, cooldownMultiplier: 1, damageReduction: 0, critChance: CONFIG.player.critChance, sprintSpeedMultiplier: 1, staminaRegenMultiplier: 1, passiveUpgradeCounts: {} });
   resetAbilities(scene, state);
-  spawnTimer = 0; worldMedkitTimer = CONFIG.medkit.worldFirstSpawn; pulseTimer = 0; pendingChoices = [];
+  spawnTimer = 0; worldMedkitTimer = CONFIG.medkit.worldFirstSpawn; pulseTimer = 0; pendingChoices = []; pendingLevelUps = 0;
 }
 
 function startGame() {
@@ -146,32 +147,42 @@ function chooseUpgrade(id) {
   if (id.startsWith('unlock_')) unlockAbility(scene, state, id.replace('unlock_', ''), player);
   else if (isAbilityCard(id)) applyAbilityUpgrade(scene, state, id, player);
   else applyUpgrade(state, id);
+  pendingLevelUps = Math.max(0, pendingLevelUps - 1);
+  if (pendingLevelUps > 0) {
+    showNextLevelUp();
+    return;
+  }
   hideOverlays(); document.getElementById('hud').classList.remove('hidden');
   setPauseButtonVisible(true);
   mode = 'playing';
 }
 
 function getXpReward(baseAmount) {
-  const elapsedAfterMultiplier = Math.max(0, state.elapsed - CONFIG.rewards.xpMultiplierStartTime);
-  const elapsedMinutes = elapsedAfterMultiplier / 60;
-  const multiplier = Math.min(
-    CONFIG.rewards.maxXpMultiplier,
-    1 + elapsedMinutes * CONFIG.rewards.xpMultiplierPerMinute,
-  );
-  return Math.ceil(baseAmount * multiplier * Math.max(0, state.xpMultiplier || 1));
+  return Math.ceil(baseAmount * Math.max(0, state.xpMultiplier || 1));
 }
 
 function getNextLevelXp() {
-  const growth = state.level >= CONFIG.level.lateGrowthStartLevel ? CONFIG.level.lateGrowth : CONFIG.level.growth;
-  return Math.floor(state.nextXp * growth);
+  return Math.floor(8 + state.level * 5 + state.level * state.level * 0.4);
+}
+
+function showNextLevelUp() {
+  pendingChoices = getUpgradeChoices(state);
+  mode = 'upgrade';
+  setPauseButtonVisible(false);
+  stopCameraTouchControls();
+  resetTouchMovement();
+  showUpgrades(pendingChoices);
 }
 
 function gainXp(amount) {
   state.xp += amount;
   while (state.xp >= state.nextXp) {
-    state.xp -= state.nextXp; state.level += 1; state.nextXp = getNextLevelXp();
-    pendingChoices = getUpgradeChoices(state); mode = 'upgrade'; setPauseButtonVisible(false); stopCameraTouchControls(); resetTouchMovement(); showUpgrades(pendingChoices); break;
+    state.xp -= state.nextXp;
+    state.level += 1;
+    state.nextXp = getNextLevelXp();
+    pendingLevelUps += 1;
   }
+  if (pendingLevelUps > 0 && mode === 'playing') showNextLevelUp();
 }
 
 function damagePlayer(damage) {
