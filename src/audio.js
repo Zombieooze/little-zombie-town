@@ -14,6 +14,7 @@ let musicGain = null;
 let controlsReady = false;
 let settings = loadSettings();
 
+// MENU MUSIC BASE
 const MENU_BPM = 82;
 const MENU_BEAT = 60 / MENU_BPM;
 const MENU_STEPS = 32;
@@ -58,27 +59,30 @@ let menuMusicNextTime = 0;
 let menuMusicFadeGain = null;
 let menuDelay = null;
 
-const GAMEPLAY_BPM = 128;
+const GAMEPLAY_BPM = MENU_BPM;
 const GAMEPLAY_BEAT = 60 / GAMEPLAY_BPM;
-const GAMEPLAY_STEP = GAMEPLAY_BEAT / 4;
-const GAMEPLAY_STEPS = 32;
+const GAMEPLAY_STEP = MENU_STEP;
+const GAMEPLAY_STEPS = MENU_STEPS;
 const GAMEPLAY_LOOKAHEAD = 0.75;
-const GAMEPLAY_INTRO_STEPS = 32;
-// Gameplay music layer switches for debugging/tuning the existing procedural track.
-// Keep these enabled by default so gameplay music sounds the same unless a layer is isolated.
+// Gameplay music layer switches for the fuller run version of the menu music.
 const GAMEPLAY_MUSIC_LAYERS = {
-  intro: true,
   drums: true,
   bass: true,
   hats: true,
-  chords: true,
-  arp: true,
-  lead: true,
+  keys: true,
+  pad: true,
+  gameplayPulse: true,
+  gameplayPercussion: true,
+  accent: true,
   extraFx: false,
 };
-const GAMEPLAY_BASS = [65.41, null, 65.41, 73.42, 65.41, null, 98, null, 58.27, null, 58.27, 65.41, 58.27, null, 87.31, null, 51.91, null, 51.91, 65.41, 51.91, null, 77.78, null, 58.27, null, 58.27, 73.42, 58.27, 65.41, 58.27, null];
-const GAMEPLAY_ARP = [null, 261.63, null, 311.13, null, 392, 349.23, null, null, 233.08, null, 293.66, null, 369.99, 311.13, null, null, 207.65, null, 261.63, null, 311.13, 293.66, null, null, 233.08, null, 349.23, 311.13, null, 293.66, null];
-const GAMEPLAY_LEAD = [null, null, null, null, 523.25, null, null, 466.16, null, null, null, null, 587.33, null, 523.25, null, null, null, null, null, 466.16, null, null, 392, null, null, 523.25, null, 466.16, null, null, null];
+const GAMEPLAY_SEQUENCE = {
+  // Same haunted-town roots as the menu, with a few extra passing tones for run momentum.
+  bass: [65.41, null, 65.41, null, 65.41, null, 98, null, 58.27, null, 58.27, null, 58.27, null, 87.31, null, 51.91, null, 51.91, null, 51.91, null, 77.78, null, 58.27, null, 58.27, null, 58.27, 65.41, 58.27, null],
+  keys: MENU_SEQUENCE.keys,
+  pad: MENU_SEQUENCE.pad,
+  accent: MENU_SEQUENCE.accent,
+};
 let gameplayMusicTimer = null;
 let gameplayMusicPlaying = false;
 let gameplayMusicNextStep = 0;
@@ -503,26 +507,26 @@ function connectGameplayVoice(source, amp, useDelay = false) {
   if (useDelay && gameplayDelay) amp.connect(gameplayDelay);
 }
 
-function scheduleGameplayKick(time, gain = 0.26) {
+function scheduleGameplayKick(time, strong = false) {
   const ctx = ensureContext();
   if (!ctx) return;
   const osc = ctx.createOscillator();
   const amp = ctx.createGain();
   osc.type = 'sine';
-  osc.frequency.setValueAtTime(118, time);
-  osc.frequency.exponentialRampToValueAtTime(45, time + 0.12);
+  osc.frequency.setValueAtTime(strong ? 82 : 74, time);
+  osc.frequency.exponentialRampToValueAtTime(36, time + 0.2);
   amp.gain.setValueAtTime(0.0001, time);
-  amp.gain.exponentialRampToValueAtTime(gain, time + 0.008);
-  amp.gain.exponentialRampToValueAtTime(0.0001, time + 0.19);
+  amp.gain.exponentialRampToValueAtTime(strong ? 0.19 : 0.135, time + 0.016);
+  amp.gain.exponentialRampToValueAtTime(0.0001, time + 0.34);
   connectGameplayVoice(osc, amp);
   osc.start(time);
-  osc.stop(time + 0.21);
+  osc.stop(time + 0.36);
 }
 
 function scheduleGameplaySnare(time) {
   const ctx = ensureContext();
   if (!ctx) return;
-  const duration = 0.105;
+  const duration = 0.12;
   const buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * duration), ctx.sampleRate);
   const data = buffer.getChannelData(0);
   for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
@@ -531,9 +535,9 @@ function scheduleGameplaySnare(time) {
   const filter = ctx.createBiquadFilter();
   source.buffer = buffer;
   filter.type = 'bandpass';
-  filter.frequency.value = 1700;
-  filter.Q.value = 0.9;
-  amp.gain.setValueAtTime(0.11, time);
+  filter.frequency.value = 1180;
+  filter.Q.value = 0.8;
+  amp.gain.setValueAtTime(0.075, time);
   amp.gain.exponentialRampToValueAtTime(0.0001, time + duration);
   source.connect(filter);
   connectGameplayVoice(filter, amp);
@@ -544,7 +548,7 @@ function scheduleGameplaySnare(time) {
 function scheduleGameplayHat(time, accent = false) {
   const ctx = ensureContext();
   if (!ctx) return;
-  const duration = accent ? 0.055 : 0.028;
+  const duration = accent ? 0.055 : 0.03;
   const buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * duration), ctx.sampleRate);
   const data = buffer.getChannelData(0);
   for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
@@ -553,119 +557,188 @@ function scheduleGameplayHat(time, accent = false) {
   const filter = ctx.createBiquadFilter();
   source.buffer = buffer;
   filter.type = 'highpass';
-  filter.frequency.value = accent ? 5200 : 6500;
-  amp.gain.setValueAtTime(accent ? 0.05 : 0.028, time);
+  filter.frequency.value = accent ? 4300 : 5400;
+  amp.gain.setValueAtTime(accent ? 0.034 : 0.019, time);
   amp.gain.exponentialRampToValueAtTime(0.0001, time + duration);
   source.connect(filter);
-  connectGameplayVoice(filter, amp, accent);
+  connectGameplayVoice(filter, amp);
   source.start(time);
+  source.stop(time + duration + 0.01);
 }
 
-function scheduleGameplayBass(time, freq) {
+function scheduleGameplayBass(time, freq, strong = false) {
+  const ctx = ensureContext();
+  if (!ctx || !freq) return;
+  const osc = ctx.createOscillator();
+  const sub = ctx.createOscillator();
+  const amp = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+  osc.type = 'triangle';
+  sub.type = 'sine';
+  osc.frequency.setValueAtTime(freq, time);
+  sub.frequency.setValueAtTime(freq / 2, time);
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(strong ? 175 : 145, time);
+  filter.Q.value = 1.6;
+  amp.gain.setValueAtTime(0.0001, time);
+  amp.gain.exponentialRampToValueAtTime(strong ? 0.28 : 0.21, time + 0.035);
+  amp.gain.setTargetAtTime(0.0001, time + GAMEPLAY_STEP * 1.2, 0.18);
+  osc.connect(filter);
+  sub.connect(filter);
+  connectGameplayVoice(filter, amp);
+  osc.start(time);
+  sub.start(time);
+  osc.stop(time + GAMEPLAY_STEP * 1.75);
+  sub.stop(time + GAMEPLAY_STEP * 1.75);
+}
+
+function scheduleGameplayPulse(time, freq) {
   const ctx = ensureContext();
   if (!ctx || !freq) return;
   const osc = ctx.createOscillator();
   const amp = ctx.createGain();
   const filter = ctx.createBiquadFilter();
-  osc.type = 'sawtooth';
-  osc.frequency.setValueAtTime(freq, time);
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(freq / 2, time);
   filter.type = 'lowpass';
-  filter.frequency.setValueAtTime(260, time);
-  filter.frequency.exponentialRampToValueAtTime(130, time + GAMEPLAY_STEP * 1.35);
-  filter.Q.value = 4.5;
+  filter.frequency.value = 115;
   amp.gain.setValueAtTime(0.0001, time);
-  amp.gain.exponentialRampToValueAtTime(0.145, time + 0.012);
-  amp.gain.exponentialRampToValueAtTime(0.0001, time + GAMEPLAY_STEP * 1.65);
+  amp.gain.linearRampToValueAtTime(0.055, time + 0.08);
+  amp.gain.setTargetAtTime(0.0001, time + GAMEPLAY_BEAT * 1.6, 0.4);
   osc.connect(filter);
   connectGameplayVoice(filter, amp);
   osc.start(time);
-  osc.stop(time + GAMEPLAY_STEP * 1.8);
+  osc.stop(time + GAMEPLAY_BEAT * 2.4);
 }
 
-function scheduleGameplaySynthLine(time, freq, gain = 0.055) {
+function scheduleGameplayKeys(time, chordIndex) {
+  const ctx = ensureContext();
+  const chord = MENU_KEY_CHORDS[chordIndex];
+  if (!ctx || !chord) return;
+  chord.forEach((freq, index) => {
+    const osc = ctx.createOscillator();
+    const amp = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+    osc.type = index === 1 ? 'triangle' : 'sine';
+    osc.frequency.setValueAtTime(freq, time);
+    osc.detune.value = (index - 1) * 5;
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(760, time);
+    filter.frequency.linearRampToValueAtTime(430, time + GAMEPLAY_BEAT * 1.8);
+    filter.Q.value = 0.75;
+    amp.gain.setValueAtTime(0.0001, time);
+    amp.gain.linearRampToValueAtTime(0.045, time + 0.22);
+    amp.gain.setTargetAtTime(0.0001, time + GAMEPLAY_BEAT * 2.7, 0.45);
+    osc.connect(filter);
+    connectGameplayVoice(filter, amp);
+    osc.start(time);
+    osc.stop(time + GAMEPLAY_BEAT * 3.4);
+  });
+}
+
+function scheduleGameplayPad(time, chordIndex) {
+  const ctx = ensureContext();
+  const chord = MENU_PAD_CHORDS[chordIndex];
+  if (!ctx || !chord) return;
+  chord.forEach((freq, index) => {
+    const osc = ctx.createOscillator();
+    const amp = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, time);
+    osc.detune.value = index === 0 ? -7 : 7;
+    filter.type = 'lowpass';
+    filter.frequency.value = 240;
+    filter.Q.value = 0.5;
+    amp.gain.setValueAtTime(0.0001, time);
+    amp.gain.linearRampToValueAtTime(0.032, time + 0.75);
+    amp.gain.setTargetAtTime(0.0001, time + GAMEPLAY_BEAT * 3.4, 0.7);
+    osc.connect(filter);
+    connectGameplayVoice(filter, amp);
+    osc.start(time);
+    osc.stop(time + GAMEPLAY_BEAT * 4.2);
+  });
+}
+
+function scheduleGameplayPercussion(time) {
+  const ctx = ensureContext();
+  if (!ctx) return;
+  const duration = 0.035;
+  const buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * duration), ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+  const source = ctx.createBufferSource();
+  const amp = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+  source.buffer = buffer;
+  filter.type = 'bandpass';
+  filter.frequency.value = 1450;
+  filter.Q.value = 1.1;
+  amp.gain.setValueAtTime(0.018, time);
+  amp.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+  source.connect(filter);
+  connectGameplayVoice(filter, amp);
+  source.start(time);
+  source.stop(time + duration + 0.01);
+}
+
+function scheduleGameplayAccent(time, freq) {
   const ctx = ensureContext();
   if (!ctx || !freq) return;
   const osc = ctx.createOscillator();
   const amp = ctx.createGain();
   const filter = ctx.createBiquadFilter();
-  osc.type = 'square';
+  osc.type = 'sine';
   osc.frequency.setValueAtTime(freq, time);
-  osc.detune.value = (Math.random() - 0.5) * 5;
   filter.type = 'lowpass';
-  filter.frequency.setValueAtTime(1800, time);
-  filter.frequency.exponentialRampToValueAtTime(420, time + 0.16);
-  filter.Q.value = 6;
+  filter.frequency.setValueAtTime(1050, time);
+  filter.frequency.exponentialRampToValueAtTime(620, time + 0.6);
   amp.gain.setValueAtTime(0.0001, time);
-  amp.gain.exponentialRampToValueAtTime(gain, time + 0.006);
-  amp.gain.exponentialRampToValueAtTime(0.0001, time + 0.2);
+  amp.gain.linearRampToValueAtTime(0.019, time + 0.12);
+  amp.gain.setTargetAtTime(0.0001, time + 0.72, 0.24);
   osc.connect(filter);
-  connectGameplayVoice(filter, amp, true);
+  connectGameplayVoice(filter, amp);
   osc.start(time);
-  osc.stop(time + 0.24);
-}
-
-function scheduleGameplayIntroStep(step, time) {
-  const progress = step / GAMEPLAY_INTRO_STEPS;
-
-  // GAMEPLAY INTRO
-  // Existing ramp-in section. Disable `intro` to skip directly to the loop when a run starts.
-  if (!GAMEPLAY_MUSIC_LAYERS.intro) return;
-
-  // GAMEPLAY DRUMS
-  if (GAMEPLAY_MUSIC_LAYERS.drums && step % 4 === 0) scheduleGameplayKick(time, 0.12 + progress * 0.13);
-  if (GAMEPLAY_MUSIC_LAYERS.drums && step >= 16 && step % 8 === 4) scheduleGameplaySnare(time);
-
-  // GAMEPLAY HATS
-  if (GAMEPLAY_MUSIC_LAYERS.hats && step >= 8 && step % 2 === 1) scheduleGameplayHat(time, step >= 24);
-
-  // GAMEPLAY ARP
-  if (GAMEPLAY_MUSIC_LAYERS.arp && step % 2 === 0) scheduleGameplaySynthLine(time, 220 * (1 + progress * 1.9), 0.035 + progress * 0.035);
-
-  // GAMEPLAY BASS
-  if (GAMEPLAY_MUSIC_LAYERS.bass && step >= 24) scheduleGameplayBass(time, GAMEPLAY_BASS[step % GAMEPLAY_STEPS]);
+  osc.stop(time + 1.25);
 }
 
 function scheduleGameplayLoopStep(step, time) {
   const index = step % GAMEPLAY_STEPS;
 
-  // GAMEPLAY DRUMS
-  if (GAMEPLAY_MUSIC_LAYERS.drums && index % 4 === 0) scheduleGameplayKick(time);
-  if (GAMEPLAY_MUSIC_LAYERS.drums && (index % 16 === 4 || index % 16 === 12)) scheduleGameplaySnare(time);
+  // GAMEPLAY MUSIC FULLER VERSION
+  // This loop keeps the menu harmony and tempo, then adds restrained run-only motion.
 
-  // GAMEPLAY HATS
-  if (GAMEPLAY_MUSIC_LAYERS.hats && (index % 2 === 1 || index % 8 === 6)) scheduleGameplayHat(time, index % 8 === 6);
-
-  // GAMEPLAY BASS
-  if (GAMEPLAY_MUSIC_LAYERS.bass) scheduleGameplayBass(time, GAMEPLAY_BASS[index]);
-
-  // GAMEPLAY CHORDS / PAD
-  // No separate gameplay chord/pad voice exists yet; this switch is reserved for isolating it later.
-  if (GAMEPLAY_MUSIC_LAYERS.chords) {
-    // Intentionally empty until the existing track gains a chord/pad call.
+  // GAMEPLAY ADDED DRUMS
+  if (GAMEPLAY_MUSIC_LAYERS.drums) {
+    if (index % 8 === 0) scheduleGameplayKick(time, index % 16 === 0);
+    if (index % 16 === 8 || index % 32 === 24) scheduleGameplaySnare(time);
   }
 
-  // GAMEPLAY ARP
-  if (GAMEPLAY_MUSIC_LAYERS.arp) scheduleGameplaySynthLine(time, GAMEPLAY_ARP[index]);
-
-  // GAMEPLAY LEAD
-  if (GAMEPLAY_MUSIC_LAYERS.lead && index % 16 >= 8) scheduleGameplaySynthLine(time, GAMEPLAY_LEAD[index], 0.035);
-
-  // GAMEPLAY EXTRA FX
-  // Decorative gameplay sweeps/one-shots should be added here and default off while tuning.
-  if (GAMEPLAY_MUSIC_LAYERS.extraFx) {
-    // Intentionally empty until gameplay-only decorative FX are present.
+  if (GAMEPLAY_MUSIC_LAYERS.hats && (index % 4 === 2 || index % 8 === 7 || index % 16 === 13)) {
+    scheduleGameplayHat(time, index % 8 === 7);
   }
+
+  if (GAMEPLAY_MUSIC_LAYERS.gameplayPercussion && (index % 16 === 6 || index % 16 === 14)) scheduleGameplayPercussion(time);
+
+  // GAMEPLAY ADDED BASS/PULSE
+  if (GAMEPLAY_MUSIC_LAYERS.bass) scheduleGameplayBass(time, GAMEPLAY_SEQUENCE.bass[index], index % 16 === 0);
+  if (GAMEPLAY_MUSIC_LAYERS.gameplayPulse && index % 8 === 4) {
+    const root = GAMEPLAY_SEQUENCE.bass[Math.floor(index / 8) * 8] || MENU_SEQUENCE.bass[Math.floor(index / 8) * 8];
+    scheduleGameplayPulse(time, root);
+  }
+
+  // GAMEPLAY ADDED KEYS/PAD
+  if (GAMEPLAY_MUSIC_LAYERS.keys && GAMEPLAY_SEQUENCE.keys[index] !== null) scheduleGameplayKeys(time, GAMEPLAY_SEQUENCE.keys[index]);
+  if (GAMEPLAY_MUSIC_LAYERS.pad && GAMEPLAY_SEQUENCE.pad[index] !== null) scheduleGameplayPad(time, GAMEPLAY_SEQUENCE.pad[index]);
+
+  if (GAMEPLAY_MUSIC_LAYERS.accent) scheduleGameplayAccent(time, GAMEPLAY_SEQUENCE.accent[index]);
 }
 
 function runGameplayScheduler() {
   const ctx = ensureContext();
   if (!ctx || !gameplayMusicPlaying) return;
   while (gameplayMusicNextTime < ctx.currentTime + GAMEPLAY_LOOKAHEAD) {
-    if (gameplayMusicNextStep < GAMEPLAY_INTRO_STEPS) {
-      scheduleGameplayIntroStep(gameplayMusicNextStep, gameplayMusicNextTime);
-    } else {
-      scheduleGameplayLoopStep(gameplayMusicNextStep - GAMEPLAY_INTRO_STEPS, gameplayMusicNextTime);
-    }
+    scheduleGameplayLoopStep(gameplayMusicNextStep, gameplayMusicNextTime);
     gameplayMusicNextStep += 1;
     gameplayMusicNextTime += GAMEPLAY_STEP;
   }
@@ -678,7 +751,7 @@ export function startGameplayMusic() {
   if (gameplayMusicPlaying) return;
   gameplayMusicPlaying = true;
   gameplayMusicDucked = false;
-  gameplayMusicNextStep = GAMEPLAY_MUSIC_LAYERS.intro ? 0 : GAMEPLAY_INTRO_STEPS;
+  gameplayMusicNextStep = 0;
   gameplayMusicNextTime = ctx.currentTime + 0.08;
   if (gameplayMusicFadeGain) {
     gameplayMusicFadeGain.gain.cancelScheduledValues(ctx.currentTime);
