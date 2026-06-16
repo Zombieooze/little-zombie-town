@@ -788,6 +788,123 @@ function addGasStation(scene, x, z) {
   addRubblePatch(scene, x - 16, z + 2, 3);
 }
 
+
+function addMotelSurfaceBox(group, wing, face, along, y, w, h, color, thickness = town(.08), rotationZ = 0) {
+  const sx = wing.w / 2 + thickness / 2;
+  const sz = wing.d / 2 + thickness / 2;
+  const mesh = box(w, h, thickness, color);
+  if (face === 'west') {
+    mesh.position.set(-sx, y, along);
+    mesh.rotation.y = Math.PI / 2;
+  } else if (face === 'east') {
+    mesh.position.set(sx, y, along);
+    mesh.rotation.y = Math.PI / 2;
+  } else if (face === 'north') {
+    mesh.position.set(along, y, sz);
+  } else {
+    mesh.position.set(along, y, -sz);
+  }
+  mesh.rotation.z = rotationZ;
+  group.add(mesh);
+  return mesh;
+}
+
+function addMotelDoor(group, wing, face, along, boarded = false) {
+  addMotelSurfaceBox(group, wing, face, along, town(.9), town(1.6), town(1.8), 0x33281f, town(.1));
+  addMotelSurfaceBox(group, wing, face, along + town(.5), town(.95), town(.08), town(.08), 0xc2a15a, town(.12));
+  if (boarded) addMotelSurfaceBox(group, wing, face, along, town(1.22), town(1.9), town(.17), 0x6b5138, town(.12), along < 0 ? .22 : -.22);
+}
+
+function addMotelWindow(group, wing, face, along, y, variant = 'dark') {
+  const color = variant === 'broken' ? 0x050505 : 0x0b0d10;
+  addMotelSurfaceBox(group, wing, face, along, y, town(1.55), town(.95), color, town(.09));
+  if (variant === 'boarded') {
+    addMotelSurfaceBox(group, wing, face, along, y - town(.12), town(1.8), town(.14), 0x6b5138, town(.12), .28);
+    addMotelSurfaceBox(group, wing, face, along, y + town(.14), town(1.8), town(.14), 0x6b5138, town(.12), -.24);
+  } else if (variant === 'broken') {
+    addMotelSurfaceBox(group, wing, face, along - town(.36), y + town(.18), town(.42), town(.18), 0x3f4548, town(.1), -.25);
+    addMotelSurfaceBox(group, wing, face, along + town(.28), y - town(.22), town(.32), town(.2), 0x3f4548, town(.1), .32);
+  }
+}
+
+function addMotelWing(scene, x, z, w, d, frontFace, label) {
+  const group = new THREE.Group();
+  const wing = { w: town(w), d: town(d) };
+  const h = town(6.2);
+  assetPart(group, box(wing.w, h, wing.d, 0x6b6658), [0, h / 2, 0]);
+  assetPart(group, box(wing.w + town(1.0), town(.38), wing.d + town(1.0), 0x292b38), [0, h + town(.19), 0]);
+  assetPart(group, box(wing.w + town(.5), town(.18), wing.d + town(.5), 0x827a66), [0, town(2.75), 0]);
+
+  const alongLimit = (frontFace === 'west' || frontFace === 'east') ? d : w;
+  const roomCount = alongLimit > 30 ? 5 : 4;
+  for (let i = 0; i < roomCount; i++) {
+    const t = roomCount === 1 ? 0 : i / (roomCount - 1);
+    const along = town(-alongLimit * .36 + t * alongLimit * .72);
+    addMotelDoor(group, wing, frontFace, along, i === 1 || i === roomCount - 1);
+    addMotelWindow(group, wing, frontFace, along, town(4.15), i % 3 === 0 ? 'boarded' : (i % 3 === 1 ? 'broken' : 'dark'));
+  }
+  addMotelSurfaceBox(group, wing, frontFace, town(alongLimit * .43), town(1.85), town(2.1), town(.9), 0x0b0d10, town(.09));
+  addMotelSurfaceBox(group, wing, frontFace, town(alongLimit * .43), town(4.95), town(2.4), town(.18), 0x8a4b2f, town(.11), .12);
+  addMotelSurfaceBox(group, wing, frontFace, town(alongLimit * .43), town(5.18), town(2.0), town(.14), 0x8a4b2f, town(.11), -.18);
+  addRustPatches(group, [wing.w, h, wing.d], 7, h + town(.42));
+
+  group.position.set(town(x), 0, town(z));
+  scene.add(group);
+  registerWorldCollider({ type: 'rect', x: town(x), z: town(z), width: wing.w, depth: wing.d, label });
+}
+
+function addMotelSign(scene, x, z) {
+  const group = new THREE.Group();
+  const canvas = document.createElement('canvas');
+  canvas.width = 256; canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#3b2529';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#d9b64c';
+  ctx.fillRect(0, 0, canvas.width, 10);
+  ctx.fillRect(0, canvas.height - 10, canvas.width, 10);
+  ctx.font = 'bold 58px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.strokeStyle = '#111827';
+  ctx.lineWidth = 8;
+  ctx.fillStyle = '#f4ead0';
+  ctx.strokeText('MOTEL', canvas.width / 2, canvas.height / 2 + 4);
+  ctx.fillText('MOTEL', canvas.width / 2, canvas.height / 2 + 4);
+  assetPart(group, box(town(.38), town(5.2), town(.38), 0x3f4548), [town(-1.9), town(2.6), 0]);
+  assetPart(group, box(town(.38), town(5.2), town(.38), 0x3f4548), [town(1.9), town(2.6), 0]);
+  const sign = new THREE.Mesh(new THREE.BoxGeometry(town(7.2), town(3.1), town(.22)), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(canvas), roughness: .9 }));
+  sign.position.set(0, town(5.4), 0);
+  group.add(sign);
+  group.position.set(town(x), 0, town(z));
+  group.rotation.y = Math.PI / 2;
+  scene.add(group);
+  registerWorldCollider({ type: 'rect', x: town(x), z: town(z), width: town(1.3), depth: town(4.4), label: 'motel-sign' });
+}
+
+function addMotelZone(scene) {
+  // Abandoned L-shaped motel in the former parking/junk lot corner. The solid wings hug
+  // the south/east map edges while the open side faces inward to the combat-friendly lot.
+  townRoadSlab(scene, 40, -39, 42, 40, COLORS.parking);
+  townRoadSlab(scene, 18, -35, 18, 10, COLORS.parking);
+  townStripe(scene, 18, -35, 14, .35, 0xcfd3d6);
+  townSidewalkSlab(scene, 58, -39, 2.2, 40, COLORS.sidewalk);
+  townSidewalkSlab(scene, 42, -58, 34, 2.2, COLORS.sidewalk);
+
+  addMotelWing(scene, 56, -43, 9, 34, 'west', 'motel-east-wing');
+  addMotelWing(scene, 42, -56, 29, 8.5, 'north', 'motel-south-wing');
+
+  addParkingStripes(scene, 37, -37);
+  townStripe(scene, 49, -45, .25, 13, 0xcfd3d6);
+  townStripe(scene, 30, -45, .25, 13, 0xcfd3d6);
+  createBurntSedan({ scene, position: [town(31), 0, town(-32)], rotation: .16, scale: town(.74) });
+  createBurntPickupTruck({ scene, position: [town(46), 0, town(-39)], rotation: Math.PI - .28, scale: town(.72) });
+  addRubblePatch(scene, 51, -29, 3);
+  addRubblePatch(scene, 33, -52, 3);
+  addMotelSign(scene, 13, -27);
+  townLotLabel(scene, 'MOTEL', 38, -59);
+}
+
 function addDistricts(scene) {
   // Four simple themed corners around the central road crossing.
   townSlab(scene, -38, 38, 44, 44, COLORS.grassAlt);
@@ -810,14 +927,8 @@ function addDistricts(scene) {
   townSidewalkSlab(scene, -38, -38, 3, 33, COLORS.path);
   townLotLabel(scene, 'PARK', -43, -57);
 
-  // Parking / junk lot corner with burnt vehicles and one simple solid garage.
-  townRoadSlab(scene, 38, -38, 42, 42, COLORS.parking);
-  townBuilding(scene, 52, -51, 15, 10, 3.1, 0x72634a);
-  addParkingStripes(scene, 36, -34);
-  createBurntSedan({ scene, position: [town(29), 0, town(-31)], rotation: .2, scale: town(.82) });
-  createBurntPickupTruck({ scene, position: [town(45), 0, town(-38)], rotation: Math.PI - .35, scale: town(.82) });
-  createBurntVan({ scene, position: [town(31), 0, town(-53)], rotation: -.15, scale: town(.76) });
-  townLotLabel(scene, 'PARKING LOT\nJUNK LOT', 38, -58);
+  // Motel corner: L-shaped two-story motel with an open inner parking lot.
+  addMotelZone(scene);
 
   createBurntVan({ scene, position: [town(8), 0, town(56)], rotation: Math.PI / 2 - .12, scale: town(.68) });
 
