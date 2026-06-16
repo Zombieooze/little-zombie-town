@@ -1203,7 +1203,9 @@ export function updateZombies(scene, player, delta, onDamage) {
 
     z.position.x += (dx / dist) * moveSpeed * moveSign * delta;
     z.position.z += (dz / dist) * moveSpeed * moveSign * delta;
-    resolveWorldCollision(z.position, type.radius ?? ZOMBIE_TYPES.walker.radius);
+    if (z.userData.typeKey !== 'boss') {
+      resolveWorldCollision(z.position, type.radius ?? ZOMBIE_TYPES.walker.radius);
+    }
     z.rotation.y = Math.atan2(dx, dz) + ZOMBIE_VISUAL_FACING_OFFSET;
     updateZombieMovementAnimation(z, delta, isMoving);
     updateGravebreakerSlamAnimation(z, delta, dist);

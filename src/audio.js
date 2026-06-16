@@ -5,6 +5,7 @@ const STORAGE_KEYS = {
 };
 
 const DEFAULTS = { sfx: 0.75, music: 0.45, muted: false };
+const OUTPUT_GAIN = { sfx: 1.65, music: 1.55 };
 const gates = new Map();
 let audioContext = null;
 let masterGain = null;
@@ -90,8 +91,8 @@ function setGain(gain, value) {
 function applyVolumes() {
   if (!audioContext) return;
   setGain(masterGain, settings.muted ? 0 : 1);
-  setGain(sfxGain, settings.sfx);
-  setGain(musicGain, settings.music);
+  setGain(sfxGain, settings.sfx * OUTPUT_GAIN.sfx);
+  setGain(musicGain, settings.music * OUTPUT_GAIN.music);
 }
 
 export function unlockAudio() {
@@ -211,7 +212,7 @@ function scheduleBass(time, freq) {
   filter.frequency.setValueAtTime(150, time);
   filter.Q.value = 2.1;
   amp.gain.setValueAtTime(0.0001, time);
-  amp.gain.exponentialRampToValueAtTime(0.28, time + 0.025);
+  amp.gain.exponentialRampToValueAtTime(0.34, time + 0.025);
   amp.gain.exponentialRampToValueAtTime(0.0001, time + MENU_STEP * 0.78);
   osc.connect(filter);
   connectMenuVoice(filter, amp);
@@ -234,7 +235,7 @@ function schedulePluck(time, freq) {
     filter.frequency.exponentialRampToValueAtTime(260, time + 0.24);
     filter.Q.value = 5;
     amp.gain.setValueAtTime(0.0001, time);
-    amp.gain.exponentialRampToValueAtTime(0.045, time + 0.01);
+    amp.gain.exponentialRampToValueAtTime(0.062, time + 0.01);
     amp.gain.exponentialRampToValueAtTime(0.0001, time + 0.32);
     osc.connect(filter);
     connectMenuVoice(filter, amp, true);
@@ -256,7 +257,7 @@ function scheduleHat(time, accent) {
   source.buffer = buffer;
   filter.type = 'highpass';
   filter.frequency.value = accent ? 4300 : 5600;
-  amp.gain.setValueAtTime(accent ? 0.038 : 0.021, time);
+  amp.gain.setValueAtTime(accent ? 0.052 : 0.03, time);
   amp.gain.exponentialRampToValueAtTime(0.0001, time + duration);
   source.connect(filter);
   connectMenuVoice(filter, amp, true);
@@ -278,7 +279,7 @@ function scheduleChord(time, chordIndex) {
     filter.frequency.setValueAtTime(520, time);
     filter.frequency.exponentialRampToValueAtTime(210, time + 1.4);
     amp.gain.setValueAtTime(0.0001, time);
-    amp.gain.exponentialRampToValueAtTime(0.035, time + 0.06);
+    amp.gain.exponentialRampToValueAtTime(0.048, time + 0.06);
     amp.gain.exponentialRampToValueAtTime(0.0001, time + 1.65);
     osc.connect(filter);
     connectMenuVoice(filter, amp, true);
