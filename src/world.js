@@ -584,11 +584,11 @@ function addResidentialNeighborhood(scene) {
   // The lane drops in from the main road, turns across the three lower homes, then rejoins the road system.
   townRoadSlab(scene, -41, 23, 6, 35, COLORS.road);
   townRoadSlab(scene, -30, 40, 48, 6.5, COLORS.road);
-  townSidewalkSlab(scene, -37, 23, 1.8, 27);
-  townSidewalkSlab(scene, -45, 23, 1.8, 27);
+  townSidewalkSlab(scene, -37, 22.8, 1.9, 27.8);
+  townSidewalkSlab(scene, -45, 22.8, 1.9, 27.8);
   townSidewalkSlab(scene, -50.1, 35.8, 11.7, 1.8);
   townSidewalkSlab(scene, -23, 35.8, 29.8, 1.8);
-  townSidewalkSlab(scene, -33, 44.2, 45.9, 1.8);
+  townSidewalkSlab(scene, -31, 44.2, 47, 1.8);
   townSidewalkSlab(scene, -55.05, 40, 1.8, 10.1);
 
   // Driveways and walkways stay flat/non-blocking so combat movement remains open.
@@ -600,14 +600,14 @@ function addResidentialNeighborhood(scene) {
   createResidentialHouse(scene, -54, 27, { w: 8.8, d: 8.3, color: 0x5f705e, rotation: Math.PI / 2, boarded: true });
   createResidentialHouse(scene, -24, 28, { w: 9.2, d: 8.0, color: 0x6f5d6d, boarded: false });
 
-  createBurntSedan({ scene, position: [town(-57.5), 0, town(38.4)], rotation: Math.PI / 2 + .08, scale: town(.62) });
-  createBurntPickupTruck({ scene, position: [town(-24), 0, town(40.3)], rotation: -.14, scale: town(.6) });
-  createBurntVan({ scene, position: [town(-51.4), 0, town(29.5)], rotation: Math.PI / 2 - .18, scale: town(.54) });
-  createStreetTree({ scene, position: [town(-62), 0, town(56)], scale: town(.72) });
-  createStreetTree({ scene, position: [town(-21), 0, town(47)], scale: town(.68) });
-  createStreetTree({ scene, position: [town(-61), 0, town(35)], scale: town(.58) });
-  createStreetTree({ scene, position: [town(-39), 0, town(56)], scale: town(.6) });
-  createStreetTree({ scene, position: [town(-23), 0, town(28)], scale: town(.56) });
+  createBurntSedan({ scene, position: [town(-57.5), 0, town(38.4)], rotation: Math.PI / 2 + .08, scale: town(1) });
+  createBurntPickupTruck({ scene, position: [town(-24), 0, town(40.3)], rotation: -.14, scale: town(1) });
+  createBurntVan({ scene, position: [town(-42.4), 0, town(46)], rotation: Math.PI / 2 - .18, scale: town(1) });
+  createStreetTree({ scene, position: [town(-62), 0, town(56)], scale: town(1.0) });
+  createStreetTree({ scene, position: [town(-21), 0, town(47)], scale: town(1.1) });
+  createStreetTree({ scene, position: [town(-61), 0, town(35)], scale: town(1.1) });
+  createStreetTree({ scene, position: [town(-39), 0, town(56)], scale: town(1.0) });
+  createStreetTree({ scene, position: [town(-13), 0, town(28)], scale: town(1.1) });
   addRubblePatch(scene, -39, 36, 4);
 }
 
@@ -620,8 +620,9 @@ function addRoadNetwork(scene) {
   // Sidewalks trace road edges but stop short of the asphalt intersection to avoid
   // cross-shaped sidewalk clutter in the middle of the road.
   [
-    [-34, -9, 44, 2], [34, -9, 44, 2], [-34, 9, 44, 2], [34, 9, 44, 2],
-    [-9, -34, 2, 44], [-9, 34, 2, 44], [9, -34, 2, 44], [9, 34, 2, 44],
+    [-36, -8, 58, 2], [36, -8, 58, 2], [-22.5, 8, 30.9, 2], [-54.5, 8, 21, 2],
+    [16.5, 8, 19, 2], [50.5, 8, 29, 2], [-8, -37, 2, 56], [-8, 54.1, 2, 21.7],
+    [-8, 21.9, 2, 29.6], [8, -19, 2, 22], [8, -52.5, 2, 25], [8, 36, 2, 58],
   ].forEach(([x, z, w, d]) => townSidewalkSlab(scene, x, z, w, d));
   for (let i = -54; i <= 54; i += 12) {
     if (Math.abs(i) > 14) townStripe(scene, i, 0, 4, .22);
@@ -688,11 +689,11 @@ function addOldFountainPark(scene) {
   createBrokenFountain({ scene, position: [town(-38), 0, town(-38)], scale: town(1.35) });
 
   // A few outer trees define the park boundary without making the center maze-like.
-  [[-56, -51, .78], [-24, -54, .72], [-55, -27, .68], [-26, -29, .7], [-59, -39, .58], [-37, -58, .56], [-20, -34, .5]].forEach(([x, z, scale]) => createStreetTree({ scene, position: [town(x), 0, town(z)], scale: town(scale) }));
+  [[-56, -51, 1.0], [-24, -54, 1.1], [-55, -27, 0.9], [-26, -29, 1.0], [-59, -39, 1.1], [-37, -58, 1.2], [-20, -34, 1.0]].forEach(([x, z, scale]) => createStreetTree({ scene, position: [town(x), 0, town(z)], scale: town(scale) }));
   createDeadTree({ scene, position: [town(-46), 0, town(-25)], rotation: .35, scale: town(.62) });
   createDeadTree({ scene, position: [town(-30), 0, town(-58)], rotation: -.4, scale: town(.48) });
-  createBurntSedan({ scene, position: [town(-18), 0, town(-31)], rotation: Math.PI / 2 + .16, scale: town(.62) });
-  createBurntPickupTruck({ scene, position: [town(-48), 0, town(-14)], rotation: -.18, scale: town(.58) });
+  createBurntSedan({ scene, position: [town(-18), 0, town(-31)], rotation: Math.PI / 2 + .16, scale: town(1) });
+  createBurntPickupTruck({ scene, position: [town(-48), 0, town(-14)], rotation: -.18, scale: town(1) });
 
   addRubblePatch(scene, -38, -38, 8);
   addRubblePatch(scene, -44, -36, 4);
@@ -802,11 +803,8 @@ function addGasPump(scene, x, z, rotation = 0) {
 function addGasStation(scene, x, z) {
   // Open paved forecourt with two clean road connections into the central roads.
   townRoadSlab(scene, x, z - 2, 42, 34, COLORS.parking);
-  townRoadSlab(scene, x - 20, z - 11, 18, 8, COLORS.parking);
-  townRoadSlab(scene, x - 9, 18, 10, 20, COLORS.parking);
-  townRoadSlab(scene, 18, z - 8, 20, 10, COLORS.parking);
-  townStripe(scene, x - 9, 18, .35, 16, 0xcfd3d6);
-  townStripe(scene, 18, z - 8, 16, .35, 0xcfd3d6);
+  townRoadSlab(scene, x - 9, 18, 10, 22, COLORS.parking);
+  townStripe(scene, x - 9, 15, .35, 16, 0xcfd3d6);
 
   addGasStationBuilding(scene, x - 4, z + 10);
   addGasStationCanopy(scene, x - 3, z - 6);
@@ -925,15 +923,15 @@ function addMotelZone(scene) {
   addParkingStripes(scene, 30.5, -22.5);
   addParkingStripes(scene, 35.4, -46.6);
   addParkingStripes(scene, 46.6, -34.2, 90);
-  createBurntSedan({ scene, position: [town(31), 0, town(-32)], rotation: .16, scale: town(.74) });
-  createBurntPickupTruck({ scene, position: [town(46), 0, town(-39)], rotation: Math.PI - .28, scale: town(.72) });
+  createBurntSedan({ scene, position: [town(31), 0, town(-32)], rotation: .16, scale: town(1) });
+  createBurntPickupTruck({ scene, position: [town(46), 0, town(-39)], rotation: Math.PI - .28, scale: town(1) });
   addRubblePatch(scene, 51, -29, 3);
   addRubblePatch(scene, 33, -52, 3);
   addMotelSign(scene, 13, -27);
 }
 
 function addLightTownDressing(scene) {
-  const place = (factory, x, z, rotation = 0, scale = .55, collide = false) => factory({
+  const place = (factory, x, z, rotation = 0, scale = 0.55, collide = false) => factory({
     scene,
     position: [town(x), 0, town(z)],
     rotation,
@@ -943,32 +941,32 @@ function addLightTownDressing(scene) {
 
   // Small non-blocking lamp posts at sidewalk and road edges.
   [
-    [-20, -10, Math.PI / 2], [22, -9.5, Math.PI / 2], [-10, 22, 0], [9.5, -23, Math.PI],
+    [-20, -10, -Math.PI / 2], [22, -9.5, -Math.PI / 2], [-10, 22, 0], [9.5, -23, -Math.PI],
     [-55, 10, Math.PI / 2], [54, -10, -Math.PI / 2], [-10, 54, 0], [10, -54, Math.PI],
     [27, 10, Math.PI / 2], [-27, 9, Math.PI / 2],
-  ].forEach(([x, z, rotation]) => place(createLampPost, x, z, rotation, .42, false));
+  ].forEach(([x, z, rotation]) => place(createLampPost, x, z, rotation, 1.5, false));
 
   // Sidewalk and roadside trees are spaced at edges so they dress the roads without
   // narrowing the main kiting lanes.
   [
-    [-58, 13, .5], [-35, 12, .44], [-13, 58, .48], [13, 48, .44],
-    [58, 13, .46], [13, 25, .42], [21, -13, .4], [-13, -22, .42],
-    [58, -18, .42], [-58, -15, .44], [24, -58, .42], [-18, -58, .44],
+    [-58, 13, 1], [-35, 12, 1.1], [-13, 58, 1.2], [13, 48, 1.1],
+    [58, 13, 1.1], [13, 25, 1.1], [21, -13, 1.2], [-13, -22, 1.0],
+    [58, -18, 1.1], [-58, -15, 1.0], [24, -58, 1.0], [-18, -58, 1.2],
   ].forEach(([x, z, scale]) => place(createStreetTree, x, z, 0, scale, true));
 
   // A light scatter of existing abandoned-town props, kept non-blocking and tucked
   // against edges except for already-solid vehicles.
-  place(createStopSign, -11, -11, Math.PI / 4, .52, false);
-  place(createStreetSign, 11, 11, -Math.PI / 4, .5, false);
-  place(createFireHydrant, 23, 10.5, 0, .65, false);
-  place(createUtilityPole, -58, 21, .1, .42, false);
+  place(createStopSign, -8, -11, Math.PI / 4, 1, false);
+  place(createStreetSign, 11, 11, -Math.PI / 4, 1, false);
+  place(createFireHydrant, 23, 10.5, 0, 1, false);
+  place(createUtilityPole, -58, 21, .1, 1, false);
   place(createTrashCan, 52, -23, 0, .58, false);
   place(createGarbageBags, 56, -53, .2, .62, false);
   place(createTirePile, 24, -52, -.2, .58, false);
   place(createScrapPile, -54, 28, .35, .55, false);
 
-  createBurntSedan({ scene, position: [town(-22), 0, town(10)], rotation: -.08, scale: town(.58) });
-  createBurntVan({ scene, position: [town(11), 0, town(-48)], rotation: Math.PI / 2 + .12, scale: town(.6) });
+  createBurntSedan({ scene, position: [town(-22), 0, town(10)], rotation: -.08, scale: town(1) });
+  createBurntVan({ scene, position: [town(11), 0, town(-48)], rotation: Math.PI / 2 + .12, scale: town(1) });
 }
 
 function addDistricts(scene) {
