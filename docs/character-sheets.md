@@ -73,8 +73,6 @@ All special abilities should stay low-poly, toy-like, readable from the default 
 3. **Electric Zapper:** Quick blue/yellow electric line from the player to a zombie, then short chain lines between zombies at higher levels. Add tiny blue/yellow spark cubes at hit points for a low-poly arcade effect.
 4. **Fire Bottle:** Small thrown bottle arcing outward, then a cartoon low-poly fire patch on the ground with orange/yellow arcade flames. Keep it readable and playful with no gore or realistic burning.
 5. **Nail Blaster:** Small gray nail/bolt projectiles fired in fast projectile bursts. Keep the bolts thin, low-poly, arcade-readable, and lightweight enough for many simultaneous shots; optional tiny spark hits can be added without gore or external assets.
-6. **Shockwave Stomp:** Expanding low-poly ring around the survivor, colored pale blue, white, yellow, or dusty orange, with a tiny dust/spark burst. It should read as an arcade panic/crowd-control ability that pushes space open around the player without gore or external assets.
-7. **Bear Trap Toss:** Low-poly metal trap built as a flat ground object with a dark base, simple jaws/arms, and small teeth/spikes. Triggering it should read as a quick arcade snap with a small spark/scrap burst effect, staying playful and non-gory.
-8. **Junkyard Turret:** Small low-poly scrap turret with a squat tripod/base, boxy scrap-metal body, little short barrel, gray/yellow scrap bolts or pellets, and tiny arcade muzzle flashes. Keep it toy-like, readable, and lightweight.
+6. **Junkyard Turret:** Small low-poly scrap turret with a squat tripod/base, boxy scrap-metal body, little short barrel, gray/yellow scrap bolts or pellets, and tiny arcade muzzle flashes. Keep it toy-like, readable, and lightweight.
 
 Future ability effects should reinforce that ranged power comes from special abilities while the bat remains a fixed-range emergency weapon.
