@@ -689,6 +689,11 @@ function handleControllerMenus(delta) {
   }
 
   if (mode === 'paused') {
+    if (isAdjustingVolumeSlider()) {
+      if (horizontal) adjustSelectedVolumeSlider(horizontal);
+      if (consumeGamepadPress('a') || consumeGamepadPress('b')) cancelVolumeSliderAdjust();
+      return;
+    }
     if (vertical || horizontal) moveMenuSelection('paused', vertical || horizontal);
     if (consumeGamepadPress('a')) activateMenuSelection('paused');
     if (consumeGamepadPress('b')) resumeGame();

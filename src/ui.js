@@ -13,7 +13,7 @@ let selectedMenuIndex = 0;
 const menuGroups = {
   menu: { root: 'menu-screen', selector: '#start-button, #shop-button, #menu-fullscreen-button:not(.hidden), #sfx-volume, #music-volume' },
   shop: { root: 'shop-screen', selector: '#shop-back-button, #shop-reset-button, .shop-buy-button:not(:disabled)' },
-  paused: { root: 'pause-screen', selector: '#resume-button, #restart-run-button' },
+  paused: { root: 'pause-screen', selector: '#resume-button, #pause-sfx-volume, #pause-music-volume, #restart-run-button' },
   ended: { root: 'end-screen', selector: '#again-button, #menu-button' },
   confirm: { root: 'confirm-modal', selector: '#confirm-modal-cancel, #confirm-modal-confirm' },
 };
