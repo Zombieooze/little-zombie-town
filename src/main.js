@@ -23,6 +23,7 @@ let player;
 let mode = 'menu';
 let muted = getAudioSettings().muted;
 let spawnTimer = 0;
+let eliteTimer = 60;
 let worldMedkitTimer = CONFIG.medkit.worldFirstSpawn;
 let pulseTimer = 0;
 let pulseVisuals = [];
@@ -97,7 +98,7 @@ function resetState() {
     pulseDamage: CONFIG.pulse.damage, damageMultiplier: permanentStats.damageMultiplier, speedMultiplier: permanentStats.speedMultiplier, pickupMagnetMultiplier: permanentStats.pickupMagnetMultiplier,
     coinMultiplier: permanentStats.coinMultiplier, xpMultiplier: permanentStats.xpMultiplier, healthRegen: permanentStats.healthRegen, jumpMultiplier: permanentStats.jumpMultiplier, maxStamina: 0, stamina: 0, bossSpawnCount: 0, bossEventsTriggered: [], batKnockback: 0, cooldownMultiplier: 1, damageReduction: 0, critChance: CONFIG.player.critChance, sprintSpeedMultiplier: 1, staminaRegenMultiplier: 1, passiveUpgradeCounts: {}, runFinalized: false, runDuration: CONFIG.runDuration });
   resetAbilities(scene, state);
-  spawnTimer = 0; worldMedkitTimer = CONFIG.medkit.worldFirstSpawn; pulseTimer = 0; pendingChoices = []; pendingLevelUps = 0;
+  spawnTimer = 0; eliteTimer = 60; worldMedkitTimer = CONFIG.medkit.worldFirstSpawn; pulseTimer = 0; pendingChoices = []; pendingLevelUps = 0;
 }
 
 function startGame() {
@@ -381,6 +382,19 @@ function recordZombieKill(position, type, typeKey) {
 function scheduleNextWorldMedkit() {
   const { worldSpawnMin, worldSpawnMax } = CONFIG.medkit;
   worldMedkitTimer = worldSpawnMin + Math.random() * (worldSpawnMax - worldSpawnMin);
+}
+
+function getSpawnBatchSize(elapsed = 0) {
+  return 1 + Math.floor(elapsed / 240);
+}
+
+function trySpawnEliteEvent(previousElapsed) {
+  if (state.elapsed <= 60) return;
+  eliteTimer -= state.elapsed - Math.max(previousElapsed, 60);
+  if (eliteTimer > 0) return;
+  eliteTimer = 90;
+  const spawned = spawnZombie(scene, { elapsed: state.elapsed, level: state.level, playerPosition: player.position, typeKey: 'crusher', bypassAliveCap: true });
+  if (spawned) showBossWarning('CRUSHER ZOMBIE INCOMING!');
 }
 
 function trySpawnBossEvents(previousElapsed) {
@@ -744,8 +758,12 @@ function tick() {
     spawnTimer -= delta; pulseTimer -= delta; worldMedkitTimer -= delta;
     if (!isDesignMode) {
       trySpawnBossEvents(previousElapsed);
+      trySpawnEliteEvent(previousElapsed);
       if (spawnTimer <= 0) {
-        spawnZombie(scene, { elapsed: state.elapsed, level: state.level, playerPosition: player.position });
+        const batchSize = getSpawnBatchSize(state.elapsed);
+        for (let i = 0; i < batchSize; i++) {
+          spawnZombie(scene, { elapsed: state.elapsed, level: state.level, playerPosition: player.position });
+        }
         spawnTimer = getSpawnDelay(state.elapsed);
       }
     }
