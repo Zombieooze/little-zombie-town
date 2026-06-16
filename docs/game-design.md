@@ -176,14 +176,14 @@ Spawn pressure increases over the run: spawn delays shrink gradually, the active
 - **A / button 0** jumps during gameplay, selects highlighted menu buttons, and selects the highlighted level-up card when cards are open.
 - **B / button 1** cancels or backs out where safe, including resuming from the simple pause menu.
 - **Start/Menu / button 9** pauses and resumes the current run when mapped by the browser/controller.
-- **LB/RB / buttons 4 and 5** smoothly zoom the camera out/in through the same clamped camera distance used by mouse wheel and mobile pinch zoom. LT/RT may also mirror zoom on controllers/browsers that expose them consistently.
+- **LB/RB / buttons 4 and 5** smoothly zoom the camera out/in through the same clamped camera distance used by mouse wheel and mobile pinch zoom. **LT / button 6** is a held sprint input.
 - **D-pad or left stick** moves through start, pause, game-over/victory, and level-up card selections with a short repeat delay so held input does not skip too quickly. Level-up cards default to the middle card when three choices appear.
 - Controller mappings can vary slightly by browser and hardware; Xbox-style controllers are the main target, and if no gamepad is connected, keyboard, mouse, and touch input continue unchanged.
 
 Desktop controls remain keyboard and mouse:
 
 - **WASD**: Move camera-relative.
-- **Shift**: Sprint.
+- **Shift / LT**: Sprint.
 - **Space**: Jump/hop.
 - **Right mouse drag**: Orbit the camera.
 - **Scroll**: Zoom the camera in or out.

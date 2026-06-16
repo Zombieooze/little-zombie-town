@@ -76,7 +76,7 @@ function clearGamepadState(message) {
 
 function readButton(gamepad, index) {
   const button = gamepad?.buttons?.[index];
-  return !!button && (button.pressed || button.value > 0.5);
+  return !!button && (button.pressed || button.value > 0.25);
 }
 
 function refreshGamepadButtons(gamepad) {
@@ -84,15 +84,14 @@ function refreshGamepadButtons(gamepad) {
   gamepadButtons.forEach((button) => previousGamepadButtons.add(button));
   gamepadButtons.clear();
 
-  // Xbox-style defaults: button 0 = A, 1 = B, 4/5 = LB/RB, 9 = Start/Menu.
+  // Xbox-style defaults: button 0 = A, 1 = B, 4/5 = LB/RB, 6 = LT, 9 = Start/Menu.
   if (readButton(gamepad, 0)) gamepadButtons.add('a');
   if (readButton(gamepad, 1)) gamepadButtons.add('b');
   if (readButton(gamepad, 4)) gamepadButtons.add('lb');
   if (readButton(gamepad, 5)) gamepadButtons.add('rb');
-  // Some browser/controller pairs expose triggers as buttons; let them mirror bumper zoom safely.
   if (readButton(gamepad, 6)) gamepadButtons.add('lt');
   if (readButton(gamepad, 7)) gamepadButtons.add('rt');
-  const fallbackStartPressed = gamepad.mapping !== 'standard' && (readButton(gamepad, 7) || readButton(gamepad, 8));
+  const fallbackStartPressed = gamepad.mapping !== 'standard' && readButton(gamepad, 8);
   if (readButton(gamepad, 9) || fallbackStartPressed) gamepadButtons.add('start');
   if (readButton(gamepad, 12)) gamepadButtons.add('dpad-up');
   if (readButton(gamepad, 13)) gamepadButtons.add('dpad-down');

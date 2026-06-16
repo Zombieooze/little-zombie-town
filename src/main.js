@@ -602,8 +602,8 @@ function updateCamera(delta) {
     cameraLimits.minPitch,
     cameraLimits.maxPitch,
   );
-  const zoomOut = isGamepadDown('lb') || isGamepadDown('lt');
-  const zoomIn = isGamepadDown('rb') || isGamepadDown('rt');
+  const zoomOut = isGamepadDown('lb');
+  const zoomIn = isGamepadDown('rb');
   if (zoomOut || zoomIn) {
     const zoomDirection = (zoomOut ? 1 : 0) + (zoomIn ? -1 : 0);
     cameraControls.targetDistance = THREE.MathUtils.clamp(
@@ -652,6 +652,20 @@ function consumeControllerNav(negativeButtons, positiveButtons) {
   if (negative === positive) return 0;
   controllerNavCooldown = 0.22;
   return negative ? -1 : 1;
+}
+
+
+function handleConfirmModalController() {
+  if (!isConfirmModalOpen()) return false;
+  if (consumeGamepadPress('a')) {
+    document.getElementById('confirm-modal-confirm')?.click();
+    return true;
+  }
+  if (consumeGamepadPress('b')) {
+    document.getElementById('confirm-modal-cancel')?.click();
+    return true;
+  }
+  return true;
 }
 
 function handleControllerMenus(delta) {
@@ -706,7 +720,8 @@ function tick() {
   updateGamepadInput();
   if (consumePress('m')) { muted = toggleMute(); setMuted(muted); }
   if (!isConfirmModalOpen() && (consumePress('p') || consumePress('escape') || consumeGamepadPress('start')) && (mode === 'playing' || mode === 'paused')) { mode === 'playing' ? pauseGame() : resumeGame(); }
-  if (!isConfirmModalOpen()) handleControllerMenus(delta);
+  if (isConfirmModalOpen()) handleConfirmModalController();
+  else handleControllerMenus(delta);
 
   if (mode === 'menu' || mode === 'shop') updateMenuCamera(delta);
 
