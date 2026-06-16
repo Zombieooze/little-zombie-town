@@ -53,17 +53,58 @@
         </div>
       </section>
 
-      <section id="hud" class="hud hidden">
-        <div class="hud-card">Timer <strong id="hud-timer">0:00</strong></div>
-        <div class="hud-card">Health <strong id="hud-health">100/100</strong></div>
-        <div class="hud-card">Level <strong id="hud-level">1</strong></div>
-        <div class="hud-card wide">
-          XP
-          <div class="bar"><span id="hud-xp-bar"></span></div>
+      <section id="hud" class="hud survival-hud hidden" aria-label="In-game survival HUD">
+        <div class="hud-column hud-left-stack">
+          <article class="survival-panel player-status-panel">
+            <div class="survivor-badge" aria-hidden="true">
+              <span class="survivor-face">▣</span>
+            </div>
+            <div class="status-rows">
+              <div class="status-row health-row">
+                <span class="status-label">Health</span>
+                <strong id="hud-health">100/100</strong>
+                <div class="survival-bar health-bar"><span id="hud-health-bar"></span></div>
+              </div>
+              <div class="status-row xp-row">
+                <span class="status-label">XP</span>
+                <strong id="hud-xp-text">0/0</strong>
+                <div class="survival-bar xp-bar"><span id="hud-xp-bar"></span></div>
+              </div>
+              <div class="level-chip">Level <strong id="hud-level">1</strong></div>
+            </div>
+          </article>
+
+          <article class="survival-panel objective-panel">
+            <h3>Objective</h3>
+            <strong>Survive Until Dawn</strong>
+            <p>Hold out until sunrise.</p>
+          </article>
+
+          <article class="survival-panel abilities-panel">
+            <h3>Active Abilities</h3>
+            <div id="hud-abilities" class="hud-list empty-list">None owned</div>
+          </article>
         </div>
-        <div class="hud-card">Coins <strong id="hud-coins">0</strong></div>
-        <div class="hud-card small">Abilities <strong id="hud-abilities">None</strong></div>
-        <div id="hud-muted" class="hud-card small hidden">Muted</div>
+
+        <div class="hud-center-stack">
+          <div class="survival-panel dawn-header">
+            <div class="dawn-title">Survive Until Dawn</div>
+            <strong id="hud-timer">0:00</strong>
+          </div>
+        </div>
+
+        <div class="hud-column hud-right-stack">
+          <div class="hud-top-stats">
+            <article class="survival-panel stat-tile"><span class="stat-icon">☠</span><div><strong id="hud-kills">0</strong><span>Zombies Killed</span></div></article>
+            <article class="survival-panel stat-tile"><span class="stat-icon coin-icon">●</span><div><strong id="hud-coins">0</strong><span>Coins</span></div></article>
+          </div>
+          <article class="survival-panel passives-panel">
+            <h3>Run Bonuses</h3>
+            <div id="hud-passives" class="hud-list empty-list">No bonuses yet</div>
+          </article>
+        </div>
+
+        <div id="hud-muted" class="survival-panel muted-chip hidden">Muted</div>
       </section>
 
       <div id="game-actions" class="game-actions hidden">
@@ -76,7 +117,7 @@
           <h2>Paused</h2>
           <p>Press P, Escape, or Resume to return to the town.</p>
           <button id="resume-button" class="primary-button" type="button">Resume</button>
-          <button id="restart-run-button" class="secondary-button" type="button">Restart Run</button>
+          <button id="restart-run-button" class="secondary-button" type="button">Return to Main Menu</button>
         </div>
       </section>
 

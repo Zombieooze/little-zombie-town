@@ -63,14 +63,14 @@ const cameraLimits = {
 const state = {
   elapsed: 0, health: 100, maxHealth: 100, level: 1, xp: 0, nextXp: CONFIG.level.baseXp,
   coins: 0, kills: 0, pulseCooldown: CONFIG.pulse.cooldown, pulseRange: CONFIG.pulse.range,
-  pulseDamage: CONFIG.pulse.damage, damageMultiplier: 1, speedMultiplier: 1, pickupMagnetMultiplier: 1, coinMultiplier: 1, xpMultiplier: 1, healthRegen: 0, maxStamina: 0, stamina: 0, bossSpawnCount: 0, bossEventsTriggered: [], batKnockback: 0, cooldownMultiplier: 1, damageReduction: 0, critChance: CONFIG.player.critChance, sprintSpeedMultiplier: 1, staminaRegenMultiplier: 1, passiveUpgradeCounts: {},
+  pulseDamage: CONFIG.pulse.damage, damageMultiplier: 1, speedMultiplier: 1, pickupMagnetMultiplier: 1, coinMultiplier: 1, xpMultiplier: 1, healthRegen: 0, maxStamina: 0, stamina: 0, bossSpawnCount: 0, bossEventsTriggered: [], batKnockback: 0, cooldownMultiplier: 1, damageReduction: 0, critChance: CONFIG.player.critChance, sprintSpeedMultiplier: 1, staminaRegenMultiplier: 1, passiveUpgradeCounts: {}, runFinalized: false, runDuration: CONFIG.runDuration,
 };
 
 setControllerStatusCallback(showControllerMessage);
 initInput();
 initCameraControls();
 createWorld(scene);
-initUI({ onStart: startGame, onUpgrade: chooseUpgrade, onMenu: returnToMenu, onShop: openShop, onPause: pauseGame, onResume: resumeGame, onRestart: restartRun, onFullscreen: requestGameFullscreen });
+initUI({ onStart: startGame, onUpgrade: chooseUpgrade, onMenu: returnToMenu, onShop: openShop, onPause: pauseGame, onResume: resumeGame, onRestart: returnToMenu, onFullscreen: requestGameFullscreen });
 document.getElementById('design-mode-banner')?.classList.toggle('hidden', !isDesignMode);
 showScreen('menu-screen');
 
@@ -79,7 +79,7 @@ function resetState() {
   Object.assign(state, { elapsed: 0, health: permanentStats.maxHealth, maxHealth: permanentStats.maxHealth, level: 1, xp: 0,
     nextXp: CONFIG.level.baseXp, coins: 0, kills: 0, pulseCooldown: permanentStats.pulseCooldown, pulseRange: CONFIG.pulse.range,
     pulseDamage: CONFIG.pulse.damage, damageMultiplier: permanentStats.damageMultiplier, speedMultiplier: permanentStats.speedMultiplier, pickupMagnetMultiplier: permanentStats.pickupMagnetMultiplier,
-    coinMultiplier: permanentStats.coinMultiplier, xpMultiplier: permanentStats.xpMultiplier, healthRegen: permanentStats.healthRegen, maxStamina: permanentStats.maxStamina, stamina: permanentStats.stamina, bossSpawnCount: 0, bossEventsTriggered: [], batKnockback: 0, cooldownMultiplier: 1, damageReduction: 0, critChance: CONFIG.player.critChance, sprintSpeedMultiplier: 1, staminaRegenMultiplier: 1, passiveUpgradeCounts: {} });
+    coinMultiplier: permanentStats.coinMultiplier, xpMultiplier: permanentStats.xpMultiplier, healthRegen: permanentStats.healthRegen, maxStamina: permanentStats.maxStamina, stamina: permanentStats.stamina, bossSpawnCount: 0, bossEventsTriggered: [], batKnockback: 0, cooldownMultiplier: 1, damageReduction: 0, critChance: CONFIG.player.critChance, sprintSpeedMultiplier: 1, staminaRegenMultiplier: 1, passiveUpgradeCounts: {}, runFinalized: false, runDuration: CONFIG.runDuration });
   resetAbilities(scene, state);
   spawnTimer = 0; worldMedkitTimer = CONFIG.medkit.worldFirstSpawn; pulseTimer = 0; pendingChoices = []; pendingLevelUps = 0;
 }
@@ -106,7 +106,18 @@ function restartRun() {
   startGame();
 }
 
-function returnToMenu() { mode = 'menu'; setGameActionsVisible(false); updateBossHealthBar(null); document.body.classList.remove('paused'); showScreen('menu-screen'); updateMenuCoins(); }
+function returnToMenu() {
+  if (mode === 'paused' || mode === 'playing' || mode === 'upgrade') finalizeRun();
+  mode = 'menu';
+  setGameActionsVisible(false);
+  setPauseButtonVisible(false);
+  updateBossHealthBar(null);
+  stopCameraTouchControls();
+  resetTouchMovement();
+  document.body.classList.remove('paused');
+  showScreen('menu-screen');
+  updateMenuCoins();
+}
 
 function openShop() {
   mode = 'shop';
@@ -375,8 +386,21 @@ function doPulse() {
   }, createHitParticles, state.batKnockback);
 }
 
+function finalizeRun() {
+  if (state.runFinalized) return 0;
+  const bankedCoins = Math.max(0, Math.floor(state.coins));
+  if (bankedCoins > 0) addCoins(bankedCoins);
+  state.runFinalized = true;
+  pendingChoices = [];
+  pendingLevelUps = 0;
+  return bankedCoins;
+}
+
 function endRun(won) {
-  mode = 'ended'; setGameActionsVisible(false); document.body.classList.remove('paused'); addCoins(state.coins);
+  finalizeRun();
+  mode = 'ended';
+  setGameActionsVisible(false);
+  document.body.classList.remove('paused');
   updateBossHealthBar(null);
   showEnd({ won, time: state.elapsed, kills: state.kills, level: state.level, coins: state.coins });
 }
