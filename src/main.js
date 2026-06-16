@@ -9,7 +9,7 @@ import { createPlayer, updatePlayer } from './player.js';
 import { spawnZombie, spawnBossZombie, getActiveBoss, updateZombies, damageZombies, resetZombies, getSpawnDelay } from './zombies.js';
 import { dropXp, dropCoin, dropMedkit, dropScrapRush, triggerScrapRush, updatePickups, resetPickups, countWorldMedkits } from './pickups.js';
 import { getUpgradeChoices, applyUpgrade } from './upgrades.js';
-import { resetAbilities, updateAbilities, unlockAbility, applyAbilityUpgrade, isAbilityCard } from './abilities.js';
+import { resetAbilities, updateAbilities, unlockAbility, applyAbilityUpgrade, isAbilityCard, getBaseballBatStats } from './abilities.js';
 import { initAudioControls, unlockAudio, playSound, toggleMute, getAudioSettings, startMenuMusic, stopMenuMusic, startGameplayMusic, stopGameplayMusic, setGameplayMusicDucked, switchToBossMusic, stopBossMusic, switchToGameplayMusic, setBossMusicDucked } from './audio.js';
 
 const canvas = document.getElementById('game-canvas');
@@ -94,6 +94,8 @@ function resetState() {
     pulseDamage: CONFIG.pulse.damage, damageMultiplier: permanentStats.damageMultiplier, speedMultiplier: permanentStats.speedMultiplier, pickupMagnetMultiplier: permanentStats.pickupMagnetMultiplier,
     coinMultiplier: permanentStats.coinMultiplier, xpMultiplier: permanentStats.xpMultiplier, healthRegen: permanentStats.healthRegen, jumpMultiplier: permanentStats.jumpMultiplier, maxStamina: permanentStats.maxStamina, stamina: permanentStats.stamina, bossSpawnCount: 0, bossEventsTriggered: [], batKnockback: 0, cooldownMultiplier: 1, damageReduction: 0, critChance: CONFIG.player.critChance, sprintSpeedMultiplier: 1, staminaRegenMultiplier: 1, passiveUpgradeCounts: {}, runFinalized: false, runDuration: CONFIG.runDuration });
   resetAbilities(scene, state);
+  const bat = getBaseballBatStats(state.abilities.levels.baseballBat);
+  state.pulseCooldown = bat.cooldown; state.pulseRange = bat.radius; state.pulseDamage = bat.damage;
   spawnTimer = 0; worldMedkitTimer = CONFIG.medkit.worldFirstSpawn; pulseTimer = 0; pendingChoices = []; pendingLevelUps = 0;
 }
 
@@ -409,7 +411,8 @@ function spawnWorldMedkit() {
 }
 
 function createPulseVisual() {
-  const arc = new THREE.Mesh(new THREE.RingGeometry(state.pulseRange * .72, state.pulseRange, 48, 1, -Math.PI * .68, Math.PI * 1.36), new THREE.MeshBasicMaterial({ color: 0xffd166, transparent: true, opacity: .9, side: THREE.DoubleSide }));
+  const bat = state.abilities?.baseballBat || getBaseballBatStats(1);
+  const arc = new THREE.Mesh(new THREE.RingGeometry(bat.radius * .72, bat.radius, 48, 1, -Math.PI * .68, Math.PI * 1.36), new THREE.MeshBasicMaterial({ color: 0xffd166, transparent: true, opacity: .9, side: THREE.DoubleSide }));
   arc.rotation.x = -Math.PI / 2; arc.rotation.z = -player.rotation.y; arc.position.copy(player.position); arc.position.y = .16;
   arc.userData.life = CONFIG.pulse.visualDuration; arc.userData.maxLife = CONFIG.pulse.visualDuration; arc.scale.setScalar(.25);
   scene.add(arc); pulseVisuals.push(arc);
@@ -438,7 +441,8 @@ function playerDamageAmount(amount) {
 
 function doPulse() {
   createPulseVisual();
-  damageZombies(scene, player.position, state.pulseRange, playerDamageAmount(state.pulseDamage), (position, type, typeKey) => {
+  const bat = state.abilities?.baseballBat || getBaseballBatStats(1);
+  damageZombies(scene, player.position, bat.radius, playerDamageAmount(bat.damage), (position, type, typeKey) => {
     recordZombieKill(position, type, typeKey);
   }, createHitParticles, state.batKnockback);
 }
@@ -730,7 +734,7 @@ function tick() {
     if (state.healthRegen > 0 && state.health > 0 && state.health < state.maxHealth) {
       state.health = Math.min(state.maxHealth, state.health + state.healthRegen * delta);
     }
-    if (pulseTimer <= 0) { doPulse(); pulseTimer = Math.max(0.1, state.pulseCooldown); }
+    if (pulseTimer <= 0) { const bat = state.abilities?.baseballBat || getBaseballBatStats(1); doPulse(); pulseTimer = Math.max(0.1, bat.cooldown); }
     updateAbilities(scene, state, player, delta, (position, type, typeKey) => {
       recordZombieKill(position, type, typeKey);
     }, createHitParticles);

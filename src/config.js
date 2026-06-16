@@ -2,7 +2,7 @@ export const CONFIG = {
   arenaSize: 130,
   runDuration: 1800,
   player: { speed: 8.0, sprintMultiplier: 1.65, maxHealth: 100, damageMultiplier: 1.0, critChance: 0.05, radius: 0.8, jumpVelocity: 8.4, gravity: 28, landingDip: 0.1 },
-  pulse: { cooldown: 2.5, range: 5.2, damage: 35, visualDuration: 0.55 },
+  pulse: { cooldown: 1.58, range: 3.9, damage: 22, visualDuration: 0.55 },
   zombie: {
     spawnEvery: 1.25, maxAlive: 48, hitCooldown: 0.8,
     spawnRing: { minDistance: 34, maxDistance: 46, attempts: 28 },
@@ -22,7 +22,7 @@ export const CONFIG = {
       brute: { name: 'Brute Zombie', health: 95, speed: 2.9, damage: 20, radius: 1.15, xp: 3, coins: 4, scale: 1.7, weight: 18, unlockTime: 180, unlockLevel: 5, medkitChance: 0.09, skin: 0x5f9f45, shirt: 0x5a3a22 },
       spitter: { name: 'Spitter Zombie', health: 34, speed: 3.4, damage: 12, radius: 0.8, xp: 2, coins: 3, scale: 1.05, weight: 16, unlockTime: 300, unlockLevel: 6, medkitChance: 0.06, skin: 0x9be55a, shirt: 0x2ccf6b, ranged: { preferredRange: 12, tooCloseRange: 6, maxRange: 16, backAwaySpeedMultiplier: 0.42, cooldown: 3.8, windupDuration: 0.72, fireTime: 0.36, projectileSpeed: 12.5, projectileRange: 18, projectileDamage: 12, projectileRadius: 0.34 } },
       crusher: { name: 'Crusher Zombie', health: 225, speed: 3.4, damage: 26, radius: 1.7, xp: 12, coins: 8, scale: 2.6, weight: 7, unlockTime: 360, unlockLevel: 9, medkitChance: 0.14, skin: 0x6f7f64, shirt: 0x6b4632 },
-      boss: { name: 'Gravebreaker', health: 800, speed: 3.0, damage: 34, radius: 2.6, xp: 40, coins: 32, scale: 4.0, weight: 0, unlockTime: 9999, unlockLevel: 999, medkitChance: 0.75, skin: 0x4d8d39, shirt: 0x25222c },
+      boss: { name: 'Gravebreaker', health: 1000, speed: 3.0, damage: 34, radius: 2.6, xp: 40, coins: 32, scale: 4.0, weight: 0, unlockTime: 9999, unlockLevel: 999, medkitChance: 0.75, skin: 0x4d8d39, shirt: 0x25222c },
     },
   },
   xp: { pickupRadius: 1.5, magnetRadius: 3.5, speed: 24 },
