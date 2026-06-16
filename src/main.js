@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
 import { initInput, consumePress, resetTouchMovement, updateGamepadInput, getGamepadLookVector, consumeGamepadPress, setControllerStatusCallback, isGamepadDown, getCurrentInputMode } from './input.js';
-import { initUI, updateHUD, showScreen, hideOverlays, showUpgrades, showEnd, setMuted, updateMenuCoins, setGameActionsVisible, setPauseButtonVisible, setFullscreenActive, showControllerMessage, moveUpgradeSelection, getSelectedUpgradeId, moveMenuSelection, activateMenuSelection, showDamageFlash, showBossWarning, updateBossHealthBar, showShop, setUpgradeControllerSelectionActive, isConfirmModalOpen, dismissConfirmModal, setLowHealthWarning, setControllerSelectionVisible, scrollActiveMenuPanel } from './ui.js';
+import { initUI, updateHUD, showScreen, hideOverlays, showUpgrades, showEnd, setMuted, updateMenuCoins, setGameActionsVisible, setPauseButtonVisible, setFullscreenActive, showControllerMessage, moveUpgradeSelection, getSelectedUpgradeId, moveMenuSelection, activateMenuSelection, showDamageFlash, showBossWarning, updateBossHealthBar, showShop, setUpgradeControllerSelectionActive, isConfirmModalOpen, dismissConfirmModal, setLowHealthWarning, setControllerSelectionVisible, scrollActiveMenuPanel, isAdjustingVolumeSlider, adjustSelectedVolumeSlider, cancelVolumeSliderAdjust } from './ui.js';
 import { addCoins, getPermanentUpgradeLevels } from './save.js';
 import { calculatePermanentStats } from './permanent-upgrades.js';
 import { createWorld } from './world.js';
@@ -671,6 +671,11 @@ function handleControllerMenus(delta) {
   }
 
   if (mode === 'menu') {
+    if (isAdjustingVolumeSlider()) {
+      if (horizontal) adjustSelectedVolumeSlider(horizontal);
+      if (consumeGamepadPress('a') || consumeGamepadPress('b')) cancelVolumeSliderAdjust();
+      return;
+    }
     if (vertical || horizontal) moveMenuSelection('menu', vertical || horizontal);
     if (consumeGamepadPress('a')) activateMenuSelection('menu');
     return;
