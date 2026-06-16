@@ -73,7 +73,7 @@ const menuCamera = {
 const state = {
   elapsed: 0, health: 100, maxHealth: 100, level: 1, xp: 0, nextXp: CONFIG.level.baseXp,
   coins: 0, kills: 0, pulseCooldown: CONFIG.pulse.cooldown, pulseRange: CONFIG.pulse.range,
-  pulseDamage: CONFIG.pulse.damage, damageMultiplier: 1, speedMultiplier: 1, pickupMagnetMultiplier: 1, coinMultiplier: 1, xpMultiplier: 1, healthRegen: 0, maxStamina: 0, stamina: 0, bossSpawnCount: 0, bossEventsTriggered: [], batKnockback: 0, cooldownMultiplier: 1, damageReduction: 0, critChance: CONFIG.player.critChance, sprintSpeedMultiplier: 1, staminaRegenMultiplier: 1, passiveUpgradeCounts: {}, runFinalized: false, runDuration: CONFIG.runDuration,
+  pulseDamage: CONFIG.pulse.damage, damageMultiplier: 1, speedMultiplier: 1, pickupMagnetMultiplier: 1, coinMultiplier: 1, xpMultiplier: 1, healthRegen: 0, jumpMultiplier: 1, maxStamina: 0, stamina: 0, bossSpawnCount: 0, bossEventsTriggered: [], batKnockback: 0, cooldownMultiplier: 1, damageReduction: 0, critChance: CONFIG.player.critChance, sprintSpeedMultiplier: 1, staminaRegenMultiplier: 1, passiveUpgradeCounts: {}, runFinalized: false, runDuration: CONFIG.runDuration,
 };
 
 setControllerStatusCallback(showControllerMessage);
@@ -92,7 +92,7 @@ function resetState() {
   Object.assign(state, { elapsed: 0, health: permanentStats.maxHealth, maxHealth: permanentStats.maxHealth, level: 1, xp: 0,
     nextXp: CONFIG.level.baseXp, coins: 0, kills: 0, pulseCooldown: permanentStats.pulseCooldown, pulseRange: CONFIG.pulse.range,
     pulseDamage: CONFIG.pulse.damage, damageMultiplier: permanentStats.damageMultiplier, speedMultiplier: permanentStats.speedMultiplier, pickupMagnetMultiplier: permanentStats.pickupMagnetMultiplier,
-    coinMultiplier: permanentStats.coinMultiplier, xpMultiplier: permanentStats.xpMultiplier, healthRegen: permanentStats.healthRegen, maxStamina: permanentStats.maxStamina, stamina: permanentStats.stamina, bossSpawnCount: 0, bossEventsTriggered: [], batKnockback: 0, cooldownMultiplier: 1, damageReduction: 0, critChance: CONFIG.player.critChance, sprintSpeedMultiplier: 1, staminaRegenMultiplier: 1, passiveUpgradeCounts: {}, runFinalized: false, runDuration: CONFIG.runDuration });
+    coinMultiplier: permanentStats.coinMultiplier, xpMultiplier: permanentStats.xpMultiplier, healthRegen: permanentStats.healthRegen, jumpMultiplier: permanentStats.jumpMultiplier, maxStamina: permanentStats.maxStamina, stamina: permanentStats.stamina, bossSpawnCount: 0, bossEventsTriggered: [], batKnockback: 0, cooldownMultiplier: 1, damageReduction: 0, critChance: CONFIG.player.critChance, sprintSpeedMultiplier: 1, staminaRegenMultiplier: 1, passiveUpgradeCounts: {}, runFinalized: false, runDuration: CONFIG.runDuration });
   resetAbilities(scene, state);
   spawnTimer = 0; worldMedkitTimer = CONFIG.medkit.worldFirstSpawn; pulseTimer = 0; pendingChoices = []; pendingLevelUps = 0;
 }
@@ -711,7 +711,7 @@ function tick() {
     if (!isDesignMode) state.elapsed += delta;
     attackVisualTimer = Math.max(0, attackVisualTimer - delta);
     cameraShake = Math.max(0, cameraShake - delta);
-    updatePlayer(player, delta, attackVisualTimer, cameraControls.yaw, state.speedMultiplier, state.sprintSpeedMultiplier);
+    updatePlayer(player, delta, attackVisualTimer, cameraControls.yaw, state.speedMultiplier, state.sprintSpeedMultiplier, state.jumpMultiplier);
     spawnTimer -= delta; pulseTimer -= delta; worldMedkitTimer -= delta;
     if (!isDesignMode) {
       trySpawnBossEvents(previousElapsed);

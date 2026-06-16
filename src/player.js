@@ -101,9 +101,9 @@ export function createPlayer(scene) {
   return group;
 }
 
-export function updatePlayer(player, delta, attackTimer = 0, cameraYaw = 0, speedMultiplier = 1, sprintSpeedMultiplier = 1) {
+export function updatePlayer(player, delta, attackTimer = 0, cameraYaw = 0, speedMultiplier = 1, sprintSpeedMultiplier = 1, jumpMultiplier = 1) {
   if ((consumePress(' ') || consumeGamepadPress('a')) && player.userData.grounded) {
-    player.userData.jumpVelocity = CONFIG.player.jumpVelocity;
+    player.userData.jumpVelocity = CONFIG.player.jumpVelocity * Math.max(0.5, Math.min(1.6, jumpMultiplier));
     player.userData.grounded = false;
   }
 

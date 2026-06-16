@@ -344,6 +344,7 @@ export function updateHUD(state) {
   $('hud-kills').textContent = state.kills;
   $('hud-xp-text').textContent = `${Math.floor(state.xp)}/${state.nextXp}`;
   $('hud-health-bar').style.width = `${Math.min(100, Math.max(0, (state.health / state.maxHealth) * 100))}%`;
+  $('low-health-warning')?.classList.toggle('active', state.health > 0 && state.health <= 25);
   $('hud-xp-bar').style.width = `${Math.min(100, Math.max(0, (state.xp / state.nextXp) * 100))}%`;
   const abilities = state.abilities?.chosen?.slice(0, 4).map((id) => ({ name: getAbilityDisplayName(id), value: `${state.abilities.levels?.[id] ?? 1}/${MAX_ABILITY_LEVEL}` })) || [];
   renderHudList('hud-abilities', abilities, 'None owned');
