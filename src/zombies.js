@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
 import { findSafeSpawnPositionNear, isPickupSpawnSafe, resolveWorldCollision } from './world.js';
+import { playSound } from './audio.js';
 
 const zombies = [];
 const slimeProjectiles = [];
@@ -1097,6 +1098,7 @@ function fireSpitterSlime(scene, zombie, player, ranged = getSpitterRangedConfig
   mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), direction);
   mesh.userData.spawn = start.clone();
   scene.add(mesh);
+  playSound('spitterShot');
   slimeProjectiles.push({
     mesh,
     direction,
@@ -1135,6 +1137,7 @@ function updateSlimeProjectiles(scene, player, delta, onDamage) {
     }
 
     if (hitPlayer || shot.traveled >= (shot.range ?? 18)) {
+      playSound('slimeSplat');
       removeSlimeProjectile(scene, i);
     }
   }
@@ -1209,6 +1212,7 @@ export function updateZombies(scene, player, delta, onDamage) {
       && !z.userData.slamHasDealtDamage
       && (GRAVEBREAKER_SLAM.duration - z.userData.slamTimer) >= GRAVEBREAKER_SLAM.impactTime) {
       z.userData.slamHasDealtDamage = true;
+      playSound('bossSlam');
       const impactDistance = Math.hypot(player.position.x - z.position.x, player.position.z - z.position.z);
       const visibleImpactRadius = z.userData.slamWarningRing?.userData?.currentWarningWorldRadius ?? GRAVEBREAKER_SLAM.warningRadius;
       const playerRadiusTolerance = CONFIG.player.radius ?? 0;

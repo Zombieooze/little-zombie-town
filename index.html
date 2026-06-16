@@ -37,6 +37,17 @@
           <button id="start-button" class="primary-button">Start Game</button>
           <button id="shop-button" class="secondary-button" type="button">Upgrade Lab</button>
           <button id="menu-fullscreen-button" class="secondary-button mobile-only-button" type="button">Fullscreen</button>
+          <div class="audio-controls" aria-label="Audio settings">
+            <label>
+              <span>SFX</span>
+              <input id="sfx-volume" type="range" min="0" max="1" step="0.01" value="0.75" />
+            </label>
+            <label>
+              <span>Music</span>
+              <input id="music-volume" type="range" min="0" max="1" step="0.01" value="0.45" />
+            </label>
+            <small id="mute-state-label">M toggles mute</small>
+          </div>
           <p class="hint">WASD move · Shift sprint · Space jump · Right-drag camera · Wheel zoom · P pause · M mute</p>
           <p class="hint mobile-hint">Mobile: left stick move · right side drag camera · JUMP button</p>
         </div>

@@ -10,6 +10,7 @@ import { spawnZombie, spawnBossZombie, getActiveBoss, updateZombies, damageZombi
 import { dropXp, dropCoin, dropMedkit, dropScrapRush, triggerScrapRush, updatePickups, resetPickups, countWorldMedkits } from './pickups.js';
 import { getUpgradeChoices, applyUpgrade } from './upgrades.js';
 import { resetAbilities, updateAbilities, unlockAbility, applyAbilityUpgrade, isAbilityCard } from './abilities.js';
+import { initAudioControls, unlockAudio, playSound, toggleMute, getAudioSettings } from './audio.js';
 
 const canvas = document.getElementById('game-canvas');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -20,7 +21,7 @@ const clock = new THREE.Clock();
 const isDesignMode = new URLSearchParams(window.location.search).has('design');
 let player;
 let mode = 'menu';
-let muted = false;
+let muted = getAudioSettings().muted;
 let spawnTimer = 0;
 let worldMedkitTimer = CONFIG.medkit.worldFirstSpawn;
 let pulseTimer = 0;
@@ -48,7 +49,7 @@ const cameraControls = {
   pinchStartCameraDistance: 0,
 };
 const cameraLimits = {
-  minPitch: 0.22,
+  minPitch: 0.08,
   maxPitch: 1.25,
   minDistance: CONFIG.camera.minDistance,
   maxDistance: CONFIG.camera.maxDistance,
@@ -76,9 +77,11 @@ const state = {
 
 setControllerStatusCallback(showControllerMessage);
 initInput();
+initAudioControls();
 initCameraControls();
 createWorld(scene);
 initUI({ onStart: startGame, onUpgrade: chooseUpgrade, onMenu: returnToMenu, onShop: openShop, onPause: pauseGame, onResume: resumeGame, onRestart: returnToMenu, onFullscreen: requestGameFullscreen });
+setMuted(muted);
 document.getElementById('design-mode-banner')?.classList.toggle('hidden', !isDesignMode);
 showScreen('menu-screen');
 
@@ -93,6 +96,8 @@ function resetState() {
 }
 
 function startGame() {
+  unlockAudio();
+  playSound('uiClick');
   resetState();
   if (player) scene.remove(player);
   resetZombies(scene); resetPickups(scene);
@@ -128,6 +133,7 @@ function returnToMenu() {
 }
 
 function openShop() {
+  playSound('modalOpen');
   mode = 'shop';
   setGameActionsVisible(false);
   document.body.classList.remove('paused');
@@ -168,6 +174,7 @@ async function requestGameFullscreen() {
 }
 
 function chooseUpgrade(id) {
+  playSound('cardSelect');
   if (id.startsWith('unlock_')) unlockAbility(scene, state, id.replace('unlock_', ''), player);
   else if (isAbilityCard(id)) applyAbilityUpgrade(scene, state, id, player);
   else applyUpgrade(state, id);
@@ -203,6 +210,7 @@ function gainXp(amount) {
   while (state.xp >= state.nextXp) {
     state.xp -= state.nextXp;
     state.level += 1;
+    playSound('levelUp');
     state.nextXp = getNextLevelXp();
     pendingLevelUps += 1;
   }
@@ -213,24 +221,29 @@ function damagePlayer(damage) {
   if (!Number.isFinite(damage) || damage <= 0 || state.health <= 0) return;
   const reducedDamage = Math.max(1, damage - (state.damageReduction ?? 0));
   state.health = Math.max(0, state.health - reducedDamage);
+  playSound(state.health <= 0 ? 'playerDeath' : 'playerHurt');
   showDamageFlash();
 }
 
 function collectPickup(pickup) {
   if (pickup.kind === 'xp') {
+    playSound('xpPickup');
     gainXp(pickup.value);
     return;
   }
   if (pickup.kind === 'coin') {
+    playSound('coinPickup');
     state.coins += Math.max(0, Number(pickup.value) || 0);
     return;
   }
   if (pickup.kind === 'scrapRush') {
+    playSound('scrapRushPickup');
     triggerScrapRush();
     createPickupMessage(player.position, 'SCRAP RUSH!', '#74fff2', '#105f72');
     return;
   }
   if (pickup.kind === 'medkit') {
+    playSound('medkitPickup');
     const oldHealth = state.health;
     state.health = Math.min(state.maxHealth, state.health + pickup.healAmount);
     createHealFloater(player.position, Math.ceil(state.health - oldHealth));
@@ -323,6 +336,7 @@ function applyKillComboBonus(position) {
 }
 
 function recordZombieKill(position, type, typeKey) {
+  playSound('enemyDeath');
   state.kills += 1;
   dropKillRewards(position, type, typeKey);
   applyKillComboBonus(position);
@@ -341,6 +355,7 @@ function trySpawnBossEvents(previousElapsed) {
       const spawned = spawnBossZombie(scene, { elapsed: state.elapsed, level: state.level });
       if (spawned) {
         state.bossSpawnCount += 1;
+        playSound('bossWarning');
         showBossWarning('GRAVEBREAKER HAS AWAKENED!');
       }
     }
@@ -369,6 +384,7 @@ function createPulseVisual() {
 }
 
 function createHitParticles(position) {
+  playSound('enemyHit');
   for (let i = 0; i < 5; i++) {
     const spark = new THREE.Mesh(new THREE.BoxGeometry(.16, .16, .16), new THREE.MeshBasicMaterial({ color: i % 2 ? 0xfff1a8 : 0xffb703, transparent: true, opacity: 1 }));
     spark.position.set(position.x + (Math.random() - .5) * .55, 1 + Math.random() * .85, position.z + (Math.random() - .5) * .55);
@@ -648,7 +664,7 @@ function tick() {
   const delta = Math.min(clock.getDelta(), 0.05);
   resize();
   updateGamepadInput();
-  if (consumePress('m')) { muted = !muted; setMuted(muted); }
+  if (consumePress('m')) { muted = toggleMute(); setMuted(muted); }
   if ((consumePress('p') || consumePress('escape') || consumeGamepadPress('start')) && (mode === 'playing' || mode === 'paused')) { mode === 'playing' ? pauseGame() : resumeGame(); }
   handleControllerMenus(delta);
 
