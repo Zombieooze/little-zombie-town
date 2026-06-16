@@ -40,13 +40,13 @@
           <div class="audio-controls" aria-label="Audio settings">
             <label>
               <span>SFX</span>
-              <input id="sfx-volume" type="range" min="0" max="1" step="0.01" value="0.75" />
+              <input id="sfx-volume" data-audio-control="sfx" type="range" min="0" max="1" step="0.01" value="0.75" />
             </label>
             <label>
               <span>Music</span>
-              <input id="music-volume" type="range" min="0" max="1" step="0.01" value="0.45" />
+              <input id="music-volume" data-audio-control="music" type="range" min="0" max="1" step="0.01" value="0.45" />
             </label>
-            <small id="mute-state-label">M toggles mute</small>
+            <small id="mute-state-label" data-mute-state-label>M toggles mute</small>
           </div>
           <p class="hint">WASD move · Shift sprint · Space jump · Right-drag camera · Wheel zoom · P pause · M mute</p>
           <p class="hint mobile-hint">Mobile: left stick move · right side drag camera · JUMP button</p>
@@ -128,6 +128,17 @@
           <h2>Paused</h2>
           <p>Press P, Escape, or Resume to return to the town.</p>
           <button id="resume-button" class="primary-button" type="button">Resume</button>
+          <div class="audio-controls pause-audio-controls" aria-label="Pause audio settings">
+            <label>
+              <span>Sound Effects Volume</span>
+              <input id="pause-sfx-volume" data-audio-control="sfx" type="range" min="0" max="1" step="0.01" value="0.75" />
+            </label>
+            <label>
+              <span>Music Volume</span>
+              <input id="pause-music-volume" data-audio-control="music" type="range" min="0" max="1" step="0.01" value="0.45" />
+            </label>
+            <small id="pause-mute-state-label" data-mute-state-label>Press M to mute all</small>
+          </div>
           <button id="restart-run-button" class="secondary-button" type="button">Return to Main Menu</button>
         </div>
       </section>

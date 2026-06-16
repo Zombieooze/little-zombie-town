@@ -10,7 +10,7 @@ import { spawnZombie, spawnBossZombie, getActiveBoss, updateZombies, damageZombi
 import { dropXp, dropCoin, dropMedkit, dropScrapRush, triggerScrapRush, updatePickups, resetPickups, countWorldMedkits } from './pickups.js';
 import { getUpgradeChoices, applyUpgrade } from './upgrades.js';
 import { resetAbilities, updateAbilities, unlockAbility, applyAbilityUpgrade, isAbilityCard } from './abilities.js';
-import { initAudioControls, unlockAudio, playSound, toggleMute, getAudioSettings } from './audio.js';
+import { initAudioControls, unlockAudio, playSound, toggleMute, getAudioSettings, startMenuMusic, stopMenuMusic } from './audio.js';
 
 const canvas = document.getElementById('game-canvas');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -84,6 +84,7 @@ initUI({ onStart: startGame, onUpgrade: chooseUpgrade, onMenu: returnToMenu, onS
 setMuted(muted);
 document.getElementById('design-mode-banner')?.classList.toggle('hidden', !isDesignMode);
 showScreen('menu-screen');
+startMenuMusic();
 
 function resetState() {
   const permanentStats = calculatePermanentStats(getPermanentUpgradeLevels());
@@ -97,6 +98,7 @@ function resetState() {
 
 function startGame() {
   unlockAudio();
+  stopMenuMusic();
   playSound('uiClick');
   resetState();
   if (player) scene.remove(player);
@@ -130,9 +132,11 @@ function returnToMenu() {
   document.body.classList.remove('paused');
   showScreen('menu-screen');
   updateMenuCoins();
+  startMenuMusic();
 }
 
 function openShop() {
+  stopMenuMusic();
   playSound('modalOpen');
   mode = 'shop';
   setGameActionsVisible(false);

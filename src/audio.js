@@ -13,6 +13,29 @@ let musicGain = null;
 let controlsReady = false;
 let settings = loadSettings();
 
+const MENU_BPM = 88;
+const MENU_BEAT = 60 / MENU_BPM;
+const MENU_STEPS = 32;
+const MENU_STEP = MENU_BEAT / 2;
+const MENU_LOOKAHEAD = 0.75;
+const MENU_SEQUENCE = {
+  bass: [43.65, null, null, 58.27, 51.91, null, 43.65, null, 43.65, null, null, 65.41, 58.27, null, 51.91, null, 38.89, null, null, 51.91, 46.25, null, 38.89, null, 41.2, null, null, 55, 49, null, 41.2, null],
+  pluck: [null, 261.63, 311.13, null, 392, null, 349.23, null, null, 233.08, 293.66, null, 369.99, null, 311.13, null, null, 246.94, 293.66, null, 349.23, null, 329.63, null, null, 220, 261.63, null, 329.63, null, 293.66, null],
+  chords: [0, null, null, null, null, null, null, null, 1, null, null, null, null, null, null, null, 2, null, null, null, null, null, null, null, 3, null, null, null, null, null, null, null],
+};
+const MENU_CHORDS = [
+  [130.81, 155.56, 196],
+  [116.54, 146.83, 185],
+  [98, 123.47, 155.56],
+  [110, 130.81, 164.81],
+];
+let menuMusicTimer = null;
+let menuMusicPlaying = false;
+let menuMusicNextStep = 0;
+let menuMusicNextTime = 0;
+let menuMusicFadeGain = null;
+let menuDelay = null;
+
 function clamp01(value, fallback) {
   const number = Number(value);
   return Number.isFinite(number) ? Math.min(1, Math.max(0, number)) : fallback;
@@ -43,6 +66,18 @@ function ensureContext() {
   sfxGain.connect(masterGain);
   musicGain.connect(masterGain);
   masterGain.connect(audioContext.destination);
+  menuMusicFadeGain = audioContext.createGain();
+  menuMusicFadeGain.gain.value = 0;
+  menuDelay = audioContext.createDelay(0.45);
+  const menuFeedback = audioContext.createGain();
+  const menuDelayFilter = audioContext.createBiquadFilter();
+  menuDelay.delayTime.value = 0.28;
+  menuFeedback.gain.value = 0.18;
+  menuDelayFilter.type = 'lowpass';
+  menuDelayFilter.frequency.value = 1800;
+  menuDelay.connect(menuDelayFilter).connect(menuFeedback).connect(menuDelay);
+  menuDelayFilter.connect(menuMusicFadeGain);
+  menuMusicFadeGain.connect(musicGain);
   applyVolumes();
   return audioContext;
 }
@@ -89,23 +124,24 @@ export function toggleMute() {
 }
 
 function syncControls() {
-  const sfx = document.getElementById('sfx-volume');
-  const music = document.getElementById('music-volume');
-  const muteLabel = document.getElementById('mute-state-label');
-  if (sfx) sfx.value = String(settings.sfx);
-  if (music) music.value = String(settings.music);
-  if (muteLabel) muteLabel.textContent = settings.muted ? 'Muted' : 'M toggles mute';
+  document.querySelectorAll('[data-audio-control=\"sfx\"]').forEach((sfx) => { sfx.value = String(settings.sfx); });
+  document.querySelectorAll('[data-audio-control=\"music\"]').forEach((music) => { music.value = String(settings.music); });
+  document.querySelectorAll('[data-mute-state-label]').forEach((muteLabel) => { muteLabel.textContent = settings.muted ? 'Muted' : 'Press M to mute all'; });
 }
 
 export function initAudioControls() {
   if (controlsReady) return;
   controlsReady = true;
   syncControls();
-  document.getElementById('sfx-volume')?.addEventListener('input', (event) => {
-    unlockAudio(); setSfxVolume(event.target.value); playSound('uiClick');
+  document.querySelectorAll('[data-audio-control=\"sfx\"]').forEach((control) => {
+    control.addEventListener('input', (event) => {
+      unlockAudio(); setSfxVolume(event.target.value); playSound('uiClick');
+    });
   });
-  document.getElementById('music-volume')?.addEventListener('input', (event) => {
-    unlockAudio(); setMusicVolume(event.target.value);
+  document.querySelectorAll('[data-audio-control=\"music\"]').forEach((control) => {
+    control.addEventListener('input', (event) => {
+      unlockAudio(); setMusicVolume(event.target.value);
+    });
   });
   ['pointerdown', 'touchstart', 'keydown'].forEach((type) => {
     window.addEventListener(type, unlockAudio, { once: true, passive: true });
@@ -153,6 +189,148 @@ function noise({ duration = 0.08, gain = 0.08, filter = 1600, type = 'bandpass' 
   amp.gain.exponentialRampToValueAtTime(0.0001, t + duration);
   source.connect(biquad).connect(amp).connect(sfxGain);
   source.start(t); source.stop(t + duration + 0.02);
+}
+
+
+function connectMenuVoice(source, amp, useDelay = false) {
+  if (!menuMusicFadeGain) return;
+  source.connect(amp).connect(menuMusicFadeGain);
+  if (useDelay && menuDelay) amp.connect(menuDelay);
+}
+
+function scheduleBass(time, freq) {
+  const ctx = ensureContext();
+  if (!ctx || !freq) return;
+  const osc = ctx.createOscillator();
+  const amp = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(freq, time);
+  osc.frequency.exponentialRampToValueAtTime(freq * 0.985, time + MENU_STEP * 0.75);
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(150, time);
+  filter.Q.value = 2.1;
+  amp.gain.setValueAtTime(0.0001, time);
+  amp.gain.exponentialRampToValueAtTime(0.28, time + 0.025);
+  amp.gain.exponentialRampToValueAtTime(0.0001, time + MENU_STEP * 0.78);
+  osc.connect(filter);
+  connectMenuVoice(filter, amp);
+  osc.start(time);
+  osc.stop(time + MENU_STEP * 0.86);
+}
+
+function schedulePluck(time, freq) {
+  const ctx = ensureContext();
+  if (!ctx || !freq) return;
+  [0, 6].forEach((detune) => {
+    const osc = ctx.createOscillator();
+    const amp = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(freq, time);
+    osc.detune.value = detune;
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(720, time);
+    filter.frequency.exponentialRampToValueAtTime(260, time + 0.24);
+    filter.Q.value = 5;
+    amp.gain.setValueAtTime(0.0001, time);
+    amp.gain.exponentialRampToValueAtTime(0.045, time + 0.01);
+    amp.gain.exponentialRampToValueAtTime(0.0001, time + 0.32);
+    osc.connect(filter);
+    connectMenuVoice(filter, amp, true);
+    osc.start(time);
+    osc.stop(time + 0.38);
+  });
+}
+
+function scheduleHat(time, accent) {
+  const ctx = ensureContext();
+  if (!ctx) return;
+  const duration = accent ? 0.055 : 0.032;
+  const buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * duration), ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+  const source = ctx.createBufferSource();
+  const amp = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+  source.buffer = buffer;
+  filter.type = 'highpass';
+  filter.frequency.value = accent ? 4300 : 5600;
+  amp.gain.setValueAtTime(accent ? 0.038 : 0.021, time);
+  amp.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+  source.connect(filter);
+  connectMenuVoice(filter, amp, true);
+  source.start(time);
+}
+
+function scheduleChord(time, chordIndex) {
+  const ctx = ensureContext();
+  const chord = MENU_CHORDS[chordIndex];
+  if (!ctx || !chord) return;
+  chord.forEach((freq, index) => {
+    const osc = ctx.createOscillator();
+    const amp = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+    osc.type = 'sawtooth';
+    osc.frequency.value = freq;
+    osc.detune.value = (index - 1) * 4;
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(520, time);
+    filter.frequency.exponentialRampToValueAtTime(210, time + 1.4);
+    amp.gain.setValueAtTime(0.0001, time);
+    amp.gain.exponentialRampToValueAtTime(0.035, time + 0.06);
+    amp.gain.exponentialRampToValueAtTime(0.0001, time + 1.65);
+    osc.connect(filter);
+    connectMenuVoice(filter, amp, true);
+    osc.start(time);
+    osc.stop(time + 1.75);
+  });
+}
+
+function scheduleMenuStep(step, time) {
+  const index = step % MENU_STEPS;
+  scheduleBass(time, MENU_SEQUENCE.bass[index]);
+  schedulePluck(time, MENU_SEQUENCE.pluck[index]);
+  if (MENU_SEQUENCE.chords[index] !== null) scheduleChord(time, MENU_SEQUENCE.chords[index]);
+  if (index % 2 === 1 || index % 8 === 0) scheduleHat(time, index % 8 === 0);
+}
+
+function runMenuScheduler() {
+  const ctx = ensureContext();
+  if (!ctx || !menuMusicPlaying) return;
+  while (menuMusicNextTime < ctx.currentTime + MENU_LOOKAHEAD) {
+    scheduleMenuStep(menuMusicNextStep, menuMusicNextTime);
+    menuMusicNextStep = (menuMusicNextStep + 1) % MENU_STEPS;
+    menuMusicNextTime += MENU_STEP;
+  }
+}
+
+export function startMenuMusic() {
+  const ctx = ensureContext();
+  if (!ctx || menuMusicPlaying) return;
+  menuMusicPlaying = true;
+  menuMusicNextStep = 0;
+  menuMusicNextTime = ctx.currentTime + 0.08;
+  if (menuMusicFadeGain) {
+    menuMusicFadeGain.gain.cancelScheduledValues(ctx.currentTime);
+    menuMusicFadeGain.gain.setValueAtTime(menuMusicFadeGain.gain.value, ctx.currentTime);
+    menuMusicFadeGain.gain.linearRampToValueAtTime(1, ctx.currentTime + 0.65);
+  }
+  runMenuScheduler();
+  menuMusicTimer = setInterval(runMenuScheduler, 100);
+}
+
+export function stopMenuMusic(fadeSeconds = 0.45) {
+  const ctx = ensureContext();
+  if (!ctx || !menuMusicPlaying) return;
+  menuMusicPlaying = false;
+  if (menuMusicTimer) clearInterval(menuMusicTimer);
+  menuMusicTimer = null;
+  if (menuMusicFadeGain) {
+    menuMusicFadeGain.gain.cancelScheduledValues(ctx.currentTime);
+    menuMusicFadeGain.gain.setValueAtTime(menuMusicFadeGain.gain.value, ctx.currentTime);
+    menuMusicFadeGain.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + fadeSeconds);
+  }
 }
 
 const sounds = {
