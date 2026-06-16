@@ -1,6 +1,7 @@
 import { buyPermanentUpgrade, getPermanentUpgradeLevels, getTotalCoins, resetPermanentProgress } from './save.js';
 import { PERMANENT_UPGRADES, getPermanentUpgradeCost } from './permanent-upgrades.js';
 import { getAbilityDisplayName, MAX_ABILITY_LEVEL } from './abilities.js';
+import { PASSIVE_UPGRADE_VALUES, UPGRADES } from './upgrades.js';
 
 const $ = (id) => document.getElementById(id);
 const screens = ['menu-screen', 'shop-screen', 'pause-screen', 'upgrade-screen', 'end-screen'];
@@ -38,7 +39,7 @@ export function initUI({ onStart, onUpgrade, onMenu, onShop, onPause, onResume, 
   $('pause-button').addEventListener('click', onPause);
   $('resume-button').addEventListener('click', onResume);
   $('restart-run-button').addEventListener('click', () => {
-    if (confirm('Restart this run?')) onRestart();
+    if (confirm('Return to the main menu and bank this run’s coins?')) onRestart();
   });
   $('menu-fullscreen-button').addEventListener('click', onFullscreen);
   $('game-fullscreen-button').addEventListener('click', onFullscreen);
@@ -191,15 +192,70 @@ export function updateBossHealthBar(boss) {
   bar.classList.remove('hidden');
 }
 
+function formatBonus(value, suffix = '') {
+  if (!Number.isFinite(value)) return `0${suffix}`;
+  const rounded = Math.abs(value) >= 10 ? Math.round(value) : Math.round(value * 10) / 10;
+  return `${rounded > 0 ? '+' : ''}${rounded}${suffix}`;
+}
+
+function renderHudList(targetId, items, emptyText) {
+  const target = $(targetId);
+  if (!items.length) {
+    target.classList.add('empty-list');
+    target.textContent = emptyText;
+    return;
+  }
+  target.classList.remove('empty-list');
+  target.innerHTML = items.map((item) => `
+    <div class="hud-list-row">
+      <span>${item.name}</span>
+      <strong>${item.value}</strong>
+    </div>`).join('');
+}
+
+function getPassiveRows(state) {
+  const counts = state.passiveUpgradeCounts || {};
+  const rows = UPGRADES.filter((upgrade) => counts[upgrade.id] > 0).map((upgrade) => {
+    const level = counts[upgrade.id];
+    const values = PASSIVE_UPGRADE_VALUES[upgrade.id] || {};
+    let value = `Lv ${level}`;
+    if (upgrade.id === 'firstAidTraining') value = `+${values.maxHealth * level} HP · Lv ${level}`;
+    if (upgrade.id === 'runningShoes') value = `${formatBonus((Math.pow(values.speedMultiplier, level) - 1) * 100, '%')} · Lv ${level}`;
+    if (upgrade.id === 'energyDrink') value = `${formatBonus((Math.pow(values.damageMultiplier, level) - 1) * 100, '%')} · Lv ${level}`;
+    if (upgrade.id === 'coffeeRush') value = `${formatBonus((1 - Math.pow(values.cooldownMultiplier, level)) * 100, '%')} speed · Lv ${level}`;
+    if (upgrade.id === 'scrapMagnet') value = `${formatBonus((Math.pow(values.pickupMagnetMultiplier, level) - 1) * 100, '%')} · Lv ${level}`;
+    return { name: upgrade.name, value };
+  });
+
+  const derived = [
+    { name: 'Damage Up', value: formatBonus(((state.damageMultiplier || 1) - 1) * 100, '%'), show: (state.damageMultiplier || 1) > 1.001 && !counts.energyDrink },
+    { name: 'Coin Find', value: formatBonus(((state.coinMultiplier || 1) - 1) * 100, '%'), show: (state.coinMultiplier || 1) > 1.001 },
+    { name: 'XP Gain', value: formatBonus(((state.xpMultiplier || 1) - 1) * 100, '%'), show: (state.xpMultiplier || 1) > 1.001 },
+    { name: 'Health Regen', value: formatBonus(state.healthRegen || 0, ' HP/s'), show: (state.healthRegen || 0) > 0 },
+    { name: 'Pickup Radius', value: formatBonus(((state.pickupMagnetMultiplier || 1) - 1) * 100, '%'), show: (state.pickupMagnetMultiplier || 1) > 1.001 && !counts.scrapMagnet },
+    { name: 'Move Speed', value: formatBonus(((state.speedMultiplier || 1) - 1) * 100, '%'), show: (state.speedMultiplier || 1) > 1.001 && !counts.runningShoes },
+    { name: 'Crit Chance', value: formatBonus((state.critChance || 0) * 100, '%'), show: (state.critChance || 0) > 0 },
+  ].filter((row) => row.show);
+
+  return [...rows, ...derived].slice(0, 7);
+}
+
 export function updateHUD(state) {
-  const minutes = Math.floor(state.elapsed / 60);
-  const seconds = Math.floor(state.elapsed % 60).toString().padStart(2, '0');
+  const remaining = Math.max(0, (state.runDuration ?? 0) - state.elapsed);
+  const timerValue = state.runDuration ? remaining : state.elapsed;
+  const minutes = Math.floor(timerValue / 60);
+  const seconds = Math.floor(timerValue % 60).toString().padStart(2, '0');
   $('hud-timer').textContent = `${minutes}:${seconds}`;
   $('hud-health').textContent = `${Math.ceil(state.health)}/${state.maxHealth}`;
   $('hud-level').textContent = state.level;
   $('hud-coins').textContent = state.coins;
-  $('hud-abilities').textContent = state.abilities?.chosen?.map((id) => `${getAbilityDisplayName(id)} ${state.abilities.levels?.[id] ?? 1}/${MAX_ABILITY_LEVEL}`).join(' | ') || 'None';
-  $('hud-xp-bar').style.width = `${Math.min(100, (state.xp / state.nextXp) * 100)}%`;
+  $('hud-kills').textContent = state.kills;
+  $('hud-xp-text').textContent = `${Math.floor(state.xp)}/${state.nextXp}`;
+  $('hud-health-bar').style.width = `${Math.min(100, Math.max(0, (state.health / state.maxHealth) * 100))}%`;
+  $('hud-xp-bar').style.width = `${Math.min(100, Math.max(0, (state.xp / state.nextXp) * 100))}%`;
+  const abilities = state.abilities?.chosen?.slice(0, 4).map((id) => ({ name: getAbilityDisplayName(id), value: `${state.abilities.levels?.[id] ?? 1}/${MAX_ABILITY_LEVEL}` })) || [];
+  renderHudList('hud-abilities', abilities, 'None owned');
+  renderHudList('hud-passives', getPassiveRows(state), 'No bonuses yet');
 }
 
 export function showUpgrades(options) {
