@@ -169,6 +169,18 @@
 
       <div id="controller-toast" class="controller-toast hidden" aria-live="polite"></div>
 
+      <div id="confirm-modal" class="confirm-modal hidden" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title" aria-describedby="confirm-modal-message">
+        <div class="confirm-modal-panel survival-panel" role="document">
+          <p class="eyebrow confirm-modal-eyebrow">Survivor Decision</p>
+          <h2 id="confirm-modal-title">CONFIRM?</h2>
+          <p id="confirm-modal-message" class="confirm-modal-message"></p>
+          <div class="confirm-modal-actions">
+            <button id="confirm-modal-cancel" class="secondary-button" type="button">CANCEL</button>
+            <button id="confirm-modal-confirm" class="primary-button danger-button" type="button">CONFIRM</button>
+          </div>
+        </div>
+      </div>
+
       <div id="rotate-overlay" aria-live="polite">
         <div class="panel rotate-panel">
           <h2>Rotate your phone</h2>
