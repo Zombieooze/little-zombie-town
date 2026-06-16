@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
 import { initInput, consumePress, resetTouchMovement, updateGamepadInput, getGamepadLookVector, consumeGamepadPress, setControllerStatusCallback, isGamepadDown, getCurrentInputMode } from './input.js';
-import { initUI, updateHUD, showScreen, hideOverlays, showUpgrades, showEnd, setMuted, updateMenuCoins, setGameActionsVisible, setPauseButtonVisible, setFullscreenActive, showControllerMessage, moveUpgradeSelection, getSelectedUpgradeId, moveMenuSelection, activateMenuSelection, showDamageFlash, showBossWarning, updateBossHealthBar, showShop, setUpgradeControllerSelectionActive } from './ui.js';
+import { initUI, updateHUD, showScreen, hideOverlays, showUpgrades, showEnd, setMuted, updateMenuCoins, setGameActionsVisible, setPauseButtonVisible, setFullscreenActive, showControllerMessage, moveUpgradeSelection, getSelectedUpgradeId, moveMenuSelection, activateMenuSelection, showDamageFlash, showBossWarning, updateBossHealthBar, showShop, setUpgradeControllerSelectionActive, isConfirmModalOpen } from './ui.js';
 import { addCoins, getPermanentUpgradeLevels } from './save.js';
 import { calculatePermanentStats } from './permanent-upgrades.js';
 import { createWorld } from './world.js';
@@ -669,8 +669,8 @@ function tick() {
   resize();
   updateGamepadInput();
   if (consumePress('m')) { muted = toggleMute(); setMuted(muted); }
-  if ((consumePress('p') || consumePress('escape') || consumeGamepadPress('start')) && (mode === 'playing' || mode === 'paused')) { mode === 'playing' ? pauseGame() : resumeGame(); }
-  handleControllerMenus(delta);
+  if (!isConfirmModalOpen() && (consumePress('p') || consumePress('escape') || consumeGamepadPress('start')) && (mode === 'playing' || mode === 'paused')) { mode === 'playing' ? pauseGame() : resumeGame(); }
+  if (!isConfirmModalOpen()) handleControllerMenus(delta);
 
   if (mode === 'menu' || mode === 'shop') updateMenuCamera(delta);
 
