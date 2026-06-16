@@ -9,9 +9,6 @@ export const PASSIVE_UPGRADE_VALUES = {
   paddedJacket: { damageReduction: 2, maxPicks: 10 },
   bandageWrap: { healthRegen: .8, maxPicks: 8 },
   luckyCharm: { critChance: .06, maxCritChance: .95, maxPicks: 10 },
-  adrenalineRush: { sprintSpeedMultiplier: 1.12, maxPicks: 8 },
-  deepBreaths: { maxStamina: 30, maxPicks: 8 },
-  secondWind: { staminaRegenMultiplier: 1.35, maxPicks: 8 },
 };
 
 export const UPGRADES = [
@@ -55,7 +52,4 @@ export function applyUpgrade(stats, id) {
   if (id === 'paddedJacket') stats.damageReduction = (stats.damageReduction ?? 0) + PASSIVE_UPGRADE_VALUES.paddedJacket.damageReduction;
   if (id === 'bandageWrap') stats.healthRegen = (stats.healthRegen ?? 0) + PASSIVE_UPGRADE_VALUES.bandageWrap.healthRegen;
   if (id === 'luckyCharm') stats.critChance = Math.min(PASSIVE_UPGRADE_VALUES.luckyCharm.maxCritChance, (stats.critChance ?? 0) + PASSIVE_UPGRADE_VALUES.luckyCharm.critChance);
-  if (id === 'adrenalineRush') stats.sprintSpeedMultiplier = (stats.sprintSpeedMultiplier ?? 1) * PASSIVE_UPGRADE_VALUES.adrenalineRush.sprintSpeedMultiplier;
-  if (id === 'deepBreaths') { stats.maxStamina = (stats.maxStamina ?? 0) + PASSIVE_UPGRADE_VALUES.deepBreaths.maxStamina; stats.stamina = (stats.stamina ?? 0) + PASSIVE_UPGRADE_VALUES.deepBreaths.maxStamina; }
-  if (id === 'secondWind') stats.staminaRegenMultiplier = (stats.staminaRegenMultiplier ?? 1) * PASSIVE_UPGRADE_VALUES.secondWind.staminaRegenMultiplier;
 }

@@ -5,7 +5,7 @@ const STORAGE_KEYS = {
 };
 
 const DEFAULTS = { sfx: 0.75, music: 0.45, muted: false };
-const OUTPUT_GAIN = { sfx: 2.475, music: 2.325 };
+const OUTPUT_GAIN = { sfx: 2.475, music: 3.4875 };
 const gates = new Map();
 const DEBUG_AUDIO = false;
 let currentMusicTrack = 'none';

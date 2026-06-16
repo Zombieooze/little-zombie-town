@@ -359,7 +359,15 @@ export function updateHUD(state) {
   $('hud-health-bar').style.width = `${Math.min(100, Math.max(0, (state.health / state.maxHealth) * 100))}%`;
   $('low-health-warning')?.classList.toggle('active', state.health > 0 && state.health <= 25);
   $('hud-xp-bar').style.width = `${Math.min(100, Math.max(0, (state.xp / state.nextXp) * 100))}%`;
-  const abilities = state.abilities?.chosen?.slice(0, 4).map((id) => ({ name: getAbilityDisplayName(id), value: `${state.abilities.levels?.[id] ?? 1}/${ABILITY_DEFINITIONS[id]?.maxLevel ?? 1}` })) || [];
+  const seenAbilities = new Set();
+  const abilities = (state.abilities?.chosen || [])
+    .filter((id) => {
+      const keep = ABILITY_DEFINITIONS[id]?.implemented && !seenAbilities.has(id);
+      if (keep) seenAbilities.add(id);
+      return keep;
+    })
+    .slice(0, 4)
+    .map((id) => ({ name: getAbilityDisplayName(id), value: `${state.abilities.levels?.[id] ?? 1}/${ABILITY_DEFINITIONS[id]?.maxLevel ?? 1}` }));
   renderHudList('hud-abilities', abilities, 'None owned');
   renderHudList('hud-passives', getPassiveRows(state), 'No bonuses yet');
 }

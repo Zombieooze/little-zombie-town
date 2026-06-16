@@ -205,13 +205,22 @@ export function resetAbilities(scene, state) {
 
 function sanitizeAbilityState(state) {
   if (!state?.abilities) return;
-  state.abilities.chosen = (state.abilities.chosen || []).filter((id) => ABILITY_DEFINITIONS[id]?.implemented && !REMOVED_ABILITY_IDS.has(id));
-  if (!state.abilities.chosen.includes('baseballBat')) state.abilities.chosen.unshift('baseballBat');
+  const uniqueChosen = [];
+  for (const id of state.abilities.chosen || []) {
+    if (!ABILITY_DEFINITIONS[id]?.implemented || REMOVED_ABILITY_IDS.has(id) || uniqueChosen.includes(id)) continue;
+    uniqueChosen.push(id);
+  }
+  if (!uniqueChosen.includes('baseballBat')) uniqueChosen.unshift('baseballBat');
+  else if (uniqueChosen[0] !== 'baseballBat') {
+    uniqueChosen.splice(uniqueChosen.indexOf('baseballBat'), 1);
+    uniqueChosen.unshift('baseballBat');
+  }
+  state.abilities.chosen = uniqueChosen.slice(0, MAX_SPECIAL_ABILITIES);
   if (!state.abilities.levels) state.abilities.levels = {};
   state.abilities.levels.baseballBat = Math.max(1, Math.min(MAX_BASEBALL_BAT_LEVEL, state.abilities.levels.baseballBat || 1));
   state.abilities.baseballBat = { ...(state.abilities.baseballBat || {}), ...getBaseballBatStats(state.abilities.levels.baseballBat) };
   for (const id of Object.keys(state.abilities.levels || {})) {
-    if (!ABILITY_DEFINITIONS[id]?.implemented || REMOVED_ABILITY_IDS.has(id)) delete state.abilities.levels[id];
+    if (!ABILITY_DEFINITIONS[id]?.implemented || REMOVED_ABILITY_IDS.has(id) || !state.abilities.chosen.includes(id)) delete state.abilities.levels[id];
   }
 }
 
