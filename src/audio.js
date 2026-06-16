@@ -25,24 +25,28 @@ const MENU_MUSIC_LAYERS = {
   drums: true,
   bass: true,
   hats: true,
-  pluck: false,
+  // `pluck` now controls the soft long-keyboard layer that replaced the old sharp pluck.
+  pluck: true,
+  // Lead/chorus is reserved for a future foreground menu melody or doubled hook.
   lead: false,
-  chords: true,
+  chords: false,
+  // Extra FX is reserved for future menu-only sweeps/one-shots.
   extraFx: false,
 };
 const MENU_SEQUENCE = {
   // C minor neighborhood groove: simple roots/fifths keep the original pulse without the old wandering pitch motion.
   bass: [65.41, null, null, 98, 77.78, null, 65.41, null, 65.41, null, null, 98, 77.78, null, 65.41, null, 58.27, null, null, 87.31, 73.42, null, 58.27, null, 51.91, null, null, 77.78, 65.41, null, 51.91, null],
-  // Sparse, original spooky-arcade hook. Rests leave space so the menu loop stays calm.
-  pluck: [null, 261.63, null, 311.13, null, null, 293.66, null, null, 261.63, null, 233.08, null, null, 196, null, null, 233.08, null, 261.63, null, null, 293.66, null, null, 196, null, 233.08, null, null, 261.63, null],
+  // Soft, sustained keyboard chord colors. Each number selects MENU_SOFT_KEY_CHORDS; nulls leave breathing room.
+  pluck: [0, null, null, null, null, null, null, null, 1, null, null, null, null, null, null, null, 2, null, null, null, null, null, null, null, 3, null, null, null, null, null, null, null],
   chords: [0, null, null, null, null, null, null, null, 1, null, null, null, null, null, null, null, 2, null, null, null, null, null, null, null, 3, null, null, null, null, null, null, null],
 };
-const MENU_CHORDS = [
+const MENU_SOFT_KEY_CHORDS = [
   [130.81, 155.56, 196],
   [116.54, 146.83, 196],
   [103.83, 130.81, 155.56],
   [98, 123.47, 155.56],
 ];
+const MENU_CHORDS = MENU_SOFT_KEY_CHORDS;
 let menuMusicTimer = null;
 let menuMusicPlaying = false;
 let menuMusicNextStep = 0;
@@ -56,6 +60,18 @@ const GAMEPLAY_STEP = GAMEPLAY_BEAT / 4;
 const GAMEPLAY_STEPS = 32;
 const GAMEPLAY_LOOKAHEAD = 0.75;
 const GAMEPLAY_INTRO_STEPS = 32;
+// Gameplay music layer switches for debugging/tuning the existing procedural track.
+// Keep these enabled by default so gameplay music sounds the same unless a layer is isolated.
+const GAMEPLAY_MUSIC_LAYERS = {
+  intro: true,
+  drums: true,
+  bass: true,
+  hats: true,
+  chords: true,
+  arp: true,
+  lead: true,
+  extraFx: false,
+};
 const GAMEPLAY_BASS = [65.41, null, 65.41, 73.42, 65.41, null, 98, null, 58.27, null, 58.27, 65.41, 58.27, null, 87.31, null, 51.91, null, 51.91, 65.41, 51.91, null, 77.78, null, 58.27, null, 58.27, 73.42, 58.27, 65.41, 58.27, null];
 const GAMEPLAY_PLUCK = [null, 261.63, null, 311.13, null, 392, 349.23, null, null, 233.08, null, 293.66, null, 369.99, 311.13, null, null, 207.65, null, 261.63, null, 311.13, 293.66, null, null, 233.08, null, 349.23, 311.13, null, 293.66, null];
 const GAMEPLAY_LEAD = [null, null, null, null, 523.25, null, null, 466.16, null, null, null, null, 587.33, null, 523.25, null, null, null, null, null, 466.16, null, null, 392, null, null, 523.25, null, 466.16, null, null, null];
@@ -262,27 +278,28 @@ function scheduleBass(time, freq) {
   osc.stop(time + MENU_STEP * 0.86);
 }
 
-function schedulePluck(time, freq) {
+function schedulePluck(time, chordIndex) {
   const ctx = ensureContext();
-  if (!ctx || !freq) return;
-  [0, 6].forEach((detune) => {
+  const chord = MENU_SOFT_KEY_CHORDS[chordIndex];
+  if (!ctx || !chord) return;
+  chord.forEach((freq, index) => {
     const osc = ctx.createOscillator();
     const amp = ctx.createGain();
     const filter = ctx.createBiquadFilter();
-    osc.type = 'triangle';
+    osc.type = index === 1 ? 'triangle' : 'sine';
     osc.frequency.setValueAtTime(freq, time);
-    osc.detune.value = detune * 0.45;
+    osc.detune.value = (index - 1) * 3;
     filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(980, time);
-    filter.frequency.exponentialRampToValueAtTime(360, time + 0.2);
-    filter.Q.value = 2.4;
+    filter.frequency.setValueAtTime(540, time);
+    filter.frequency.linearRampToValueAtTime(420, time + 0.9);
+    filter.Q.value = 0.8;
     amp.gain.setValueAtTime(0.0001, time);
-    amp.gain.exponentialRampToValueAtTime(0.046, time + 0.012);
-    amp.gain.exponentialRampToValueAtTime(0.0001, time + 0.28);
+    amp.gain.linearRampToValueAtTime(0.024, time + 0.18);
+    amp.gain.setTargetAtTime(0.0001, time + 1.05, 0.26);
     osc.connect(filter);
     connectMenuVoice(filter, amp, true);
     osc.start(time);
-    osc.stop(time + 0.38);
+    osc.stop(time + 1.85);
   });
 }
 
@@ -346,19 +363,19 @@ function scheduleMenuStep(step, time) {
   // Root/fifth bass notes carry the main menu groove.
   if (MENU_MUSIC_LAYERS.bass) scheduleBass(time, MENU_SEQUENCE.bass[index]);
 
-  // MENU PLUCK / ARP
-  // Sparse spooky hook/arpeggio. Disabled by default for easier testing of the stable beat and bass.
+  // MENU SOFT KEYS (formerly PLUCK / ARP)
+  // Gentle sustained minor-key keyboard colors replace the old sharp pluck pattern.
   if (MENU_MUSIC_LAYERS.pluck) schedulePluck(time, MENU_SEQUENCE.pluck[index]);
 
   // MENU LEAD / CHORUS
-  // No separate menu lead voice is currently scheduled; this switch is here for quick A/B testing
-  // if a lead/chorus call is added back to the menu loop.
+  // Reserved for a future foreground menu melody or chorus/doubled hook. It defaults off so
+  // the menu stays calm and the bass/drums/hats/soft keys can be tested cleanly.
   if (MENU_MUSIC_LAYERS.lead) {
     // Intentionally empty until a menu lead/chorus voice is present.
   }
 
   // MENU CHORDS / PAD
-  // Slow filtered triads underneath the loop.
+  // Optional alternate pad layer using the same simple minor-key chord map as the soft keys.
   if (MENU_MUSIC_LAYERS.chords && MENU_SEQUENCE.chords[index] !== null) scheduleChord(time, MENU_SEQUENCE.chords[index]);
 
   // MENU EXTRA FX
@@ -515,21 +532,55 @@ function scheduleGameplayPluck(time, freq, gain = 0.055) {
 
 function scheduleGameplayIntroStep(step, time) {
   const progress = step / GAMEPLAY_INTRO_STEPS;
-  if (step % 4 === 0) scheduleGameplayKick(time, 0.12 + progress * 0.13);
-  if (step >= 16 && step % 8 === 4) scheduleGameplaySnare(time);
-  if (step >= 8 && step % 2 === 1) scheduleGameplayHat(time, step >= 24);
-  if (step % 2 === 0) scheduleGameplayPluck(time, 220 * (1 + progress * 1.9), 0.035 + progress * 0.035);
-  if (step >= 24) scheduleGameplayBass(time, GAMEPLAY_BASS[step % GAMEPLAY_STEPS]);
+
+  // GAMEPLAY INTRO
+  // Existing ramp-in section. Disable `intro` to skip directly to the loop when a run starts.
+  if (!GAMEPLAY_MUSIC_LAYERS.intro) return;
+
+  // GAMEPLAY DRUMS
+  if (GAMEPLAY_MUSIC_LAYERS.drums && step % 4 === 0) scheduleGameplayKick(time, 0.12 + progress * 0.13);
+  if (GAMEPLAY_MUSIC_LAYERS.drums && step >= 16 && step % 8 === 4) scheduleGameplaySnare(time);
+
+  // GAMEPLAY HATS
+  if (GAMEPLAY_MUSIC_LAYERS.hats && step >= 8 && step % 2 === 1) scheduleGameplayHat(time, step >= 24);
+
+  // GAMEPLAY ARP / PLUCK
+  if (GAMEPLAY_MUSIC_LAYERS.arp && step % 2 === 0) scheduleGameplayPluck(time, 220 * (1 + progress * 1.9), 0.035 + progress * 0.035);
+
+  // GAMEPLAY BASS
+  if (GAMEPLAY_MUSIC_LAYERS.bass && step >= 24) scheduleGameplayBass(time, GAMEPLAY_BASS[step % GAMEPLAY_STEPS]);
 }
 
 function scheduleGameplayLoopStep(step, time) {
   const index = step % GAMEPLAY_STEPS;
-  if (index % 4 === 0) scheduleGameplayKick(time);
-  if (index % 16 === 4 || index % 16 === 12) scheduleGameplaySnare(time);
-  if (index % 2 === 1 || index % 8 === 6) scheduleGameplayHat(time, index % 8 === 6);
-  scheduleGameplayBass(time, GAMEPLAY_BASS[index]);
-  scheduleGameplayPluck(time, GAMEPLAY_PLUCK[index]);
-  if (index % 16 >= 8) scheduleGameplayPluck(time, GAMEPLAY_LEAD[index], 0.035);
+
+  // GAMEPLAY DRUMS
+  if (GAMEPLAY_MUSIC_LAYERS.drums && index % 4 === 0) scheduleGameplayKick(time);
+  if (GAMEPLAY_MUSIC_LAYERS.drums && (index % 16 === 4 || index % 16 === 12)) scheduleGameplaySnare(time);
+
+  // GAMEPLAY HATS
+  if (GAMEPLAY_MUSIC_LAYERS.hats && (index % 2 === 1 || index % 8 === 6)) scheduleGameplayHat(time, index % 8 === 6);
+
+  // GAMEPLAY BASS
+  if (GAMEPLAY_MUSIC_LAYERS.bass) scheduleGameplayBass(time, GAMEPLAY_BASS[index]);
+
+  // GAMEPLAY CHORDS / PAD
+  // No separate gameplay chord/pad voice exists yet; this switch is reserved for isolating it later.
+  if (GAMEPLAY_MUSIC_LAYERS.chords) {
+    // Intentionally empty until the existing track gains a chord/pad call.
+  }
+
+  // GAMEPLAY ARP / PLUCK
+  if (GAMEPLAY_MUSIC_LAYERS.arp) scheduleGameplayPluck(time, GAMEPLAY_PLUCK[index]);
+
+  // GAMEPLAY LEAD
+  if (GAMEPLAY_MUSIC_LAYERS.lead && index % 16 >= 8) scheduleGameplayPluck(time, GAMEPLAY_LEAD[index], 0.035);
+
+  // GAMEPLAY EXTRA FX
+  // Decorative gameplay sweeps/one-shots should be added here and default off while tuning.
+  if (GAMEPLAY_MUSIC_LAYERS.extraFx) {
+    // Intentionally empty until gameplay-only decorative FX are present.
+  }
 }
 
 function runGameplayScheduler() {
@@ -553,7 +604,7 @@ export function startGameplayMusic() {
   if (gameplayMusicPlaying) return;
   gameplayMusicPlaying = true;
   gameplayMusicDucked = false;
-  gameplayMusicNextStep = 0;
+  gameplayMusicNextStep = GAMEPLAY_MUSIC_LAYERS.intro ? 0 : GAMEPLAY_INTRO_STEPS;
   gameplayMusicNextTime = ctx.currentTime + 0.08;
   if (gameplayMusicFadeGain) {
     gameplayMusicFadeGain.gain.cancelScheduledValues(ctx.currentTime);
