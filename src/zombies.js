@@ -98,11 +98,6 @@ function createWalkerZombieModel(group, skin, shirt) {
   addBox(group, darkSkin, .47, 1.88, -.03, .12, .36, .36);
   addBox(group, darkSkin, 0, 2.29, -.05, .82, .1, .76);
 
-  const leftSpike = new THREE.Mesh(new THREE.ConeGeometry(.13, .38, 4), material(darkSkin));
-  leftSpike.position.set(-.24, 2.56, -.08); group.add(leftSpike);
-  const rightSpike = new THREE.Mesh(new THREE.ConeGeometry(.13, .38, 4), material(darkSkin));
-  rightSpike.position.set(.24, 2.55, -.06); group.add(rightSpike);
-
   addBox(group, 0xf3f3e8, -.18, 1.94, -.44, .2, .24, .04);
   addBox(group, 0xf3f3e8, .2, 1.94, -.44, .2, .24, .04);
   addBox(group, 0x191919, -.18, 1.94, -.47, .08, .1, .035);
@@ -155,13 +150,6 @@ function createRunnerZombieModel(group, skin, shirt) {
   addBox(group, darkSkin, 0, 2.2, -.06, .78, .09, .7);
   addBox(group, shadowSkin, -.43, 1.82, -.05, .09, .34, .34);
   addBox(group, shadowSkin, .43, 1.82, -.05, .09, .34, .34);
-
-  [-.21, .22].forEach((x, index) => {
-    const spike = new THREE.Mesh(new THREE.ConeGeometry(.12, .42, 4), material(darkSkin));
-    spike.position.set(x, 2.48 + index * .02, -.08);
-    spike.rotation.y = Math.PI / 4;
-    group.add(spike);
-  });
 
   addBox(group, 0xf4f5ee, -.18, 1.9, -.43, .19, .24, .045);
   addBox(group, 0xf4f5ee, .19, 1.9, -.43, .19, .24, .045);
@@ -285,11 +273,6 @@ function createSpitterZombieModel(group, skin, shirt) {
   addBox(group, shadowSkin, -.48, 1.88, -.08, .1, .36, .36);
   addBox(group, shadowSkin, .48, 1.88, -.08, .1, .36, .36);
   addBox(group, darkSkin, 0, 2.32, -.08, .86, .1, .78);
-
-  const spike = new THREE.Mesh(new THREE.ConeGeometry(.18, .48, 4), material(shirtPurple));
-  spike.position.set(0, 2.65, -.08);
-  spike.rotation.y = Math.PI / 4;
-  group.add(spike);
 
   addBox(group, 0xf4f5ee, -.2, 1.96, -.52, .2, .25, .045);
   addBox(group, 0xf4f5ee, .2, 1.96, -.52, .2, .25, .045);
