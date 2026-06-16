@@ -409,6 +409,8 @@ body.controller-mode button.controller-selected:hover {
 .audio-controls label { display: grid; grid-template-columns: 82px 1fr; align-items: center; gap: 10px; font-weight: 900; }
 .audio-controls input[type="range"] { width: 100%; accent-color: var(--mint); touch-action: manipulation; }
 .audio-controls small { color: var(--gold); text-align: center; font-weight: 800; }
+.audio-unlock-message { color: #eee8ff; opacity: .9; }
+.audio-unlock-message.hidden { display: none; }
 .pause-audio-controls { margin-top: 14px; margin-bottom: 8px; }
 .pause-audio-controls label { grid-template-columns: 150px 1fr; }
 @media (max-width: 520px) {
@@ -606,12 +608,19 @@ body.controller-mode input[type="range"].controller-adjusting {
 
   #menu-screen .hero-panel {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     width: min(96vw, 980px);
     max-height: calc(100dvh - 12px);
     overflow: auto;
+    overflow-x: hidden;
     gap: 5px;
     align-content: center;
+    justify-items: center;
     padding: clamp(8px, 2.2vh, 12px) clamp(12px, 2.4vw, 20px);
+  }
+
+  #menu-screen .hero-panel > * {
+    grid-column: 1 / -1;
   }
 
   #menu-screen .eyebrow {
@@ -647,6 +656,7 @@ body.controller-mode input[type="range"].controller-adjusting {
     gap: 7px;
     width: min(100%, 680px);
     margin: 3px auto 2px;
+    justify-self: stretch;
   }
 
   #menu-screen .menu-action-row button {
@@ -679,6 +689,10 @@ body.controller-mode input[type="range"].controller-adjusting {
     grid-column: 1 / -1;
     font-size: .68rem;
     line-height: 1.1;
+  }
+
+  #menu-screen .audio-unlock-message {
+    font-size: .66rem;
   }
 
   #menu-screen .hint {
