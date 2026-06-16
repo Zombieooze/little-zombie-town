@@ -659,9 +659,20 @@ function addRoadNetwork(scene) {
   townStripe(scene, 0, 0, .28, 15, 0xbfc3c7);
 }
 
-function addParkingStripes(scene, cx, cz) {
-  for (let i = 0; i < 5; i++) townStripe(scene, cx - 16 + i * 8, cz + 2, .25, 15, 0xcfd3d6);
-  townStripe(scene, cx, cz - 6, 38, .25, 0xcfd3d6);
+function addParkingStripes(scene, cx, cz, rotation = 0, count = 5, spacing = 4, length = 6.4, thickness = .25) {
+  const color = 0xcfd3d6;
+  const rotated = rotation === 90 || rotation === 'sideways';
+  const start = -((count - 1) * spacing) / 2;
+
+  for (let i = 0; i < count; i++) {
+    const offset = start + i * spacing;
+
+    if (rotated) {
+      townStripe(scene, cx, cz + offset, length, thickness, color);
+    } else {
+      townStripe(scene, cx + offset, cz, thickness, length, color);
+    }
+  }
 }
 
 function addRubblePatch(scene, x, z, count = 7) {
@@ -871,8 +882,8 @@ function addMotelSign(scene, x, z) {
   ctx.fillStyle = '#f4ead0';
   ctx.strokeText('MOTEL', canvas.width / 2, canvas.height / 2 + 4);
   ctx.fillText('MOTEL', canvas.width / 2, canvas.height / 2 + 4);
-  assetPart(group, box(town(.38), town(5.2), town(.38), 0x3f4548), [town(-1.9), town(2.6), 0]);
-  assetPart(group, box(town(.38), town(5.2), town(.38), 0x3f4548), [town(1.9), town(2.6), 0]);
+  assetPart(group, box(town(.38), town(4.2), town(.38), 0x3f4548), [town(-1.9), town(1.7), 0]);
+  assetPart(group, box(town(.38), town(4.2), town(.38), 0x3f4548), [town(1.9), town(1.7), 0]);
   const sign = new THREE.Mesh(new THREE.BoxGeometry(town(7.2), town(3.1), town(.22)), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(canvas), roughness: .9 }));
   sign.position.set(0, town(5.4), 0);
   group.add(sign);
@@ -886,17 +897,17 @@ function addMotelZone(scene) {
   // Abandoned L-shaped motel in the former parking/junk lot corner. The solid wings hug
   // the south/east map edges while the open side faces inward to the combat-friendly lot.
   townRoadSlab(scene, 40, -39, 42, 40, COLORS.parking);
-  townRoadSlab(scene, 18, -35, 18, 10, COLORS.parking);
-  townStripe(scene, 18, -35, 14, .35, 0xcfd3d6);
-  townSidewalkSlab(scene, 58, -39, 2.2, 40, COLORS.sidewalk);
-  townSidewalkSlab(scene, 42, -58, 34, 2.2, COLORS.sidewalk);
+  townRoadSlab(scene, 16, -35, 18, 10, COLORS.parking);
+  townStripe(scene, 12, -35, 10, .35, 0xcfd3d6);
+  townSidewalkSlab(scene, 50.8, -39, 2.2, 26, COLORS.sidewalk);
+  townSidewalkSlab(scene, 39.4, -50.8, 24, 2.2, COLORS.sidewalk);
 
   addMotelWing(scene, 56, -43, 9, 34, 'west', 'motel-east-wing');
   addMotelWing(scene, 42, -56, 29, 8.5, 'north', 'motel-south-wing');
 
-  addParkingStripes(scene, 37, -37);
-  townStripe(scene, 49, -45, .25, 13, 0xcfd3d6);
-  townStripe(scene, 30, -45, .25, 13, 0xcfd3d6);
+  addParkingStripes(scene, 30.5, -22.5);
+  addParkingStripes(scene, 35.4, -46.6);
+  addParkingStripes(scene, 46.6, -34.2, 90);
   createBurntSedan({ scene, position: [town(31), 0, town(-32)], rotation: .16, scale: town(.74) });
   createBurntPickupTruck({ scene, position: [town(46), 0, town(-39)], rotation: Math.PI - .28, scale: town(.72) });
   addRubblePatch(scene, 51, -29, 3);
