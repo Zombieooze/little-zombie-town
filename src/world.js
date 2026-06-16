@@ -612,51 +612,21 @@ function addResidentialNeighborhood(scene) {
 }
 
 
-function lotLabel(scene, text, x, z) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 256; canvas.height = 64;
-  const ctx = canvas.getContext('2d');
-  ctx.font = 'bold 26px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#f7f3d0';
-  ctx.strokeStyle = '#111827';
-  ctx.lineWidth = 5;
-  const lines = text.split('\n');
-  const lineHeight = lines.length > 1 ? 24 : 0;
-  const startY = lines.length > 1 ? 28 : 40;
-  lines.forEach((line, index) => {
-    const y = startY + index * lineHeight;
-    ctx.strokeText(line, 128, y);
-    ctx.fillText(line, 128, y);
-  });
-  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true }));
-  sprite.position.set(x, 1.7, z);
-  sprite.scale.set(7 * TOWN_SCALE, 1.75 * TOWN_SCALE, 1);
-  scene.add(sprite);
-}
-
-function townLotLabel(scene, text, x, z) {
-  lotLabel(scene, text, town(x), town(z));
-}
-
 function addRoadNetwork(scene) {
   // Compact 130 x 130 arena roads: one clean central crossing with readable sidewalks.
   townRoadSlab(scene, 0, 0, REFERENCE_ARENA_SIZE, 14);
   townRoadSlab(scene, 0, 0, 14, REFERENCE_ARENA_SIZE);
 
-  [[0, -9, 112, 2], [0, 9, 112, 2], [-9, 0, 2, 112], [9, 0, 2, 112]].forEach(([x, z, w, d]) => townSidewalkSlab(scene, x, z, w, d));
+  // Sidewalks trace road edges but stop short of the asphalt intersection to avoid
+  // cross-shaped sidewalk clutter in the middle of the road.
+  [
+    [-34, -9, 44, 2], [34, -9, 44, 2], [-34, 9, 44, 2], [34, 9, 44, 2],
+    [-9, -34, 2, 44], [-9, 34, 2, 44], [9, -34, 2, 44], [9, 34, 2, 44],
+  ].forEach(([x, z, w, d]) => townSidewalkSlab(scene, x, z, w, d));
   for (let i = -54; i <= 54; i += 12) {
-    if (Math.abs(i) > 8) townStripe(scene, i, 0, 4, .22);
-    if (Math.abs(i) > 8) townStripe(scene, 0, i, .22, 4);
+    if (Math.abs(i) > 14) townStripe(scene, i, 0, 4, .22);
+    if (Math.abs(i) > 14) townStripe(scene, 0, i, .22, 4);
   }
-  [-12, 12].forEach((offset) => {
-    townStripe(scene, offset, -7, .38, 5.5, 0xcfd3d6);
-    townStripe(scene, offset, 7, .38, 5.5, 0xcfd3d6);
-    townStripe(scene, -7, offset, 5.5, .38, 0xcfd3d6);
-    townStripe(scene, 7, offset, 5.5, .38, 0xcfd3d6);
-  });
-  townStripe(scene, 0, 0, 15, .28, 0xbfc3c7);
-  townStripe(scene, 0, 0, .28, 15, 0xbfc3c7);
 }
 
 function addParkingStripes(scene, cx, cz, rotation = 0, count = 5, spacing = 4, length = 6.4, thickness = .25) {
@@ -713,17 +683,22 @@ function addOldFountainPark(scene) {
   townSidewalkSlab(scene, -38, -38, 5.4, 12, 0x9c8a63);
 
   // Worn patches stay flat and non-blocking so the park remains a combat arena.
-  [[-48, -47, 9, 5], [-30, -47, 8, 4], [-50, -31, 7, 5], [-29, -29, 8, 5], [-42, -54, 6, 3], [-55, -39, 4, 7]].forEach(([x, z, w, d]) => townDistrictDetailSlab(scene, x, z, w, d, 0x4b432f));
+  [[-48, -47, 9, 5], [-30, -47, 8, 4], [-50, -31, 7, 5], [-29, -29, 8, 5], [-42, -54, 6, 3], [-55, -39, 4, 7], [-21, -42, 5, 8], [-39, -21, 7, 4]].forEach(([x, z, w, d]) => townDistrictDetailSlab(scene, x, z, w, d, 0x4b432f));
 
   createBrokenFountain({ scene, position: [town(-38), 0, town(-38)], scale: town(1.35) });
 
   // A few outer trees define the park boundary without making the center maze-like.
-  [[-56, -51, .78], [-24, -54, .72], [-55, -27, .68], [-26, -29, .7]].forEach(([x, z, scale]) => createStreetTree({ scene, position: [town(x), 0, town(z)], scale: town(scale) }));
+  [[-56, -51, .78], [-24, -54, .72], [-55, -27, .68], [-26, -29, .7], [-59, -39, .58], [-37, -58, .56], [-20, -34, .5]].forEach(([x, z, scale]) => createStreetTree({ scene, position: [town(x), 0, town(z)], scale: town(scale) }));
   createDeadTree({ scene, position: [town(-46), 0, town(-25)], rotation: .35, scale: town(.62) });
+  createDeadTree({ scene, position: [town(-30), 0, town(-58)], rotation: -.4, scale: town(.48) });
+  createBurntSedan({ scene, position: [town(-18), 0, town(-31)], rotation: Math.PI / 2 + .16, scale: town(.62) });
+  createBurntPickupTruck({ scene, position: [town(-48), 0, town(-14)], rotation: -.18, scale: town(.58) });
 
   addRubblePatch(scene, -38, -38, 8);
   addRubblePatch(scene, -44, -36, 4);
   addRubblePatch(scene, -34, -43, 4);
+  addRubblePatch(scene, -41, -31, 5);
+  addRubblePatch(scene, -31, -37, 4);
 }
 
 function addGasStationSign(group, width, height, position) {
@@ -955,7 +930,45 @@ function addMotelZone(scene) {
   addRubblePatch(scene, 51, -29, 3);
   addRubblePatch(scene, 33, -52, 3);
   addMotelSign(scene, 13, -27);
-  townLotLabel(scene, 'MOTEL', 38, -59);
+}
+
+function addLightTownDressing(scene) {
+  const place = (factory, x, z, rotation = 0, scale = .55, collide = false) => factory({
+    scene,
+    position: [town(x), 0, town(z)],
+    rotation,
+    scale: town(scale),
+    collide,
+  });
+
+  // Small non-blocking lamp posts at sidewalk and road edges.
+  [
+    [-20, -10, Math.PI / 2], [22, -9.5, Math.PI / 2], [-10, 22, 0], [9.5, -23, Math.PI],
+    [-55, 10, Math.PI / 2], [54, -10, -Math.PI / 2], [-10, 54, 0], [10, -54, Math.PI],
+    [27, 10, Math.PI / 2], [-27, 9, Math.PI / 2],
+  ].forEach(([x, z, rotation]) => place(createLampPost, x, z, rotation, .42, false));
+
+  // Sidewalk and roadside trees are spaced at edges so they dress the roads without
+  // narrowing the main kiting lanes.
+  [
+    [-58, 13, .5], [-35, 12, .44], [-13, 58, .48], [13, 48, .44],
+    [58, 13, .46], [13, 25, .42], [21, -13, .4], [-13, -22, .42],
+    [58, -18, .42], [-58, -15, .44], [24, -58, .42], [-18, -58, .44],
+  ].forEach(([x, z, scale]) => place(createStreetTree, x, z, 0, scale, true));
+
+  // A light scatter of existing abandoned-town props, kept non-blocking and tucked
+  // against edges except for already-solid vehicles.
+  place(createStopSign, -11, -11, Math.PI / 4, .52, false);
+  place(createStreetSign, 11, 11, -Math.PI / 4, .5, false);
+  place(createFireHydrant, 23, 10.5, 0, .65, false);
+  place(createUtilityPole, -58, 21, .1, .42, false);
+  place(createTrashCan, 52, -23, 0, .58, false);
+  place(createGarbageBags, 56, -53, .2, .62, false);
+  place(createTirePile, 24, -52, -.2, .58, false);
+  place(createScrapPile, -54, 28, .35, .55, false);
+
+  createBurntSedan({ scene, position: [town(-22), 0, town(10)], rotation: -.08, scale: town(.58) });
+  createBurntVan({ scene, position: [town(11), 0, town(-48)], rotation: Math.PI / 2 + .12, scale: town(.6) });
 }
 
 function addDistricts(scene) {
@@ -967,16 +980,13 @@ function addDistricts(scene) {
 
   // Residential corner: compact abandoned neighborhood with low-poly peaked-roof homes.
   addResidentialNeighborhood(scene);
-  townLotLabel(scene, 'RESIDENTIAL', -43, 20);
 
   // Gas / convenience store corner with one solid shop and non-blocking pump details.
   addGasStation(scene, 40, 42);
   createBurntRV({ scene, position: [town(55), 0, town(34)], rotation: -.08, scale: town(.74) });
-  townLotLabel(scene, 'GAS', 38, 20);
 
   // Old Fountain Park: open grass, readable cross-paths, sparse trees, and one broken centerpiece.
   addOldFountainPark(scene);
-  townLotLabel(scene, 'PARK', -43, -57);
 
   // Motel corner: L-shaped two-story motel with an open inner parking lot.
   addMotelZone(scene);
@@ -984,6 +994,7 @@ function addDistricts(scene) {
   createBurntVan({ scene, position: [town(8), 0, town(56)], rotation: Math.PI / 2 - .12, scale: town(.68) });
 
   [[-18, 16], [16, 18], [-20, -16], [18, -18], [54, 54], [-58, -58]].forEach(([x, z]) => addRubblePatch(scene, x, z, 5));
+  addLightTownDressing(scene);
 }
 
 export function createWorld(scene) {
