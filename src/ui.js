@@ -1,4 +1,4 @@
-import { buyPermanentUpgrade, getPermanentUpgradeLevels, getTotalCoins } from './save.js';
+import { buyPermanentUpgrade, getPermanentUpgradeLevels, getTotalCoins, resetPermanentProgress } from './save.js';
 import { PERMANENT_UPGRADES, getPermanentUpgradeCost } from './permanent-upgrades.js';
 import { getAbilityDisplayName, MAX_ABILITY_LEVEL } from './abilities.js';
 
@@ -9,7 +9,7 @@ let selectedUpgradeIndex = 0;
 let selectedMenuIndex = 0;
 const menuGroups = {
   menu: { root: 'menu-screen', selector: '#start-button, #shop-button, #menu-fullscreen-button:not(.hidden)' },
-  shop: { root: 'shop-screen', selector: '#shop-back-button, .shop-buy-button:not(:disabled)' },
+  shop: { root: 'shop-screen', selector: '#shop-back-button, #shop-reset-button, .shop-buy-button:not(:disabled)' },
   paused: { root: 'pause-screen', selector: '#resume-button' },
   ended: { root: 'end-screen', selector: '#again-button, #menu-button' },
 };
@@ -24,6 +24,12 @@ export function initUI({ onStart, onUpgrade, onMenu, onShop, onPause, onResume, 
     const button = event.target.closest('[data-shop-upgrade]');
     if (!button) return;
     buyPermanentUpgrade(button.dataset.shopUpgrade);
+    renderShop();
+    updateMenuCoins();
+  });
+  $('shop-reset-button').addEventListener('click', () => {
+    if (!confirm('Reset all progress? This will clear saved coins and permanent upgrades.')) return;
+    resetPermanentProgress();
     renderShop();
     updateMenuCoins();
   });

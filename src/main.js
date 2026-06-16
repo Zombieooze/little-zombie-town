@@ -255,11 +255,42 @@ function maybeDropScrapRush(position, typeKey) {
   if (Math.random() < CONFIG.scrapRush.dropChance) dropScrapRush(scene, position);
 }
 
+function getRandomCoinValue() {
+  return 5 + Math.floor(Math.random() * 8);
+}
+
+function getNormalCoinDropChance() {
+  return 0.06 * Math.min(1, 600 / Math.max(1, state.elapsed));
+}
+
+function dropCoinPickup(position) {
+  dropCoin(scene, position, awardCoins(getRandomCoinValue()));
+}
+
 function dropKillRewards(position, type, typeKey) {
   dropXp(scene, position, getXpReward(type.xp));
-  dropCoin(scene, position, awardCoins(type.coins));
+  if (typeKey === 'boss') {
+    for (let i = 0; i < 8; i++) dropCoinPickup(position);
+  } else if (typeKey === 'crusher') {
+    dropCoinPickup(position);
+  } else if (Math.random() < getNormalCoinDropChance()) {
+    dropCoinPickup(position);
+  }
   maybeDropMedkit(position, type, typeKey);
   maybeDropScrapRush(position, typeKey);
+}
+
+function applyKillComboBonus(position) {
+  if (state.kills <= 0 || state.kills % 50 !== 0) return;
+  const bonus = Math.max(0, Math.round(12 * state.coinMultiplier));
+  state.coins += bonus;
+  createPickupMessage(position, `RAMPAGE +${bonus}`, '#ffd166', '#5c3600');
+}
+
+function recordZombieKill(position, type, typeKey) {
+  state.kills += 1;
+  dropKillRewards(position, type, typeKey);
+  applyKillComboBonus(position);
 }
 
 function scheduleNextWorldMedkit() {
@@ -324,7 +355,7 @@ function playerDamageAmount(amount) {
 function doPulse() {
   createPulseVisual();
   damageZombies(scene, player.position, state.pulseRange, playerDamageAmount(state.pulseDamage), (position, type, typeKey) => {
-    state.kills += 1; dropKillRewards(position, type, typeKey);
+    recordZombieKill(position, type, typeKey);
   }, createHitParticles, state.batKnockback);
 }
 
@@ -583,7 +614,7 @@ function tick() {
     }
     if (pulseTimer <= 0) { doPulse(); pulseTimer = Math.max(0.1, state.pulseCooldown); }
     updateAbilities(scene, state, player, delta, (position, type, typeKey) => {
-      state.kills += 1; dropKillRewards(position, type, typeKey);
+      recordZombieKill(position, type, typeKey);
     }, createHitParticles);
     if (!isDesignMode && state.health <= 0) endRun(false);
     if (!isDesignMode && state.elapsed >= CONFIG.runDuration) endRun(true);

@@ -37,6 +37,11 @@ export function savePermanentUpgradeLevels(levels) {
   return safeLevels;
 }
 
+export function resetPermanentProgress() {
+  localStorage.setItem(COINS_KEY, '0');
+  return savePermanentUpgradeLevels({});
+}
+
 export function buyPermanentUpgrade(id) {
   const upgrade = getPermanentUpgrade(id);
   if (!upgrade) return { ok: false, reason: 'invalid' };
