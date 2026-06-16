@@ -2,7 +2,7 @@ import { buyPermanentUpgrade, getPermanentUpgradeLevels, getTotalCoins, resetPer
 import { PERMANENT_UPGRADES, getPermanentUpgradeCost } from './permanent-upgrades.js';
 import { getActiveAbilityIds, getAbilityDisplayName, getAbilityMaxLevel } from './abilities.js';
 import { PASSIVE_UPGRADE_VALUES, UPGRADES } from './upgrades.js';
-import { playSound, unlockAudio } from './audio.js';
+import { getAudioSettings, playSound, setMusicVolume, setSfxVolume, unlockAudio } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
 const screens = ['menu-screen', 'shop-screen', 'pause-screen', 'upgrade-screen', 'end-screen'];
@@ -11,7 +11,7 @@ let selectedUpgradeIndex = 0;
 let upgradeControllerSelectionActive = false;
 let selectedMenuIndex = 0;
 const menuGroups = {
-  menu: { root: 'menu-screen', selector: '#start-button, #shop-button, #menu-fullscreen-button:not(.hidden)' },
+  menu: { root: 'menu-screen', selector: '#start-button, #shop-button, #menu-fullscreen-button:not(.hidden), #sfx-volume, #music-volume' },
   shop: { root: 'shop-screen', selector: '#shop-back-button, #shop-reset-button, .shop-buy-button:not(:disabled)' },
   paused: { root: 'pause-screen', selector: '#resume-button, #restart-run-button' },
   ended: { root: 'end-screen', selector: '#again-button, #menu-button' },
@@ -21,6 +21,7 @@ let toastTimer = null;
 let damageFlashTimer = null;
 let activeConfirmModal = null;
 let controllerSelectionVisible = false;
+let adjustingVolumeSlider = null;
 
 export function initUI({ onStart, onUpgrade, onMenu, onShop, onPause, onResume, onRestart, onFullscreen }) {
   document.addEventListener('click', (event) => {
@@ -177,12 +178,24 @@ export function showControllerMessage(message) {
   toastTimer = setTimeout(() => toast.classList.add('hidden'), 1800);
 }
 
-function getMenuButtons(context) {
+function getMenuItems(context) {
   const group = menuGroups[context];
   if (!group) return [];
   const root = $(group.root);
   if (!root || root.classList.contains('hidden')) return [];
-  return [...root.querySelectorAll(group.selector)].filter((button) => button.offsetParent !== null && !button.disabled);
+  return [...root.querySelectorAll(group.selector)].filter((item) => item.offsetParent !== null && !item.disabled);
+}
+
+function clearVolumeAdjustMode() {
+  if (adjustingVolumeSlider) adjustingVolumeSlider.classList.remove('controller-adjusting');
+  adjustingVolumeSlider = null;
+}
+
+function setVolumeAdjustMode(slider) {
+  clearVolumeAdjustMode();
+  if (!slider?.matches?.('input[type="range"][data-audio-control]')) return;
+  adjustingVolumeSlider = slider;
+  adjustingVolumeSlider.classList.add('controller-adjusting');
 }
 
 
@@ -199,7 +212,10 @@ export function setControllerSelectionVisible(visible) {
   const changed = controllerSelectionVisible !== visible;
   controllerSelectionVisible = visible;
   document.body.classList.toggle('controller-mode', visible);
-  if (!visible) setUpgradeControllerSelectionActive(false);
+  if (!visible) {
+    setUpgradeControllerSelectionActive(false);
+    clearVolumeAdjustMode();
+  }
   if (visible && changed) {
     const context = getActiveMenuContext();
     if (context) updateMenuSelection(context);
@@ -209,7 +225,8 @@ export function setControllerSelectionVisible(visible) {
 
 export function moveMenuSelection(context, direction) {
   setControllerSelectionVisible(true);
-  const buttons = getMenuButtons(context);
+  if (adjustingVolumeSlider) return;
+  const buttons = getMenuItems(context);
   if (!buttons.length) return;
   selectedMenuIndex = (selectedMenuIndex + direction + buttons.length) % buttons.length;
   updateMenuSelection(context);
@@ -217,16 +234,26 @@ export function moveMenuSelection(context, direction) {
 
 export function activateMenuSelection(context) {
   setControllerSelectionVisible(true);
-  const buttons = getMenuButtons(context);
+  const buttons = getMenuItems(context);
   const button = buttons[selectedMenuIndex] || buttons[0];
-  if (button) button.click();
+  if (!button) return;
+  if (button.matches?.('input[type="range"][data-audio-control]')) {
+    if (adjustingVolumeSlider === button) clearVolumeAdjustMode();
+    else setVolumeAdjustMode(button);
+    return;
+  }
+  clearVolumeAdjustMode();
+  button.click();
 }
 
 function updateMenuSelection(context) {
   Object.values(menuGroups).forEach((group) => {
-    $(group.root).querySelectorAll(group.selector).forEach((button) => button.classList.remove('controller-selected'));
+    $(group.root).querySelectorAll(group.selector).forEach((button) => {
+      button.classList.remove('controller-selected');
+      if (button !== adjustingVolumeSlider) button.classList.remove('controller-adjusting');
+    });
   });
-  const buttons = getMenuButtons(context);
+  const buttons = getMenuItems(context);
   if (!buttons.length) return;
   selectedMenuIndex = Math.max(0, Math.min(selectedMenuIndex, buttons.length - 1));
   buttons[selectedMenuIndex].classList.toggle('controller-selected', controllerSelectionVisible);
@@ -257,13 +284,36 @@ function updateUpgradeSelection() {
 
 export function showScreen(name) {
   selectedMenuIndex = 0;
+  clearVolumeAdjustMode();
   screens.forEach((id) => {
     $(id).classList.toggle('hidden', id !== name);
     $(id).classList.toggle('active', id === name);
   });
   $('hud').classList.toggle('hidden', name === 'menu-screen' || name === 'end-screen');
   const context = name === 'menu-screen' ? 'menu' : name === 'shop-screen' ? 'shop' : name === 'pause-screen' ? 'paused' : name === 'end-screen' ? 'ended' : null;
+  document.body.classList.toggle('menu-ui-open', name === 'menu-screen' || name === 'shop-screen' || name === 'end-screen');
   if (context) updateMenuSelection(context);
+}
+
+export function isAdjustingVolumeSlider() {
+  return !!adjustingVolumeSlider;
+}
+
+export function cancelVolumeSliderAdjust() {
+  clearVolumeAdjustMode();
+}
+
+export function adjustSelectedVolumeSlider(direction, step = 0.05) {
+  if (!adjustingVolumeSlider || !direction) return false;
+  unlockAudio();
+  const settings = getAudioSettings();
+  const type = adjustingVolumeSlider.dataset.audioControl;
+  const current = type === 'music' ? settings.music : settings.sfx;
+  const next = Math.max(0, Math.min(1, Math.round((current + direction * step) * 100) / 100));
+  if (type === 'music') setMusicVolume(next);
+  else setSfxVolume(next);
+  if (type === 'sfx') playSound('uiClick');
+  return true;
 }
 
 export function scrollActiveMenuPanel(amount) {
@@ -276,7 +326,11 @@ export function scrollActiveMenuPanel(amount) {
   if (panel) panel.scrollBy({ top: amount, behavior: 'auto' });
 }
 
-export function hideOverlays() { screens.filter((id) => id !== 'menu-screen').forEach((id) => { $(id).classList.add('hidden'); $(id).classList.remove('active'); }); }
+export function hideOverlays() {
+  screens.filter((id) => id !== 'menu-screen').forEach((id) => { $(id).classList.add('hidden'); $(id).classList.remove('active'); });
+  document.body.classList.remove('menu-ui-open');
+  clearVolumeAdjustMode();
+}
 export function setGameActionsVisible(visible) { $('game-actions').classList.toggle('hidden', !visible); }
 export function setPauseButtonVisible(visible) { $('pause-button').classList.toggle('hidden', !visible); }
 export function updateMenuCoins() { $('menu-total-coins').textContent = getTotalCoins(); }
