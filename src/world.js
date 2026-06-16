@@ -684,6 +684,48 @@ function addRubblePatch(scene, x, z, count = 7) {
   }
 }
 
+function createBrokenFountain(options = {}) {
+  const g = new THREE.Group();
+  const stone = ASSET_MATS.concrete;
+  const darkBasin = makeMat(0x2f4650);
+  const crack = makeMat(0x2a2928);
+
+  assetPart(g, new THREE.Mesh(new THREE.CylinderGeometry(1.9, 2.05, .38, 8), stone), [0, .19, 0]);
+  assetPart(g, new THREE.Mesh(new THREE.CylinderGeometry(1.36, 1.48, .16, 8), darkBasin), [0, .43, 0]);
+  assetPart(g, new THREE.Mesh(new THREE.CylinderGeometry(.56, .68, .42, 8), stone), [0, .72, 0]);
+  assetPart(g, new THREE.Mesh(new THREE.CylinderGeometry(.34, .42, .46, 7), stone), [0, 1.14, 0]);
+
+  // Missing rim chunks, dark cracks, and fallen stones make the centerpiece read as abandoned.
+  assetPart(g, box(.92, .18, .3, 0x4f4f4a), [1.34, .5, -.7], [0, -.55, 0]);
+  assetPart(g, box(.72, .12, .28, 0x5f5b54), [-.9, .12, 1.58], [0, .35, 0]);
+  assetPart(g, box(.08, .04, 1.55, 0x1d1d1b), [.32, .53, .04], [0, .65, 0]);
+  assetPart(g, box(.07, .045, 1.1, 0x1d1d1b), [-.58, .535, -.28], [0, -1.05, 0]);
+  assetPart(g, box(.12, .055, .7, 0x1d1d1b), [.1, 1.38, 0], [0, .25, .32]);
+
+  return finishAsset(g, options, { type: 'circle', radius: 2.05, label: 'broken-fountain' });
+}
+
+function addOldFountainPark(scene) {
+  // Intentional clear paths from the roads/sidewalk edges into one dry broken fountain.
+  townSidewalkSlab(scene, -38, -38, 34, 3.2, COLORS.path);
+  townSidewalkSlab(scene, -38, -38, 3.2, 34, COLORS.path);
+  townSidewalkSlab(scene, -38, -38, 12, 5.4, 0x9c8a63);
+  townSidewalkSlab(scene, -38, -38, 5.4, 12, 0x9c8a63);
+
+  // Worn patches stay flat and non-blocking so the park remains a combat arena.
+  [[-48, -47, 9, 5], [-30, -47, 8, 4], [-50, -31, 7, 5], [-29, -29, 8, 5], [-42, -54, 6, 3], [-55, -39, 4, 7]].forEach(([x, z, w, d]) => townDistrictDetailSlab(scene, x, z, w, d, 0x4b432f));
+
+  createBrokenFountain({ scene, position: [town(-38), 0, town(-38)], scale: town(1.35) });
+
+  // A few outer trees define the park boundary without making the center maze-like.
+  [[-56, -51, .78], [-24, -54, .72], [-55, -27, .68], [-26, -29, .7]].forEach(([x, z, scale]) => createStreetTree({ scene, position: [town(x), 0, town(z)], scale: town(scale) }));
+  createDeadTree({ scene, position: [town(-46), 0, town(-25)], rotation: .35, scale: town(.62) });
+
+  addRubblePatch(scene, -38, -38, 8);
+  addRubblePatch(scene, -44, -36, 4);
+  addRubblePatch(scene, -34, -43, 4);
+}
+
 function addGasStationSign(group, width, height, position) {
   const canvas = document.createElement('canvas');
   canvas.width = 256; canvas.height = 96;
@@ -932,10 +974,8 @@ function addDistricts(scene) {
   createBurntRV({ scene, position: [town(55), 0, town(34)], rotation: -.08, scale: town(.74) });
   townLotLabel(scene, 'GAS', 38, 20);
 
-  // Park corner: mostly open grass, with only a few large tree trunks as meaningful blockers.
-  [[-55, -50], [-38, -43], [-52, -27], [-25, -55], [-28, -30]].forEach(([x, z]) => createStreetTree({ scene, position: [town(x), 0, town(z)], scale: town(.9) }));
-  townSidewalkSlab(scene, -38, -38, 33, 3, COLORS.path);
-  townSidewalkSlab(scene, -38, -38, 3, 33, COLORS.path);
+  // Old Fountain Park: open grass, readable cross-paths, sparse trees, and one broken centerpiece.
+  addOldFountainPark(scene);
   townLotLabel(scene, 'PARK', -43, -57);
 
   // Motel corner: L-shaped two-story motel with an open inner parking lot.
