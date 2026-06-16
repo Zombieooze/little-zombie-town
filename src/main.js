@@ -10,7 +10,7 @@ import { spawnZombie, spawnBossZombie, getActiveBoss, updateZombies, damageZombi
 import { dropXp, dropCoin, dropMedkit, dropScrapRush, triggerScrapRush, updatePickups, resetPickups, countWorldMedkits } from './pickups.js';
 import { getUpgradeChoices, applyUpgrade } from './upgrades.js';
 import { resetAbilities, updateAbilities, unlockAbility, applyAbilityUpgrade, isAbilityCard } from './abilities.js';
-import { initAudioControls, unlockAudio, playSound, toggleMute, getAudioSettings, startMenuMusic, stopMenuMusic, startGameplayMusic, stopGameplayMusic, setGameplayMusicDucked } from './audio.js';
+import { initAudioControls, unlockAudio, playSound, toggleMute, getAudioSettings, startMenuMusic, stopMenuMusic, startGameplayMusic, stopGameplayMusic, setGameplayMusicDucked, switchToBossMusic, stopBossMusic, switchToGameplayMusic, setBossMusicDucked } from './audio.js';
 
 const canvas = document.getElementById('game-canvas');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -32,6 +32,7 @@ let attackVisualTimer = 0;
 let cameraShake = 0;
 let pendingChoices = [];
 let pendingLevelUps = 0;
+let bossMusicActive = false;
 let controllerNavCooldown = 0;
 const cameraControls = {
   yaw: Math.atan2(CONFIG.camera.offset.x, CONFIG.camera.offset.z),
@@ -99,6 +100,8 @@ function resetState() {
 function startGame() {
   unlockAudio();
   stopMenuMusic();
+  stopBossMusic(0.2);
+  bossMusicActive = false;
   stopGameplayMusic(0.2);
   startGameplayMusic();
   playSound('uiClick');
@@ -125,6 +128,8 @@ function restartRun() {
 
 function returnToMenu() {
   if (mode === 'paused' || mode === 'playing' || mode === 'upgrade') finalizeRun();
+  stopBossMusic();
+  bossMusicActive = false;
   stopGameplayMusic();
   mode = 'menu';
   setGameActionsVisible(false);
@@ -140,6 +145,8 @@ function returnToMenu() {
 
 function openShop() {
   stopMenuMusic();
+  stopBossMusic();
+  bossMusicActive = false;
   stopGameplayMusic();
   playSound('modalOpen');
   mode = 'shop';
@@ -155,6 +162,7 @@ function pauseGame() {
   stopCameraTouchControls();
   document.body.classList.add('paused');
   setGameplayMusicDucked(true);
+  setBossMusicDucked(true);
   showScreen('pause-screen');
 }
 
@@ -163,6 +171,7 @@ function resumeGame() {
   mode = 'playing';
   document.body.classList.remove('paused');
   setGameplayMusicDucked(false);
+  setBossMusicDucked(false);
   hideOverlays();
   document.getElementById('hud').classList.remove('hidden');
 }
@@ -300,6 +309,18 @@ function createHealFloater(position, amount) {
   scene.add(sprite); healFloaters.push(sprite);
 }
 
+function updateBossMusicState() {
+  if (mode !== 'playing' && mode !== 'paused') return;
+  const hasActiveBoss = Boolean(getActiveBoss());
+  if (hasActiveBoss && !bossMusicActive) {
+    switchToBossMusic();
+    bossMusicActive = true;
+  } else if (!hasActiveBoss && bossMusicActive) {
+    switchToGameplayMusic();
+    bossMusicActive = false;
+  }
+}
+
 function maybeDropMedkit(position, type, typeKey) {
   const chance = type.medkitChance ?? CONFIG.zombie.types[typeKey]?.medkitChance ?? 0;
   if (Math.random() < chance) dropMedkit(scene, position, 'zombie');
@@ -366,6 +387,8 @@ function trySpawnBossEvents(previousElapsed) {
       if (spawned) {
         state.bossSpawnCount += 1;
         playSound('bossWarning');
+        switchToBossMusic();
+        bossMusicActive = true;
         showBossWarning('GRAVEBREAKER HAS AWAKENED!');
       }
     }
@@ -432,6 +455,8 @@ function finalizeRun() {
 
 function endRun(won) {
   finalizeRun();
+  stopBossMusic();
+  bossMusicActive = false;
   stopGameplayMusic();
   mode = 'ended';
   setGameActionsVisible(false);
@@ -700,6 +725,7 @@ function tick() {
       scheduleNextWorldMedkit();
     }
     if (!isDesignMode) updateZombies(scene, player, delta, damagePlayer);
+    updateBossMusicState();
     updatePickups(scene, player, delta, collectPickup, state.pickupMagnetMultiplier);
     if (state.healthRegen > 0 && state.health > 0 && state.health < state.maxHealth) {
       state.health = Math.min(state.maxHealth, state.health + state.healthRegen * delta);
@@ -708,6 +734,7 @@ function tick() {
     updateAbilities(scene, state, player, delta, (position, type, typeKey) => {
       recordZombieKill(position, type, typeKey);
     }, createHitParticles);
+    updateBossMusicState();
     if (!isDesignMode && state.health <= 0) endRun(false);
     if (!isDesignMode && state.elapsed >= CONFIG.runDuration) endRun(true);
     updateHUD(state); updateBossHealthBar(getActiveBoss()); updateCamera(delta);
