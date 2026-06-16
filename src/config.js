@@ -31,7 +31,7 @@ export const CONFIG = {
   medkit: { healAmount: 25, pickupRadius: 1.7, worldFirstSpawn: 45, worldSpawnMin: 55, worldSpawnMax: 85, maxWorldActive: 3, maxActive: 6, spawnMinDistance: 10, spawnMaxDistance: 28 },
   level: { baseXp: 12 },
   rewards: {},
-  boss: { spawnTimes: [240, 480], slamCooldownMin: 4, slamCooldownMax: 4, slamWindup: 3, slamImpactTime: 2.55, slamRadius: 4.6, slamDamage: 34, slamTriggerRange: 10.5 },
+  boss: { spawnTimes: [300, 600, 900, 1200, 1500], slamCooldownMin: 4, slamCooldownMax: 4, slamWindup: 3, slamImpactTime: 2.55, slamRadius: 4.6, slamDamage: 34, slamTriggerRange: 10.5 },
   camera: { offset: { x: 0, y: 22, z: 19 }, lookAhead: 2.5, minDistance: 9.5, maxDistance: 24 },
   gamepad: { deadzone: 0.2, cameraSensitivity: 2.8 },
 };

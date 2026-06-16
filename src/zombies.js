@@ -709,14 +709,20 @@ function getScaling(elapsed = 0) {
   };
 }
 
-export function getSpawnDelay(elapsed = 0) {
-  const pressure = Math.max(CONFIG.zombie.pacing.minSpawnMultiplier, 1 - elapsed / 520);
-  return CONFIG.zombie.spawnEvery * pressure;
+export function getSpawnInterval(elapsed = 0) {
+  return Math.max(0.2, 1.45 - elapsed * 0.0011);
+}
+
+export function getSpawnBatchSize(elapsed = 0) {
+  return 1 + Math.floor(elapsed / 240);
 }
 
 function getMaxAlive(elapsed = 0) {
-  const progress = Math.min(1, elapsed / CONFIG.runDuration);
-  return Math.floor(CONFIG.zombie.maxAlive + CONFIG.zombie.pacing.maxAliveBonus * progress);
+  return 260 + Math.min(120, Math.floor(elapsed / 12));
+}
+
+function getNormalAliveCount() {
+  return zombies.filter((z) => z?.userData?.typeKey !== 'crusher' && z?.userData?.typeKey !== 'boss').length;
 }
 
 function zombieMesh(typeKey = 'walker', progress = {}) {
@@ -783,16 +789,14 @@ function unlockedTypes({ elapsed = 0, level = 1 } = {}) {
   });
 }
 
-function chooseZombieType(progress) {
-  const choices = unlockedTypes(progress);
-  const elapsedMinutes = (progress.elapsed ?? 0) / 60;
-  const total = choices.reduce((sum, [key, type]) => sum + getTypeWeight(key, type, elapsedMinutes), 0);
-  let roll = Math.random() * total;
-  for (const [key, type] of choices) {
-    roll -= getTypeWeight(key, type, elapsedMinutes);
-    if (roll <= 0) return key;
-  }
-  return 'walker';
+function chooseZombieType(progress = {}) {
+  const t = progress.elapsed ?? 0;
+  const r = Math.random();
+  let type = 'walker';
+  if (t > 40 && r < 0.28) type = 'runner';
+  if (t > 360 && r >= 0.62 && r < 0.76) type = 'spitter';
+  if (t > 120 && r > (t > 900 ? 0.78 : 0.84)) type = 'brute';
+  return type;
 }
 
 function getTypeWeight(key, type, elapsedMinutes) {
@@ -870,7 +874,7 @@ function findZombieSpawnNearPlayer(playerPosition, radius = ZOMBIE_TYPES.walker.
 }
 
 export function spawnBossZombie(scene, progress = {}) {
-  if (!scene || getActiveBoss()) return null;
+  if (!scene) return null;
   const z = zombieMesh('boss', progress);
   const bossType = ZOMBIE_TYPES.boss;
   const edge = Math.floor(Math.random() * 4), half = CONFIG.arenaSize / 2 + 2, roll = (Math.random() - .5) * CONFIG.arenaSize;
@@ -880,9 +884,18 @@ export function spawnBossZombie(scene, progress = {}) {
 }
 
 export function spawnZombie(scene, progress = {}) {
-  if (zombies.length >= getMaxAlive(progress.elapsed)) return null;
+  if (getNormalAliveCount() >= getMaxAlive(progress.elapsed)) return null;
   const typeKey = chooseZombieType(progress);
   const type = ZOMBIE_TYPES[typeKey] ?? ZOMBIE_TYPES.walker;
+  const z = zombieMesh(typeKey, progress);
+  z.position.copy(findZombieSpawnNearPlayer(progress.playerPosition, type.radius ?? ZOMBIE_TYPES.walker.radius));
+  zombies.push(z); scene.add(z); return z;
+}
+
+export function spawnEliteZombie(scene, progress = {}) {
+  if (!scene) return null;
+  const typeKey = 'crusher';
+  const type = ZOMBIE_TYPES[typeKey];
   const z = zombieMesh(typeKey, progress);
   z.position.copy(findZombieSpawnNearPlayer(progress.playerPosition, type.radius ?? ZOMBIE_TYPES.walker.radius));
   zombies.push(z); scene.add(z); return z;

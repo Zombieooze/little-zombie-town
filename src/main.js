@@ -6,7 +6,7 @@ import { addCoins, getPermanentUpgradeLevels } from './save.js';
 import { calculatePermanentStats } from './permanent-upgrades.js';
 import { createWorld } from './world.js';
 import { createPlayer, updatePlayer } from './player.js';
-import { spawnZombie, spawnBossZombie, getActiveBoss, updateZombies, damageZombies, resetZombies, getSpawnDelay } from './zombies.js';
+import { spawnZombie, spawnBossZombie, spawnEliteZombie, getActiveBoss, updateZombies, damageZombies, resetZombies, getSpawnInterval, getSpawnBatchSize } from './zombies.js';
 import { dropXp, dropCoin, dropMedkit, dropScrapRush, triggerScrapRush, updatePickups, resetPickups, countWorldMedkits } from './pickups.js';
 import { getUpgradeChoices, applyUpgrade } from './upgrades.js';
 import { resetAbilities, updateAbilities, unlockAbility, applyAbilityUpgrade, isAbilityCard } from './abilities.js';
@@ -22,7 +22,8 @@ const isDesignMode = new URLSearchParams(window.location.search).has('design');
 let player;
 let mode = 'menu';
 let muted = getAudioSettings().muted;
-let spawnTimer = 0;
+let spawnAcc = 0;
+let eliteTimer = 60;
 let worldMedkitTimer = CONFIG.medkit.worldFirstSpawn;
 let pulseTimer = 0;
 let pulseVisuals = [];
@@ -97,7 +98,7 @@ function resetState() {
     pulseDamage: CONFIG.pulse.damage, damageMultiplier: permanentStats.damageMultiplier, speedMultiplier: permanentStats.speedMultiplier, pickupMagnetMultiplier: permanentStats.pickupMagnetMultiplier,
     coinMultiplier: permanentStats.coinMultiplier, xpMultiplier: permanentStats.xpMultiplier, healthRegen: permanentStats.healthRegen, jumpMultiplier: permanentStats.jumpMultiplier, maxStamina: 0, stamina: 0, bossSpawnCount: 0, bossEventsTriggered: [], batKnockback: 0, cooldownMultiplier: 1, damageReduction: 0, critChance: CONFIG.player.critChance, sprintSpeedMultiplier: 1, staminaRegenMultiplier: 1, passiveUpgradeCounts: {}, runFinalized: false, runDuration: CONFIG.runDuration });
   resetAbilities(scene, state);
-  spawnTimer = 0; worldMedkitTimer = CONFIG.medkit.worldFirstSpawn; pulseTimer = 0; pendingChoices = []; pendingLevelUps = 0;
+  spawnAcc = 0; eliteTimer = 60; worldMedkitTimer = CONFIG.medkit.worldFirstSpawn; pulseTimer = 0; pendingChoices = []; pendingLevelUps = 0;
 }
 
 function startGame() {
@@ -381,6 +382,15 @@ function recordZombieKill(position, type, typeKey) {
 function scheduleNextWorldMedkit() {
   const { worldSpawnMin, worldSpawnMax } = CONFIG.medkit;
   worldMedkitTimer = worldSpawnMin + Math.random() * (worldSpawnMax - worldSpawnMin);
+}
+
+function trySpawnEliteEvent(delta) {
+  if (state.elapsed <= 60) return;
+  eliteTimer -= delta;
+  if (eliteTimer > 0) return;
+  eliteTimer = 90;
+  const spawned = spawnEliteZombie(scene, { elapsed: state.elapsed, level: state.level, playerPosition: player.position });
+  if (spawned) showBossWarning('CRUSHER ZOMBIE INCOMING!');
 }
 
 function trySpawnBossEvents(previousElapsed) {
@@ -741,12 +751,18 @@ function tick() {
     attackVisualTimer = Math.max(0, attackVisualTimer - delta);
     cameraShake = Math.max(0, cameraShake - delta);
     updatePlayer(player, delta, attackVisualTimer, cameraControls.yaw, state.speedMultiplier, state.sprintSpeedMultiplier, state.jumpMultiplier);
-    spawnTimer -= delta; pulseTimer -= delta; worldMedkitTimer -= delta;
+    pulseTimer -= delta; worldMedkitTimer -= delta;
     if (!isDesignMode) {
+      spawnAcc += delta;
       trySpawnBossEvents(previousElapsed);
-      if (spawnTimer <= 0) {
-        spawnZombie(scene, { elapsed: state.elapsed, level: state.level, playerPosition: player.position });
-        spawnTimer = getSpawnDelay(state.elapsed);
+      trySpawnEliteEvent(delta);
+      const interval = getSpawnInterval(state.elapsed);
+      while (spawnAcc >= interval) {
+        spawnAcc -= interval;
+        const batchSize = getSpawnBatchSize(state.elapsed);
+        for (let i = 0; i < batchSize; i++) {
+          spawnZombie(scene, { elapsed: state.elapsed, level: state.level, playerPosition: player.position });
+        }
       }
     }
     if (worldMedkitTimer <= 0) {
