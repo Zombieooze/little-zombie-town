@@ -17,6 +17,7 @@ const menuGroups = {
 };
 let toastTimer = null;
 let damageFlashTimer = null;
+let activeConfirmModal = null;
 
 export function initUI({ onStart, onUpgrade, onMenu, onShop, onPause, onResume, onRestart, onFullscreen }) {
   $('start-button').addEventListener('click', onStart);
@@ -29,8 +30,15 @@ export function initUI({ onStart, onUpgrade, onMenu, onShop, onPause, onResume, 
     renderShop();
     updateMenuCoins();
   });
-  $('shop-reset-button').addEventListener('click', () => {
-    if (!confirm('Reset all progress? This will clear saved coins and permanent upgrades.')) return;
+  $('shop-reset-button').addEventListener('click', async () => {
+    const confirmed = await showConfirmModal({
+      title: 'RESET ALL PROGRESS?',
+      message: 'This will clear your saved coins and permanent upgrades. This cannot be undone.',
+      confirmText: 'RESET PROGRESS',
+      cancelText: 'CANCEL',
+      danger: true,
+    });
+    if (!confirmed) return;
     resetPermanentProgress();
     renderShop();
     updateMenuCoins();
@@ -39,8 +47,14 @@ export function initUI({ onStart, onUpgrade, onMenu, onShop, onPause, onResume, 
   $('menu-button').addEventListener('click', onMenu);
   $('pause-button').addEventListener('click', onPause);
   $('resume-button').addEventListener('click', onResume);
-  $('restart-run-button').addEventListener('click', () => {
-    if (confirm('Return to the main menu and bank this run’s coins?')) onRestart();
+  $('restart-run-button').addEventListener('click', async () => {
+    const confirmed = await showConfirmModal({
+      title: 'RETURN TO MAIN MENU?',
+      message: 'Bank the coins from this run and return to the main menu?',
+      confirmText: 'BANK COINS & LEAVE',
+      cancelText: 'STAY IN RUN',
+    });
+    if (confirmed) onRestart();
   });
   $('menu-fullscreen-button').addEventListener('click', onFullscreen);
   $('game-fullscreen-button').addEventListener('click', onFullscreen);
@@ -57,6 +71,66 @@ export function initUI({ onStart, onUpgrade, onMenu, onShop, onPause, onResume, 
   document.addEventListener('fullscreenchange', () => setFullscreenActive(!!document.fullscreenElement));
   updateMenuCoins();
   setFullscreenActive(!!document.fullscreenElement);
+}
+
+
+export function showConfirmModal({ title, message, confirmText = 'CONFIRM', cancelText = 'CANCEL', danger = false }) {
+  if (activeConfirmModal) return activeConfirmModal;
+
+  const modal = $('confirm-modal');
+  if (!modal) return Promise.resolve(false);
+
+  const titleEl = $('confirm-modal-title');
+  const messageEl = $('confirm-modal-message');
+  const confirmButton = $('confirm-modal-confirm');
+  const cancelButton = $('confirm-modal-cancel');
+
+  titleEl.textContent = title;
+  messageEl.textContent = message;
+  confirmButton.textContent = confirmText;
+  cancelButton.textContent = cancelText;
+  confirmButton.classList.toggle('danger-button', danger);
+
+  modal.classList.remove('hidden');
+  modal.setAttribute('aria-hidden', 'false');
+  cancelButton.focus({ preventScroll: true });
+
+  activeConfirmModal = new Promise((resolve) => {
+    let settled = false;
+
+    const cleanup = (result) => {
+      if (settled) return;
+      settled = true;
+      modal.classList.add('hidden');
+      modal.setAttribute('aria-hidden', 'true');
+      confirmButton.classList.remove('danger-button');
+      activeConfirmModal = null;
+      confirmButton.removeEventListener('click', onConfirm);
+      cancelButton.removeEventListener('click', onCancel);
+      modal.removeEventListener('pointerdown', onBackdropPointerDown);
+      document.removeEventListener('keydown', onKeyDown, true);
+      resolve(result);
+    };
+
+    const onConfirm = () => cleanup(true);
+    const onCancel = () => cleanup(false);
+    const onBackdropPointerDown = (event) => {
+      if (event.target === modal) cleanup(false);
+    };
+    const onKeyDown = (event) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      cleanup(false);
+    };
+
+    confirmButton.addEventListener('click', onConfirm);
+    cancelButton.addEventListener('click', onCancel);
+    modal.addEventListener('pointerdown', onBackdropPointerDown);
+    document.addEventListener('keydown', onKeyDown, true);
+  });
+
+  return activeConfirmModal;
 }
 
 export function setFullscreenActive(active) {
