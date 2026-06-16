@@ -1,4 +1,4 @@
-import { clampPermanentLevels, getPermanentUpgrade, getPermanentUpgradeCost, migratePermanentLevels } from './permanent-upgrades.js';
+import { DEFAULT_PERMANENT_LEVELS, clampPermanentLevels, getPermanentUpgrade, getPermanentUpgradeCost, migratePermanentLevels } from './permanent-upgrades.js';
 
 const COINS_KEY = 'little-zombie-town-total-coins';
 const PERMANENT_UPGRADES_KEY = 'little-zombie-town-permanent-upgrades';
@@ -39,7 +39,7 @@ export function savePermanentUpgradeLevels(levels) {
 
 export function resetPermanentProgress() {
   localStorage.setItem(COINS_KEY, '0');
-  return savePermanentUpgradeLevels({});
+  return savePermanentUpgradeLevels(DEFAULT_PERMANENT_LEVELS);
 }
 
 export function buyPermanentUpgrade(id) {

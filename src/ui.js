@@ -10,13 +10,13 @@ let selectedMenuIndex = 0;
 const menuGroups = {
   menu: { root: 'menu-screen', selector: '#start-button, #shop-button, #menu-fullscreen-button:not(.hidden)' },
   shop: { root: 'shop-screen', selector: '#shop-back-button, #shop-reset-button, .shop-buy-button:not(:disabled)' },
-  paused: { root: 'pause-screen', selector: '#resume-button' },
+  paused: { root: 'pause-screen', selector: '#resume-button, #restart-run-button' },
   ended: { root: 'end-screen', selector: '#again-button, #menu-button' },
 };
 let toastTimer = null;
 let damageFlashTimer = null;
 
-export function initUI({ onStart, onUpgrade, onMenu, onShop, onPause, onResume, onFullscreen }) {
+export function initUI({ onStart, onUpgrade, onMenu, onShop, onPause, onResume, onRestart, onFullscreen }) {
   $('start-button').addEventListener('click', onStart);
   $('shop-button').addEventListener('click', onShop);
   $('shop-back-button').addEventListener('click', onMenu);
@@ -37,6 +37,9 @@ export function initUI({ onStart, onUpgrade, onMenu, onShop, onPause, onResume, 
   $('menu-button').addEventListener('click', onMenu);
   $('pause-button').addEventListener('click', onPause);
   $('resume-button').addEventListener('click', onResume);
+  $('restart-run-button').addEventListener('click', () => {
+    if (confirm('Restart this run?')) onRestart();
+  });
   $('menu-fullscreen-button').addEventListener('click', onFullscreen);
   $('game-fullscreen-button').addEventListener('click', onFullscreen);
   $('upgrade-cards').addEventListener('click', (event) => {
