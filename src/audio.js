@@ -20,15 +20,17 @@ const MENU_STEPS = 32;
 const MENU_STEP = MENU_BEAT / 2;
 const MENU_LOOKAHEAD = 0.75;
 const MENU_SEQUENCE = {
-  bass: [43.65, null, null, 58.27, 51.91, null, 43.65, null, 43.65, null, null, 65.41, 58.27, null, 51.91, null, 38.89, null, null, 51.91, 46.25, null, 38.89, null, 41.2, null, null, 55, 49, null, 41.2, null],
-  pluck: [null, 261.63, 311.13, null, 392, null, 349.23, null, null, 233.08, 293.66, null, 369.99, null, 311.13, null, null, 246.94, 293.66, null, 349.23, null, 329.63, null, null, 220, 261.63, null, 329.63, null, 293.66, null],
+  // C minor neighborhood groove: simple roots/fifths keep the original pulse without the old wandering pitch motion.
+  bass: [65.41, null, null, 98, 77.78, null, 65.41, null, 65.41, null, null, 98, 77.78, null, 65.41, null, 58.27, null, null, 87.31, 73.42, null, 58.27, null, 51.91, null, null, 77.78, 65.41, null, 51.91, null],
+  // Sparse, original spooky-arcade hook. Rests leave space so the menu loop stays calm.
+  pluck: [null, 261.63, null, 311.13, null, null, 293.66, null, null, 261.63, null, 233.08, null, null, 196, null, null, 233.08, null, 261.63, null, null, 293.66, null, null, 196, null, 233.08, null, null, 261.63, null],
   chords: [0, null, null, null, null, null, null, null, 1, null, null, null, null, null, null, null, 2, null, null, null, null, null, null, null, 3, null, null, null, null, null, null, null],
 };
 const MENU_CHORDS = [
   [130.81, 155.56, 196],
-  [116.54, 146.83, 185],
+  [116.54, 146.83, 196],
+  [103.83, 130.81, 155.56],
   [98, 123.47, 155.56],
-  [110, 130.81, 164.81],
 ];
 let menuMusicTimer = null;
 let menuMusicPlaying = false;
@@ -256,16 +258,16 @@ function schedulePluck(time, freq) {
     const osc = ctx.createOscillator();
     const amp = ctx.createGain();
     const filter = ctx.createBiquadFilter();
-    osc.type = 'square';
+    osc.type = 'triangle';
     osc.frequency.setValueAtTime(freq, time);
-    osc.detune.value = detune;
+    osc.detune.value = detune * 0.45;
     filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(720, time);
-    filter.frequency.exponentialRampToValueAtTime(260, time + 0.24);
-    filter.Q.value = 5;
+    filter.frequency.setValueAtTime(980, time);
+    filter.frequency.exponentialRampToValueAtTime(360, time + 0.2);
+    filter.Q.value = 2.4;
     amp.gain.setValueAtTime(0.0001, time);
-    amp.gain.exponentialRampToValueAtTime(0.062, time + 0.01);
-    amp.gain.exponentialRampToValueAtTime(0.0001, time + 0.32);
+    amp.gain.exponentialRampToValueAtTime(0.046, time + 0.012);
+    amp.gain.exponentialRampToValueAtTime(0.0001, time + 0.28);
     osc.connect(filter);
     connectMenuVoice(filter, amp, true);
     osc.start(time);
@@ -301,15 +303,15 @@ function scheduleChord(time, chordIndex) {
     const osc = ctx.createOscillator();
     const amp = ctx.createGain();
     const filter = ctx.createBiquadFilter();
-    osc.type = 'sawtooth';
+    osc.type = 'sine';
     osc.frequency.value = freq;
-    osc.detune.value = (index - 1) * 4;
+    osc.detune.value = (index - 1) * 2;
     filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(520, time);
-    filter.frequency.exponentialRampToValueAtTime(210, time + 1.4);
+    filter.frequency.setValueAtTime(620, time);
+    filter.frequency.exponentialRampToValueAtTime(260, time + 1.25);
     amp.gain.setValueAtTime(0.0001, time);
-    amp.gain.exponentialRampToValueAtTime(0.048, time + 0.06);
-    amp.gain.exponentialRampToValueAtTime(0.0001, time + 1.65);
+    amp.gain.exponentialRampToValueAtTime(0.038, time + 0.08);
+    amp.gain.exponentialRampToValueAtTime(0.0001, time + 1.55);
     osc.connect(filter);
     connectMenuVoice(filter, amp, true);
     osc.start(time);
