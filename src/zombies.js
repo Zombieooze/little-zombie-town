@@ -726,8 +726,9 @@ function getScaling(elapsed = 0) {
 }
 
 export function getSpawnDelay(elapsed = 0) {
-  const pressure = Math.max(CONFIG.zombie.pacing.minSpawnMultiplier, 1 - elapsed / 520);
-  return CONFIG.zombie.spawnEvery * pressure;
+  const progress = Math.min(1, Math.max(0, elapsed) / CONFIG.runDuration);
+  const curvedPressure = 1 - Math.pow(progress, 0.82) * (1 - CONFIG.zombie.pacing.minSpawnMultiplier);
+  return CONFIG.zombie.spawnEvery * Math.max(CONFIG.zombie.pacing.minSpawnMultiplier, curvedPressure);
 }
 
 function getMaxAlive(elapsed = 0) {

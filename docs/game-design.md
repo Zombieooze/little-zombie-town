@@ -24,7 +24,7 @@
 
 ## Movement and jump
 
-- Base player and zombie movement speeds are tuned about **10% faster** than the previous stable feel so the town pace is slightly snappier without changing the 12-minute run clock, spawn cadence, cooldowns, XP curve, medkit timers, or damage tick timers.
+- Base player and zombie movement speeds are tuned about **10% faster** than the previous stable feel so the town pace is slightly snappier while supporting the newer 30-minute survival run clock, spawn cadence, XP curve, medkit timers, and damage tick timers.
 - **Spacebar** or an Xbox-style controller **A** button starts a quick, modest arcade jump only while grounded. Holding the jump input does not repeat jumps in midair.
 - The player keeps camera-relative steering while airborne, so pressing a new WASD direction during a jump changes the movement direction instead of locking the original takeoff direction.
 - Jumping is currently a movement-feel feature only: it does not grant invincibility, stomp damage, dodge frames, or special combat rules. Bat swings and special abilities can still operate while jumping.
@@ -137,20 +137,24 @@ Medkits are the current basic healing system. They use simple low-poly red boxes
 - Drop chances live near zombie type tuning: Walkers are rare, Runners/Little Zombies and Spitters are slightly more likely, and Brutes/Crushers/Mini Bosses are more rewarding without replacing XP drops.
 - World medkits begin appearing around **0:45**, then occasionally respawn near—but not directly on—the player, with small world and total active caps so healing remains helpful without flooding the arena. Medkits and practical pickup drops use the shared safe-spawn helper so they stay inside the 130 x 130 play area and avoid registered solid world objects such as buildings, vehicles, and large trees.
 
+## Lighting direction
+
+Little Zombie Town now uses a moonlit nighttime setup while intentionally preserving the existing town layout. The sky and fog are darker, a cool moon-style directional light provides the main shape and shadow direction, and soft blue fill/hemisphere lighting keeps buildings, roads, trees, cars, enemies, and pickups readable from the gameplay camera. Street lamps remain visual world props; the pass avoids adding expensive extra assets, textures, GLTF files, libraries, or heavy post-processing.
+
 ## Zombie progression
 
 Zombie tuning lives in `src/config.js` so health, speed, damage, XP, coins, size, spawn weight, unlock time, and unlock level are easy to adjust.
 
-- **0:00 to 1:30 / levels 1-2:** Walker Zombies are the default threat.
-- **1:30+ or level 3+:** Little Runner Zombies join as smaller, faster, lower-health chasers.
-- **3:00+ or level 5+:** Brute Zombies join as larger, slower, high-health chasers with stronger contact damage.
-- **5:00+ or level 6+:** Spitter Zombies join as toxic-colored visual variants; for now they still chase directly instead of firing projectiles.
-- **6:00+ or level 9+:** Crusher Zombies enter as late-game heavy chasers between Brutes and Gravebreaker.
-- **4:00 and 8:00 boss events:** Gravebreaker awakens as a timed boss event. Only one Gravebreaker can exist at a time, so the 8:00 event is skipped if the 4:00 Gravebreaker is still alive.
+- **0:00 to 2:00 / levels 1-2:** Walker Zombies are the default readable opening threat.
+- **2:00+ or level 3+:** Little Runner Zombies join as smaller, faster, lower-health chasers.
+- **4:00+ or level 6+:** Brute Zombies join as larger, slower, high-health chasers with stronger contact damage.
+- **6:00+ or level 8+:** Spitter Zombies join as ranged toxic pressure with slime projectiles, but their lower weight keeps them from dominating too early.
+- **9:00+ or level 12+:** Crusher Zombies enter as late-game heavy chasers between Brutes and Gravebreaker.
+- **Every 4 minutes from 4:00 through 28:00:** Gravebreaker awakens as a timed boss event at 4:00, 8:00, 12:00, 16:00, 20:00, 24:00, and 28:00. Only one Gravebreaker can exist at a time, so a later event is skipped if the previous Gravebreaker is still alive.
 
 Normal zombies spawn near the player in a tunable donut/ring rather than across the far side of the larger town map, keeping combat pressure tight without increasing the spawn rate or horde cap. Spawn candidates are checked against the 130 x 130 map bounds and registered solid world objects when possible, so mobs avoid buildings, vehicles, and large trees before falling back to the safest available nearby point. Zombies still use simple direct chasing after spawning; this does not add navmesh or smart pathfinding.
 
-Spawn pressure increases over the run: spawn delays shrink gradually, the active horde cap rises, and later zombie type weights become more prominent after they unlock, with extra late pressure on heavy enemies after minute five. Enemy health scales slowly by elapsed minutes and contact damage scales even more lightly, keeping the opening approachable while preventing the late run from becoming too easy. XP rewards also gain a modest time-based multiplier after minute five, and level XP growth softens after level 10, so upgrades keep feeding through the full 12-minute run. Strong successful play should trend closer to level 24-30 instead of stalling near the high teens.
+Spawn pressure now supports a full **30-minute** run with a CubeBasher-inspired curve: the opening stays easy and readable, the mid game adds mixed pressure and stronger enemy variety, the late game raises horde density without flooding the browser, and the final minutes become a high-pressure survival push. Spawn delays shrink along a curved 30-minute ramp, the active horde cap rises gradually, and later zombie type weights become more prominent after they unlock, with extra late pressure on heavy enemies after minute five. Enemy health and contact damage scale more gently per minute than the old short-run tuning so 30 minutes stays fair while still preventing maxed builds from trivializing the end. XP rewards gain a modest time-based multiplier after minute four and level XP growth softens after level 12, so upgrades keep feeding through the full 30-minute run without maxing everything too early. Coin rewards remain tied to enemy rewards and permanent Upgrade Lab multipliers, preserving saved coins and localStorage progress.
 
 ## Zombie type roles
 
@@ -206,5 +210,5 @@ Mobile/touch controls are hidden on normal desktop/laptop screens and appear onl
 
 ## Win/loss condition
 
-- Win by surviving until the timer reaches **12:00**.
+- Win by surviving until the timer reaches **30:00**.
 - Lose if health reaches **0** before the timer finishes.

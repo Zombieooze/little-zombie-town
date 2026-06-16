@@ -997,12 +997,14 @@ function addDistricts(scene) {
 
 export function createWorld(scene) {
   resetWorldColliders();
-  scene.background = new THREE.Color(0x111827);
-  scene.fog = new THREE.Fog(0x111827, 64, 155);
-  const hemi = new THREE.HemisphereLight(0xb8ffcf, 0x2a173d, 2.8);
-  const sun = new THREE.DirectionalLight(0xc6b7ff, 2.6);
-  sun.position.set(10, 22, 8);
-  scene.add(hemi, sun);
+  scene.background = new THREE.Color(0x050914);
+  scene.fog = new THREE.Fog(0x07101f, 58, 150);
+  const hemi = new THREE.HemisphereLight(0x8fb6ff, 0x151322, 1.55);
+  const moon = new THREE.DirectionalLight(0xb8cfff, 2.35);
+  moon.position.set(-18, 30, 12);
+  const fill = new THREE.DirectionalLight(0x516b9f, .55);
+  fill.position.set(18, 10, -16);
+  scene.add(hemi, moon, fill);
 
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(CONFIG.arenaSize, CONFIG.arenaSize, 10, 10), makeMat(COLORS.grass, 1));
   ground.rotation.x = -Math.PI / 2;
