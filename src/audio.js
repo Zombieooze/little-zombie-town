@@ -5,7 +5,7 @@ const STORAGE_KEYS = {
 };
 
 const DEFAULTS = { sfx: 0.75, music: 0.45, muted: false };
-const OUTPUT_GAIN = { sfx: 1.65, music: 1.55 };
+const OUTPUT_GAIN = { sfx: 2.475, music: 2.325 };
 const gates = new Map();
 let audioContext = null;
 let masterGain = null;
@@ -91,6 +91,38 @@ let gameplayMusicFadeGain = null;
 let gameplayDelay = null;
 let gameplayMusicDucked = false;
 
+const BOSS_BPM = 128;
+const BOSS_BEAT = 60 / BOSS_BPM;
+const BOSS_STEP = BOSS_BEAT / 2;
+const BOSS_STEPS = 32;
+const BOSS_LOOKAHEAD = 0.75;
+// Boss music layer switches for the Gravebreaker fight. No pluck layer: this track stays heavy, dark, and urgent.
+const BOSS_MUSIC_LAYERS = {
+  drums: true,
+  bass: true,
+  pulse: true,
+  pad: true,
+  accents: true,
+};
+const BOSS_SEQUENCE = {
+  bass: [49, null, 49, 49, 55, null, 49, null, 43.65, null, 43.65, 49, 41.2, null, 43.65, null, 49, null, 49, 49, 55, null, 58.27, null, 65.41, null, 58.27, 55, 49, null, 43.65, null],
+  pulse: [98, null, null, 98, null, 110, null, null, 87.31, null, null, 98, null, 82.41, null, null, 98, null, null, 98, null, 110, null, 116.54, null, 130.81, null, 116.54, 98, null, 87.31, null],
+  pad: [0, null, null, null, null, null, null, null, 1, null, null, null, null, null, null, null, 2, null, null, null, null, null, null, null, 3, null, null, null, null, null, null, null],
+  accents: [null, null, null, null, 196, null, null, null, null, null, 174.61, null, null, null, null, 155.56, null, null, null, null, 196, null, 207.65, null, null, null, 233.08, null, null, 196, null, null],
+};
+const BOSS_PAD_CHORDS = [
+  [49, 73.42, 98],
+  [43.65, 65.41, 87.31],
+  [41.2, 61.74, 82.41],
+  [49, 65.41, 98],
+];
+let bossMusicTimer = null;
+let bossMusicPlaying = false;
+let bossMusicNextStep = 0;
+let bossMusicNextTime = 0;
+let bossMusicFadeGain = null;
+let bossMusicDucked = false;
+
 function clamp01(value, fallback) {
   const number = Number(value);
   return Number.isFinite(number) ? Math.min(1, Math.max(0, number)) : fallback;
@@ -145,6 +177,9 @@ function ensureContext() {
   gameplayDelay.connect(gameplayDelayFilter).connect(gameplayFeedback).connect(gameplayDelay);
   gameplayDelayFilter.connect(gameplayMusicFadeGain);
   gameplayMusicFadeGain.connect(musicGain);
+  bossMusicFadeGain = audioContext.createGain();
+  bossMusicFadeGain.gain.value = 0;
+  bossMusicFadeGain.connect(musicGain);
   applyVolumes();
   return audioContext;
 }
@@ -783,6 +818,204 @@ export function setGameplayMusicDucked(ducked) {
   gameplayMusicFadeGain.gain.cancelScheduledValues(ctx.currentTime);
   gameplayMusicFadeGain.gain.setValueAtTime(gameplayMusicFadeGain.gain.value, ctx.currentTime);
   gameplayMusicFadeGain.gain.linearRampToValueAtTime(gameplayMusicDucked ? 0.25 : 1, ctx.currentTime + 0.28);
+}
+
+
+function connectBossVoice(source, amp) {
+  if (!bossMusicFadeGain) return;
+  source.connect(amp).connect(bossMusicFadeGain);
+}
+
+function scheduleBossKick(time, strong = false) {
+  const ctx = ensureContext();
+  if (!ctx) return;
+  const osc = ctx.createOscillator();
+  const amp = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(strong ? 96 : 82, time);
+  osc.frequency.exponentialRampToValueAtTime(34, time + 0.18);
+  amp.gain.setValueAtTime(0.0001, time);
+  amp.gain.exponentialRampToValueAtTime(strong ? 0.24 : 0.18, time + 0.012);
+  amp.gain.exponentialRampToValueAtTime(0.0001, time + 0.28);
+  connectBossVoice(osc, amp);
+  osc.start(time); osc.stop(time + 0.3);
+}
+
+function scheduleBossSnare(time, accent = false) {
+  const ctx = ensureContext();
+  if (!ctx) return;
+  const duration = 0.105;
+  const buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * duration), ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+  const source = ctx.createBufferSource();
+  const amp = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+  source.buffer = buffer;
+  filter.type = 'bandpass'; filter.frequency.value = accent ? 1380 : 1080; filter.Q.value = 0.9;
+  amp.gain.setValueAtTime(accent ? 0.12 : 0.095, time);
+  amp.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+  source.connect(filter); connectBossVoice(filter, amp);
+  source.start(time); source.stop(time + duration + 0.01);
+}
+
+function scheduleBossHat(time, accent = false) {
+  const ctx = ensureContext();
+  if (!ctx) return;
+  const duration = accent ? 0.045 : 0.024;
+  const buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * duration), ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+  const source = ctx.createBufferSource();
+  const amp = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+  source.buffer = buffer;
+  filter.type = 'highpass'; filter.frequency.value = accent ? 4700 : 6200;
+  amp.gain.setValueAtTime(accent ? 0.036 : 0.022, time);
+  amp.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+  source.connect(filter); connectBossVoice(filter, amp);
+  source.start(time); source.stop(time + duration + 0.01);
+}
+
+function scheduleBossBass(time, freq, strong = false) {
+  const ctx = ensureContext();
+  if (!ctx || !freq) return;
+  const osc = ctx.createOscillator();
+  const sub = ctx.createOscillator();
+  const amp = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+  osc.type = 'sawtooth'; sub.type = 'sine';
+  osc.frequency.setValueAtTime(freq, time); sub.frequency.setValueAtTime(freq / 2, time);
+  filter.type = 'lowpass'; filter.frequency.setValueAtTime(strong ? 190 : 150, time); filter.Q.value = 2.2;
+  amp.gain.setValueAtTime(0.0001, time);
+  amp.gain.exponentialRampToValueAtTime(strong ? 0.24 : 0.19, time + 0.025);
+  amp.gain.setTargetAtTime(0.0001, time + BOSS_STEP * 0.82, 0.09);
+  osc.connect(filter); sub.connect(filter); connectBossVoice(filter, amp);
+  osc.start(time); sub.start(time); osc.stop(time + BOSS_STEP * 1.2); sub.stop(time + BOSS_STEP * 1.2);
+}
+
+function scheduleBossPulse(time, freq) {
+  const ctx = ensureContext();
+  if (!ctx || !freq) return;
+  const osc = ctx.createOscillator();
+  const amp = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+  osc.type = 'square'; osc.frequency.setValueAtTime(freq, time);
+  filter.type = 'lowpass'; filter.frequency.setValueAtTime(320, time); filter.frequency.exponentialRampToValueAtTime(180, time + BOSS_STEP * 0.85); filter.Q.value = 1.4;
+  amp.gain.setValueAtTime(0.0001, time); amp.gain.linearRampToValueAtTime(0.05, time + 0.018); amp.gain.setTargetAtTime(0.0001, time + BOSS_STEP * 0.65, 0.08);
+  osc.connect(filter); connectBossVoice(filter, amp);
+  osc.start(time); osc.stop(time + BOSS_STEP);
+}
+
+function scheduleBossPad(time, chordIndex) {
+  const ctx = ensureContext();
+  const chord = BOSS_PAD_CHORDS[chordIndex];
+  if (!ctx || !chord) return;
+  chord.forEach((freq, index) => {
+    const osc = ctx.createOscillator();
+    const amp = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+    osc.type = index === 1 ? 'triangle' : 'sine'; osc.frequency.setValueAtTime(freq, time); osc.detune.value = (index - 1) * 6;
+    filter.type = 'lowpass'; filter.frequency.value = 210; filter.Q.value = 0.65;
+    amp.gain.setValueAtTime(0.0001, time); amp.gain.linearRampToValueAtTime(0.026, time + 0.5); amp.gain.setTargetAtTime(0.0001, time + BOSS_BEAT * 3.1, 0.58);
+    osc.connect(filter); connectBossVoice(filter, amp); osc.start(time); osc.stop(time + BOSS_BEAT * 3.8);
+  });
+}
+
+function scheduleBossAccent(time, freq) {
+  const ctx = ensureContext();
+  if (!ctx || !freq) return;
+  const osc = ctx.createOscillator();
+  const amp = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+  osc.type = 'triangle'; osc.frequency.setValueAtTime(freq, time); osc.detune.value = -7;
+  filter.type = 'bandpass'; filter.frequency.value = 820; filter.Q.value = 1.8;
+  amp.gain.setValueAtTime(0.0001, time); amp.gain.linearRampToValueAtTime(0.03, time + 0.035); amp.gain.exponentialRampToValueAtTime(0.0001, time + 0.26);
+  osc.connect(filter); connectBossVoice(filter, amp); osc.start(time); osc.stop(time + 0.3);
+}
+
+function scheduleBossLoopStep(step, time) {
+  const index = step % BOSS_STEPS;
+
+  // BOSS DRUMS
+  if (BOSS_MUSIC_LAYERS.drums) {
+    if (index % 4 === 0 || index % 16 === 6 || index % 16 === 14) scheduleBossKick(time, index % 16 === 0);
+    if (index % 8 === 4 || index % 16 === 12) scheduleBossSnare(time, index % 16 === 12);
+    if (index % 2 === 1) scheduleBossHat(time, index % 8 === 7);
+  }
+
+  // BOSS BASS
+  if (BOSS_MUSIC_LAYERS.bass) scheduleBossBass(time, BOSS_SEQUENCE.bass[index], index % 8 === 0);
+
+  // BOSS PULSE
+  if (BOSS_MUSIC_LAYERS.pulse) scheduleBossPulse(time, BOSS_SEQUENCE.pulse[index]);
+
+  // BOSS PAD
+  if (BOSS_MUSIC_LAYERS.pad && BOSS_SEQUENCE.pad[index] !== null) scheduleBossPad(time, BOSS_SEQUENCE.pad[index]);
+
+  // BOSS ACCENTS
+  if (BOSS_MUSIC_LAYERS.accents) scheduleBossAccent(time, BOSS_SEQUENCE.accents[index]);
+}
+
+function runBossScheduler() {
+  const ctx = ensureContext();
+  if (!ctx || !bossMusicPlaying) return;
+  while (bossMusicNextTime < ctx.currentTime + BOSS_LOOKAHEAD) {
+    scheduleBossLoopStep(bossMusicNextStep, bossMusicNextTime);
+    bossMusicNextStep += 1;
+    bossMusicNextTime += BOSS_STEP;
+  }
+}
+
+export function startBossMusic() {
+  const ctx = ensureContext();
+  if (!ctx) return;
+  stopMenuMusic(0.25);
+  stopGameplayMusic(0.45);
+  if (bossMusicPlaying) return;
+  bossMusicPlaying = true;
+  bossMusicDucked = false;
+  bossMusicNextStep = 0;
+  bossMusicNextTime = ctx.currentTime + 0.06;
+  if (bossMusicFadeGain) {
+    bossMusicFadeGain.gain.cancelScheduledValues(ctx.currentTime);
+    bossMusicFadeGain.gain.setValueAtTime(bossMusicFadeGain.gain.value, ctx.currentTime);
+    bossMusicFadeGain.gain.linearRampToValueAtTime(1, ctx.currentTime + 0.45);
+  }
+  runBossScheduler();
+  bossMusicTimer = setInterval(runBossScheduler, 100);
+}
+
+export function stopBossMusic(fadeSeconds = 0.35) {
+  const ctx = ensureContext();
+  if (!ctx || !bossMusicPlaying) return;
+  bossMusicPlaying = false;
+  if (bossMusicTimer) clearInterval(bossMusicTimer);
+  bossMusicTimer = null;
+  bossMusicDucked = false;
+  if (bossMusicFadeGain) {
+    bossMusicFadeGain.gain.cancelScheduledValues(ctx.currentTime);
+    bossMusicFadeGain.gain.setValueAtTime(bossMusicFadeGain.gain.value, ctx.currentTime);
+    bossMusicFadeGain.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + fadeSeconds);
+  }
+}
+
+export function switchToBossMusic() {
+  startBossMusic();
+}
+
+export function switchToGameplayMusic() {
+  stopBossMusic(0.35);
+  startGameplayMusic();
+}
+
+export function setBossMusicDucked(ducked) {
+  const ctx = ensureContext();
+  if (!ctx || !bossMusicFadeGain || !bossMusicPlaying) return;
+  bossMusicDucked = Boolean(ducked);
+  bossMusicFadeGain.gain.cancelScheduledValues(ctx.currentTime);
+  bossMusicFadeGain.gain.setValueAtTime(bossMusicFadeGain.gain.value, ctx.currentTime);
+  bossMusicFadeGain.gain.linearRampToValueAtTime(bossMusicDucked ? 0.25 : 1, ctx.currentTime + 0.28);
 }
 
 const sounds = {
