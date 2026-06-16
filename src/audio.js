@@ -14,7 +14,7 @@ let musicGain = null;
 let controlsReady = false;
 let settings = loadSettings();
 
-const MENU_BPM = 88;
+const MENU_BPM = 82;
 const MENU_BEAT = 60 / MENU_BPM;
 const MENU_STEPS = 32;
 const MENU_STEP = MENU_BEAT / 2;
@@ -25,28 +25,32 @@ const MENU_MUSIC_LAYERS = {
   drums: true,
   bass: true,
   hats: true,
-  // `pluck` now controls the soft long-keyboard layer that replaced the old sharp pluck.
-  pluck: true,
-  // Lead/chorus is reserved for a future foreground menu melody or doubled hook.
-  lead: false,
-  chords: false,
-  // Extra FX is reserved for future menu-only sweeps/one-shots.
+  keys: true,
+  pad: true,
+  accent: true,
   extraFx: false,
 };
 const MENU_SEQUENCE = {
-  // C minor neighborhood groove: simple roots/fifths keep the original pulse without the old wandering pitch motion.
-  bass: [65.41, null, null, 98, 77.78, null, 65.41, null, 65.41, null, null, 98, 77.78, null, 65.41, null, 58.27, null, null, 87.31, 73.42, null, 58.27, null, 51.91, null, null, 77.78, 65.41, null, 51.91, null],
-  // Soft, sustained keyboard chord colors. Each number selects MENU_SOFT_KEY_CHORDS; nulls leave breathing room.
-  pluck: [0, null, null, null, null, null, null, null, 1, null, null, null, null, null, null, null, 2, null, null, null, null, null, null, null, 3, null, null, null, null, null, null, null],
-  chords: [0, null, null, null, null, null, null, null, 1, null, null, null, null, null, null, null, 2, null, null, null, null, null, null, null, 3, null, null, null, null, null, null, null],
+  // Slow C minor small-town groove: sparse roots and fifths leave space for the menu to breathe.
+  bass: [65.41, null, null, null, 65.41, null, 98, null, 58.27, null, null, null, 58.27, null, 87.31, null, 51.91, null, null, null, 51.91, null, 77.78, null, 58.27, null, null, null, 58.27, null, 65.41, null],
+  // Long organ/keyboard colors, one change every two bars for a calm haunted-town loop.
+  keys: [0, null, null, null, null, null, null, null, 1, null, null, null, null, null, null, null, 2, null, null, null, null, null, null, null, 3, null, null, null, null, null, null, null],
+  pad: [0, null, null, null, null, null, null, null, 1, null, null, null, null, null, null, null, 2, null, null, null, null, null, null, null, 3, null, null, null, null, null, null, null],
+  // Sparse soft bell/keyboard accents only at phrase edges; no repeating echo pattern.
+  accent: [null, null, null, null, null, null, 261.63, null, null, null, null, null, null, null, null, null, null, null, null, null, 233.08, null, null, null, null, null, null, null, null, 196, null, null],
 };
-const MENU_SOFT_KEY_CHORDS = [
+const MENU_KEY_CHORDS = [
   [130.81, 155.56, 196],
   [116.54, 146.83, 196],
   [103.83, 130.81, 155.56],
   [98, 123.47, 155.56],
 ];
-const MENU_CHORDS = MENU_SOFT_KEY_CHORDS;
+const MENU_PAD_CHORDS = [
+  [65.41, 98],
+  [58.27, 87.31],
+  [51.91, 77.78],
+  [58.27, 87.31],
+];
 let menuMusicTimer = null;
 let menuMusicPlaying = false;
 let menuMusicNextStep = 0;
@@ -73,7 +77,7 @@ const GAMEPLAY_MUSIC_LAYERS = {
   extraFx: false,
 };
 const GAMEPLAY_BASS = [65.41, null, 65.41, 73.42, 65.41, null, 98, null, 58.27, null, 58.27, 65.41, 58.27, null, 87.31, null, 51.91, null, 51.91, 65.41, 51.91, null, 77.78, null, 58.27, null, 58.27, 73.42, 58.27, 65.41, 58.27, null];
-const GAMEPLAY_PLUCK = [null, 261.63, null, 311.13, null, 392, 349.23, null, null, 233.08, null, 293.66, null, 369.99, 311.13, null, null, 207.65, null, 261.63, null, 311.13, 293.66, null, null, 233.08, null, 349.23, 311.13, null, 293.66, null];
+const GAMEPLAY_ARP = [null, 261.63, null, 311.13, null, 392, 349.23, null, null, 233.08, null, 293.66, null, 369.99, 311.13, null, null, 207.65, null, 261.63, null, 311.13, 293.66, null, null, 233.08, null, 349.23, 311.13, null, 293.66, null];
 const GAMEPLAY_LEAD = [null, null, null, null, 523.25, null, null, 466.16, null, null, null, null, 587.33, null, 523.25, null, null, null, null, null, 466.16, null, null, 392, null, null, 523.25, null, 466.16, null, null, null];
 let gameplayMusicTimer = null;
 let gameplayMusicPlaying = false;
@@ -257,7 +261,45 @@ function connectMenuVoice(source, amp, useDelay = false) {
   if (useDelay && menuDelay) amp.connect(menuDelay);
 }
 
-function scheduleBass(time, freq) {
+function scheduleMenuKick(time, strong = false) {
+  const ctx = ensureContext();
+  if (!ctx) return;
+  const osc = ctx.createOscillator();
+  const amp = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(strong ? 72 : 64, time);
+  osc.frequency.exponentialRampToValueAtTime(38, time + 0.18);
+  amp.gain.setValueAtTime(0.0001, time);
+  amp.gain.exponentialRampToValueAtTime(strong ? 0.13 : 0.085, time + 0.018);
+  amp.gain.exponentialRampToValueAtTime(0.0001, time + 0.32);
+  connectMenuVoice(osc, amp);
+  osc.start(time);
+  osc.stop(time + 0.34);
+}
+
+function scheduleMenuDustHit(time) {
+  const ctx = ensureContext();
+  if (!ctx) return;
+  const duration = 0.08;
+  const buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * duration), ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+  const source = ctx.createBufferSource();
+  const amp = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+  source.buffer = buffer;
+  filter.type = 'bandpass';
+  filter.frequency.value = 920;
+  filter.Q.value = 0.7;
+  amp.gain.setValueAtTime(0.024, time);
+  amp.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+  source.connect(filter);
+  connectMenuVoice(filter, amp);
+  source.start(time);
+  source.stop(time + duration + 0.01);
+}
+
+function scheduleMenuBass(time, freq) {
   const ctx = ensureContext();
   if (!ctx || !freq) return;
   const osc = ctx.createOscillator();
@@ -265,48 +307,23 @@ function scheduleBass(time, freq) {
   const filter = ctx.createBiquadFilter();
   osc.type = 'triangle';
   osc.frequency.setValueAtTime(freq, time);
-  osc.frequency.exponentialRampToValueAtTime(freq * 0.985, time + MENU_STEP * 0.75);
+  osc.frequency.exponentialRampToValueAtTime(freq * 0.992, time + MENU_STEP * 1.45);
   filter.type = 'lowpass';
-  filter.frequency.setValueAtTime(150, time);
-  filter.Q.value = 2.1;
+  filter.frequency.setValueAtTime(135, time);
+  filter.Q.value = 1.8;
   amp.gain.setValueAtTime(0.0001, time);
-  amp.gain.exponentialRampToValueAtTime(0.34, time + 0.025);
-  amp.gain.exponentialRampToValueAtTime(0.0001, time + MENU_STEP * 0.78);
+  amp.gain.exponentialRampToValueAtTime(0.24, time + 0.04);
+  amp.gain.setTargetAtTime(0.0001, time + MENU_STEP * 1.15, 0.18);
   osc.connect(filter);
   connectMenuVoice(filter, amp);
   osc.start(time);
-  osc.stop(time + MENU_STEP * 0.86);
+  osc.stop(time + MENU_STEP * 1.7);
 }
 
-function schedulePluck(time, chordIndex) {
-  const ctx = ensureContext();
-  const chord = MENU_SOFT_KEY_CHORDS[chordIndex];
-  if (!ctx || !chord) return;
-  chord.forEach((freq, index) => {
-    const osc = ctx.createOscillator();
-    const amp = ctx.createGain();
-    const filter = ctx.createBiquadFilter();
-    osc.type = index === 1 ? 'triangle' : 'sine';
-    osc.frequency.setValueAtTime(freq, time);
-    osc.detune.value = (index - 1) * 3;
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(540, time);
-    filter.frequency.linearRampToValueAtTime(420, time + 0.9);
-    filter.Q.value = 0.8;
-    amp.gain.setValueAtTime(0.0001, time);
-    amp.gain.linearRampToValueAtTime(0.024, time + 0.18);
-    amp.gain.setTargetAtTime(0.0001, time + 1.05, 0.26);
-    osc.connect(filter);
-    connectMenuVoice(filter, amp, true);
-    osc.start(time);
-    osc.stop(time + 1.85);
-  });
-}
-
-function scheduleHat(time, accent) {
+function scheduleMenuHat(time, accent) {
   const ctx = ensureContext();
   if (!ctx) return;
-  const duration = accent ? 0.055 : 0.032;
+  const duration = accent ? 0.05 : 0.026;
   const buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * duration), ctx.sampleRate);
   const data = buffer.getChannelData(0);
   for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
@@ -315,74 +332,131 @@ function scheduleHat(time, accent) {
   const filter = ctx.createBiquadFilter();
   source.buffer = buffer;
   filter.type = 'highpass';
-  filter.frequency.value = accent ? 4300 : 5600;
-  amp.gain.setValueAtTime(accent ? 0.052 : 0.03, time);
+  filter.frequency.value = accent ? 3600 : 5200;
+  amp.gain.setValueAtTime(accent ? 0.032 : 0.018, time);
   amp.gain.exponentialRampToValueAtTime(0.0001, time + duration);
   source.connect(filter);
-  connectMenuVoice(filter, amp, true);
+  connectMenuVoice(filter, amp);
   source.start(time);
+  source.stop(time + duration + 0.01);
 }
 
-function scheduleChord(time, chordIndex) {
+function scheduleMenuKeys(time, chordIndex) {
   const ctx = ensureContext();
-  const chord = MENU_CHORDS[chordIndex];
+  const chord = MENU_KEY_CHORDS[chordIndex];
+  if (!ctx || !chord) return;
+  chord.forEach((freq, index) => {
+    const osc = ctx.createOscillator();
+    const amp = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+    osc.type = index === 1 ? 'triangle' : 'sine';
+    osc.frequency.setValueAtTime(freq, time);
+    osc.detune.value = (index - 1) * 4;
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(680, time);
+    filter.frequency.linearRampToValueAtTime(480, time + MENU_BEAT * 2.2);
+    filter.Q.value = 0.65;
+    amp.gain.setValueAtTime(0.0001, time);
+    amp.gain.linearRampToValueAtTime(0.033, time + 0.42);
+    amp.gain.setTargetAtTime(0.0001, time + MENU_BEAT * 3.2, 0.55);
+    osc.connect(filter);
+    connectMenuVoice(filter, amp);
+    osc.start(time);
+    osc.stop(time + MENU_BEAT * 4.1);
+  });
+}
+
+function scheduleMenuPad(time, chordIndex) {
+  const ctx = ensureContext();
+  const chord = MENU_PAD_CHORDS[chordIndex];
   if (!ctx || !chord) return;
   chord.forEach((freq, index) => {
     const osc = ctx.createOscillator();
     const amp = ctx.createGain();
     const filter = ctx.createBiquadFilter();
     osc.type = 'sine';
-    osc.frequency.value = freq;
-    osc.detune.value = (index - 1) * 2;
+    osc.frequency.setValueAtTime(freq, time);
+    osc.detune.value = index === 0 ? -5 : 5;
     filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(620, time);
-    filter.frequency.exponentialRampToValueAtTime(260, time + 1.25);
+    filter.frequency.setValueAtTime(260, time);
+    filter.Q.value = 0.45;
     amp.gain.setValueAtTime(0.0001, time);
-    amp.gain.exponentialRampToValueAtTime(0.038, time + 0.08);
-    amp.gain.exponentialRampToValueAtTime(0.0001, time + 1.55);
+    amp.gain.linearRampToValueAtTime(0.024, time + 0.9);
+    amp.gain.setTargetAtTime(0.0001, time + MENU_BEAT * 3.5, 0.75);
     osc.connect(filter);
-    connectMenuVoice(filter, amp, true);
+    connectMenuVoice(filter, amp);
     osc.start(time);
-    osc.stop(time + 1.75);
+    osc.stop(time + MENU_BEAT * 4.4);
   });
+}
+
+function scheduleMenuAccent(time, freq) {
+  const ctx = ensureContext();
+  if (!ctx || !freq) return;
+  const osc = ctx.createOscillator();
+  const amp = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(freq, time);
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(1200, time);
+  filter.frequency.exponentialRampToValueAtTime(720, time + 0.55);
+  amp.gain.setValueAtTime(0.0001, time);
+  amp.gain.linearRampToValueAtTime(0.026, time + 0.09);
+  amp.gain.setTargetAtTime(0.0001, time + 0.72, 0.22);
+  osc.connect(filter);
+  connectMenuVoice(filter, amp);
+  osc.start(time);
+  osc.stop(time + 1.35);
+}
+
+function scheduleMenuExtraFx(time) {
+  const ctx = ensureContext();
+  if (!ctx) return;
+  const osc = ctx.createOscillator();
+  const amp = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(130.81, time);
+  osc.frequency.exponentialRampToValueAtTime(98, time + MENU_BEAT * 2);
+  filter.type = 'lowpass';
+  filter.frequency.value = 360;
+  amp.gain.setValueAtTime(0.0001, time);
+  amp.gain.linearRampToValueAtTime(0.018, time + 0.8);
+  amp.gain.setTargetAtTime(0.0001, time + MENU_BEAT * 2.4, 0.6);
+  osc.connect(filter);
+  connectMenuVoice(filter, amp, true);
+  osc.start(time);
+  osc.stop(time + MENU_BEAT * 3.2);
 }
 
 function scheduleMenuStep(step, time) {
   const index = step % MENU_STEPS;
 
   // MENU DRUMS
-  // Reserved switch for the main menu drum layer. The current menu groove has no kick/snare voice;
-  // keep this gate separate so future drum calls can be disabled without touching other layers.
   if (MENU_MUSIC_LAYERS.drums) {
-    // MENU HATS
-    // Light offbeat/noise ticks provide the menu pulse and can be isolated from the drum switch.
-    if (MENU_MUSIC_LAYERS.hats && (index % 2 === 1 || index % 8 === 0)) scheduleHat(time, index % 8 === 0);
+    if (index % 16 === 0) scheduleMenuKick(time, true);
+    if (index % 16 === 10) scheduleMenuKick(time, false);
+    if (index % 32 === 24) scheduleMenuDustHit(time);
   }
+
+  // MENU HATS
+  if (MENU_MUSIC_LAYERS.hats && (index % 4 === 2 || index % 8 === 7)) scheduleMenuHat(time, index % 8 === 7);
 
   // MENU BASS
-  // Root/fifth bass notes carry the main menu groove.
-  if (MENU_MUSIC_LAYERS.bass) scheduleBass(time, MENU_SEQUENCE.bass[index]);
+  if (MENU_MUSIC_LAYERS.bass) scheduleMenuBass(time, MENU_SEQUENCE.bass[index]);
 
-  // MENU SOFT KEYS (formerly PLUCK / ARP)
-  // Gentle sustained minor-key keyboard colors replace the old sharp pluck pattern.
-  if (MENU_MUSIC_LAYERS.pluck) schedulePluck(time, MENU_SEQUENCE.pluck[index]);
+  // MENU KEYS
+  if (MENU_MUSIC_LAYERS.keys && MENU_SEQUENCE.keys[index] !== null) scheduleMenuKeys(time, MENU_SEQUENCE.keys[index]);
 
-  // MENU LEAD / CHORUS
-  // Reserved for a future foreground menu melody or chorus/doubled hook. It defaults off so
-  // the menu stays calm and the bass/drums/hats/soft keys can be tested cleanly.
-  if (MENU_MUSIC_LAYERS.lead) {
-    // Intentionally empty until a menu lead/chorus voice is present.
-  }
+  // MENU PAD
+  if (MENU_MUSIC_LAYERS.pad && MENU_SEQUENCE.pad[index] !== null) scheduleMenuPad(time, MENU_SEQUENCE.pad[index]);
 
-  // MENU CHORDS / PAD
-  // Optional alternate pad layer using the same simple minor-key chord map as the soft keys.
-  if (MENU_MUSIC_LAYERS.chords && MENU_SEQUENCE.chords[index] !== null) scheduleChord(time, MENU_SEQUENCE.chords[index]);
+  // MENU ACCENT
+  if (MENU_MUSIC_LAYERS.accent) scheduleMenuAccent(time, MENU_SEQUENCE.accent[index]);
 
   // MENU EXTRA FX
-  // Decorative one-shots/sweeps should be guarded here so they can be muted while debugging.
-  if (MENU_MUSIC_LAYERS.extraFx) {
-    // Intentionally empty until menu-only decorative FX are present.
-  }
+  if (MENU_MUSIC_LAYERS.extraFx && index === 28) scheduleMenuExtraFx(time);
 }
 
 function runMenuScheduler() {
@@ -508,7 +582,7 @@ function scheduleGameplayBass(time, freq) {
   osc.stop(time + GAMEPLAY_STEP * 1.8);
 }
 
-function scheduleGameplayPluck(time, freq, gain = 0.055) {
+function scheduleGameplaySynthLine(time, freq, gain = 0.055) {
   const ctx = ensureContext();
   if (!ctx || !freq) return;
   const osc = ctx.createOscillator();
@@ -544,8 +618,8 @@ function scheduleGameplayIntroStep(step, time) {
   // GAMEPLAY HATS
   if (GAMEPLAY_MUSIC_LAYERS.hats && step >= 8 && step % 2 === 1) scheduleGameplayHat(time, step >= 24);
 
-  // GAMEPLAY ARP / PLUCK
-  if (GAMEPLAY_MUSIC_LAYERS.arp && step % 2 === 0) scheduleGameplayPluck(time, 220 * (1 + progress * 1.9), 0.035 + progress * 0.035);
+  // GAMEPLAY ARP
+  if (GAMEPLAY_MUSIC_LAYERS.arp && step % 2 === 0) scheduleGameplaySynthLine(time, 220 * (1 + progress * 1.9), 0.035 + progress * 0.035);
 
   // GAMEPLAY BASS
   if (GAMEPLAY_MUSIC_LAYERS.bass && step >= 24) scheduleGameplayBass(time, GAMEPLAY_BASS[step % GAMEPLAY_STEPS]);
@@ -570,11 +644,11 @@ function scheduleGameplayLoopStep(step, time) {
     // Intentionally empty until the existing track gains a chord/pad call.
   }
 
-  // GAMEPLAY ARP / PLUCK
-  if (GAMEPLAY_MUSIC_LAYERS.arp) scheduleGameplayPluck(time, GAMEPLAY_PLUCK[index]);
+  // GAMEPLAY ARP
+  if (GAMEPLAY_MUSIC_LAYERS.arp) scheduleGameplaySynthLine(time, GAMEPLAY_ARP[index]);
 
   // GAMEPLAY LEAD
-  if (GAMEPLAY_MUSIC_LAYERS.lead && index % 16 >= 8) scheduleGameplayPluck(time, GAMEPLAY_LEAD[index], 0.035);
+  if (GAMEPLAY_MUSIC_LAYERS.lead && index % 16 >= 8) scheduleGameplaySynthLine(time, GAMEPLAY_LEAD[index], 0.035);
 
   // GAMEPLAY EXTRA FX
   // Decorative gameplay sweeps/one-shots should be added here and default off while tuning.
