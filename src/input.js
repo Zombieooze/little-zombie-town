@@ -13,6 +13,15 @@ const SMALL_SCREEN_QUERY = '(max-width: 820px), (max-height: 520px)';
 let mobileControlsReady = false;
 let activeGamepadIndex = null;
 let controllerStatusCallback = null;
+let currentInputMode = 'mouse';
+
+function setInputMode(mode) {
+  currentInputMode = mode;
+}
+
+export function getCurrentInputMode() {
+  return currentInputMode;
+}
 
 function setMobileClass() {
   const isTouchDevice = navigator.maxTouchPoints > 0;
@@ -122,6 +131,7 @@ export function updateGamepadInput() {
   gamepadLook.x = right.x;
   gamepadLook.y = right.y;
   refreshGamepadButtons(gamepad);
+  if (Math.hypot(gamepadMove.x, gamepadMove.y, gamepadLook.x, gamepadLook.y) > 0.2 || gamepadButtons.size > 0) setInputMode('gamepad');
 }
 
 function initMobileControls() {
@@ -158,6 +168,7 @@ function initMobileControls() {
   };
 
   joystick.addEventListener('pointerdown', (event) => {
+    setInputMode('touch');
     event.preventDefault();
     joystick.setPointerCapture(event.pointerId);
     joystick.classList.add('active');
@@ -176,6 +187,7 @@ function initMobileControls() {
   joystick.addEventListener('lostpointercapture', resetJoystick);
 
   jumpButton.addEventListener('pointerdown', (event) => {
+    setInputMode('touch');
     event.preventDefault();
     jumpButton.setPointerCapture(event.pointerId);
     pressKey(' ');
@@ -201,6 +213,8 @@ export function initInput() {
   window.addEventListener('gamepaddisconnected', (event) => {
     if (activeGamepadIndex === event.gamepad.index) clearGamepadState('Controller disconnected');
   });
+  window.addEventListener('pointermove', (event) => setInputMode(event.pointerType === 'touch' ? 'touch' : 'mouse'));
+  window.addEventListener('pointerdown', (event) => setInputMode(event.pointerType === 'touch' ? 'touch' : 'mouse'));
   window.addEventListener('keydown', (event) => {
     const key = event.key.toLowerCase();
     if (!keys.has(key)) pressed.add(key);

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
-import { initInput, consumePress, resetTouchMovement, updateGamepadInput, getGamepadLookVector, consumeGamepadPress, setControllerStatusCallback, isGamepadDown } from './input.js';
-import { initUI, updateHUD, showScreen, hideOverlays, showUpgrades, showEnd, setMuted, updateMenuCoins, setGameActionsVisible, setPauseButtonVisible, setFullscreenActive, showControllerMessage, moveUpgradeSelection, getSelectedUpgradeId, moveMenuSelection, activateMenuSelection, showDamageFlash, showBossWarning, updateBossHealthBar, showShop } from './ui.js';
+import { initInput, consumePress, resetTouchMovement, updateGamepadInput, getGamepadLookVector, consumeGamepadPress, setControllerStatusCallback, isGamepadDown, getCurrentInputMode } from './input.js';
+import { initUI, updateHUD, showScreen, hideOverlays, showUpgrades, showEnd, setMuted, updateMenuCoins, setGameActionsVisible, setPauseButtonVisible, setFullscreenActive, showControllerMessage, moveUpgradeSelection, getSelectedUpgradeId, moveMenuSelection, activateMenuSelection, showDamageFlash, showBossWarning, updateBossHealthBar, showShop, setUpgradeControllerSelectionActive } from './ui.js';
 import { addCoins, getPermanentUpgradeLevels } from './save.js';
 import { calculatePermanentStats } from './permanent-upgrades.js';
 import { createWorld } from './world.js';
@@ -48,7 +48,7 @@ const cameraControls = {
   pinchStartCameraDistance: 0,
 };
 const cameraLimits = {
-  minPitch: 0.32,
+  minPitch: 0.22,
   maxPitch: 1.25,
   minDistance: CONFIG.camera.minDistance,
   maxDistance: CONFIG.camera.maxDistance,
@@ -58,6 +58,14 @@ const cameraLimits = {
   touchPitchSpeed: 0.0034,
   zoomSpeed: 0.0025,
   gamepadZoomSpeed: 13,
+};
+
+const menuCamera = {
+  angle: -0.75,
+  radius: 76,
+  height: 54,
+  target: new THREE.Vector3(0, 0, 0),
+  lookAt: new THREE.Vector3(0, 0, 0),
 };
 
 const state = {
@@ -187,7 +195,7 @@ function showNextLevelUp() {
   setPauseButtonVisible(false);
   stopCameraTouchControls();
   resetTouchMovement();
-  showUpgrades(pendingChoices);
+  showUpgrades(pendingChoices, getCurrentInputMode() === 'gamepad');
 }
 
 function gainXp(amount) {
@@ -549,7 +557,7 @@ function updateCamera(delta) {
     );
   }
   cameraControls.distance = THREE.MathUtils.lerp(cameraControls.distance, cameraControls.targetDistance, 1 - Math.exp(-14 * delta));
-  const target = new THREE.Vector3(player.position.x, 0.8, player.position.z);
+  const target = new THREE.Vector3(player.position.x, 2.2, player.position.z);
   const horizontalDistance = Math.cos(cameraControls.pitch) * cameraControls.distance;
   const desired = target.clone().add(new THREE.Vector3(
     Math.sin(cameraControls.yaw) * horizontalDistance,
@@ -559,6 +567,17 @@ function updateCamera(delta) {
   if (cameraShake > 0) desired.x += (Math.random() - .5) * cameraShake;
   camera.position.copy(desired);
   camera.lookAt(target);
+}
+
+function updateMenuCamera(delta) {
+  menuCamera.angle += delta * 0.075;
+  menuCamera.lookAt.lerp(menuCamera.target, 1 - Math.exp(-3 * delta));
+  camera.position.set(
+    Math.sin(menuCamera.angle) * menuCamera.radius,
+    menuCamera.height,
+    Math.cos(menuCamera.angle) * menuCamera.radius,
+  );
+  camera.lookAt(menuCamera.lookAt);
 }
 
 function resize() {
@@ -612,8 +631,12 @@ function handleControllerMenus(delta) {
 
   if (mode === 'upgrade') {
     const direction = horizontal || consumeControllerNav(['dpad-left', 'stick-left'], ['dpad-right', 'stick-right']);
-    if (direction) moveUpgradeSelection(direction);
+    if (direction) {
+      setUpgradeControllerSelectionActive(true);
+      moveUpgradeSelection(direction);
+    }
     if (consumeGamepadPress('a')) {
+      setUpgradeControllerSelectionActive(true);
       const selectedUpgradeId = getSelectedUpgradeId();
       if (selectedUpgradeId) chooseUpgrade(selectedUpgradeId);
     }
@@ -628,6 +651,8 @@ function tick() {
   if (consumePress('m')) { muted = !muted; setMuted(muted); }
   if ((consumePress('p') || consumePress('escape') || consumeGamepadPress('start')) && (mode === 'playing' || mode === 'paused')) { mode === 'playing' ? pauseGame() : resumeGame(); }
   handleControllerMenus(delta);
+
+  if (mode === 'menu' || mode === 'shop') updateMenuCamera(delta);
 
   if (mode === 'playing') {
     const previousElapsed = state.elapsed;
