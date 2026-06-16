@@ -15,10 +15,12 @@ const menuGroups = {
   shop: { root: 'shop-screen', selector: '#shop-back-button, #shop-reset-button, .shop-buy-button:not(:disabled)' },
   paused: { root: 'pause-screen', selector: '#resume-button, #restart-run-button' },
   ended: { root: 'end-screen', selector: '#again-button, #menu-button' },
+  confirm: { root: 'confirm-modal', selector: '#confirm-modal-cancel, #confirm-modal-confirm' },
 };
 let toastTimer = null;
 let damageFlashTimer = null;
 let activeConfirmModal = null;
+let controllerSelectionVisible = false;
 
 export function initUI({ onStart, onUpgrade, onMenu, onShop, onPause, onResume, onRestart, onFullscreen }) {
   document.addEventListener('click', (event) => {
@@ -63,11 +65,11 @@ export function initUI({ onStart, onUpgrade, onMenu, onShop, onPause, onResume, 
   });
   $('menu-fullscreen-button').addEventListener('click', onFullscreen);
   $('game-fullscreen-button').addEventListener('click', onFullscreen);
-  $('upgrade-cards').addEventListener('pointermove', (event) => {
-    if (event.pointerType === 'mouse' || event.pointerType === 'touch') setUpgradeControllerSelectionActive(false);
+  document.addEventListener('pointermove', (event) => {
+    if (event.pointerType === 'mouse' || event.pointerType === 'touch') setControllerSelectionVisible(false);
   });
-  $('upgrade-cards').addEventListener('pointerdown', (event) => {
-    if (event.pointerType === 'mouse' || event.pointerType === 'touch') setUpgradeControllerSelectionActive(false);
+  document.addEventListener('pointerdown', (event) => {
+    if (event.pointerType === 'mouse' || event.pointerType === 'touch') setControllerSelectionVisible(false);
   });
   $('upgrade-cards').addEventListener('click', (event) => {
     const button = event.target.closest('[data-upgrade]');
@@ -80,6 +82,10 @@ export function initUI({ onStart, onUpgrade, onMenu, onShop, onPause, onResume, 
 
 export function isConfirmModalOpen() {
   return !!activeConfirmModal;
+}
+
+export function dismissConfirmModal() {
+  if (activeConfirmModal) activeConfirmModal.resolve(false);
 }
 
 export function showConfirmModal({ title, message, confirmText = 'CONFIRM', cancelText = 'CANCEL', danger = false }) {
@@ -128,12 +134,14 @@ export function showConfirmModal({ title, message, confirmText = 'CONFIRM', canc
       }
     };
 
+    selectedMenuIndex = 0;
     activeConfirmModal = { resolve: close };
     modal.classList.remove('hidden');
     modal.addEventListener('click', onBackdropClick);
     confirmButton.addEventListener('click', onConfirm, { once: true });
     cancelButton.addEventListener('click', onCancel, { once: true });
     window.addEventListener('keydown', onKeyDown, true);
+    updateMenuSelection('confirm');
     cancelButton.focus({ preventScroll: true });
   });
 }
@@ -172,10 +180,35 @@ export function showControllerMessage(message) {
 function getMenuButtons(context) {
   const group = menuGroups[context];
   if (!group) return [];
-  return [...$(group.root).querySelectorAll(group.selector)].filter((button) => button.offsetParent !== null && !button.disabled);
+  const root = $(group.root);
+  if (!root || root.classList.contains('hidden')) return [];
+  return [...root.querySelectorAll(group.selector)].filter((button) => button.offsetParent !== null && !button.disabled);
+}
+
+
+function getActiveMenuContext() {
+  if (activeConfirmModal) return 'confirm';
+  if ($('menu-screen')?.classList.contains('active')) return 'menu';
+  if ($('shop-screen')?.classList.contains('active')) return 'shop';
+  if ($('pause-screen')?.classList.contains('active')) return 'paused';
+  if ($('end-screen')?.classList.contains('active')) return 'ended';
+  return null;
+}
+
+export function setControllerSelectionVisible(visible) {
+  const changed = controllerSelectionVisible !== visible;
+  controllerSelectionVisible = visible;
+  document.body.classList.toggle('controller-mode', visible);
+  if (!visible) setUpgradeControllerSelectionActive(false);
+  if (visible && changed) {
+    const context = getActiveMenuContext();
+    if (context) updateMenuSelection(context);
+    if ($('upgrade-screen')?.classList.contains('active')) updateUpgradeSelection();
+  }
 }
 
 export function moveMenuSelection(context, direction) {
+  setControllerSelectionVisible(true);
   const buttons = getMenuButtons(context);
   if (!buttons.length) return;
   selectedMenuIndex = (selectedMenuIndex + direction + buttons.length) % buttons.length;
@@ -183,6 +216,7 @@ export function moveMenuSelection(context, direction) {
 }
 
 export function activateMenuSelection(context) {
+  setControllerSelectionVisible(true);
   const buttons = getMenuButtons(context);
   const button = buttons[selectedMenuIndex] || buttons[0];
   if (button) button.click();
@@ -194,11 +228,12 @@ function updateMenuSelection(context) {
   });
   const buttons = getMenuButtons(context);
   if (!buttons.length) return;
-  selectedMenuIndex = Math.min(selectedMenuIndex, buttons.length - 1);
-  buttons[selectedMenuIndex].classList.add('controller-selected');
+  selectedMenuIndex = Math.max(0, Math.min(selectedMenuIndex, buttons.length - 1));
+  buttons[selectedMenuIndex].classList.toggle('controller-selected', controllerSelectionVisible);
 }
 
 export function moveUpgradeSelection(direction) {
+  setControllerSelectionVisible(true);
   const cards = [...$('upgrade-cards').querySelectorAll('[data-upgrade]')];
   if (!cards.length) return;
   selectedUpgradeIndex = (selectedUpgradeIndex + direction + cards.length) % cards.length;
@@ -217,7 +252,7 @@ export function setUpgradeControllerSelectionActive(active) {
 
 function updateUpgradeSelection() {
   const cards = [...$('upgrade-cards').querySelectorAll('[data-upgrade]')];
-  cards.forEach((card, index) => card.classList.toggle('controller-selected', upgradeControllerSelectionActive && index === selectedUpgradeIndex));
+  cards.forEach((card, index) => card.classList.toggle('controller-selected', controllerSelectionVisible && upgradeControllerSelectionActive && index === selectedUpgradeIndex));
 }
 
 export function showScreen(name) {
@@ -229,6 +264,16 @@ export function showScreen(name) {
   $('hud').classList.toggle('hidden', name === 'menu-screen' || name === 'end-screen');
   const context = name === 'menu-screen' ? 'menu' : name === 'shop-screen' ? 'shop' : name === 'pause-screen' ? 'paused' : name === 'end-screen' ? 'ended' : null;
   if (context) updateMenuSelection(context);
+}
+
+export function scrollActiveMenuPanel(amount) {
+  if (!Number.isFinite(amount) || Math.abs(amount) < 0.01) return;
+  const roots = activeConfirmModal
+    ? [$('confirm-modal')]
+    : screens.map((id) => $(id)).filter((screen) => screen?.classList.contains('active') && !screen.classList.contains('hidden'));
+  const panel = roots.flatMap((root) => [...(root?.querySelectorAll('.panel, .confirm-modal-panel') || [])])
+    .find((candidate) => candidate.scrollHeight > candidate.clientHeight + 2);
+  if (panel) panel.scrollBy({ top: amount, behavior: 'auto' });
 }
 
 export function hideOverlays() { screens.filter((id) => id !== 'menu-screen').forEach((id) => { $(id).classList.add('hidden'); $(id).classList.remove('active'); }); }

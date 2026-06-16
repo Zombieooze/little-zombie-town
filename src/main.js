@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
 import { initInput, consumePress, resetTouchMovement, updateGamepadInput, getGamepadLookVector, consumeGamepadPress, setControllerStatusCallback, isGamepadDown, getCurrentInputMode } from './input.js';
-import { initUI, updateHUD, showScreen, hideOverlays, showUpgrades, showEnd, setMuted, updateMenuCoins, setGameActionsVisible, setPauseButtonVisible, setFullscreenActive, showControllerMessage, moveUpgradeSelection, getSelectedUpgradeId, moveMenuSelection, activateMenuSelection, showDamageFlash, showBossWarning, updateBossHealthBar, showShop, setUpgradeControllerSelectionActive, isConfirmModalOpen, setLowHealthWarning } from './ui.js';
+import { initUI, updateHUD, showScreen, hideOverlays, showUpgrades, showEnd, setMuted, updateMenuCoins, setGameActionsVisible, setPauseButtonVisible, setFullscreenActive, showControllerMessage, moveUpgradeSelection, getSelectedUpgradeId, moveMenuSelection, activateMenuSelection, showDamageFlash, showBossWarning, updateBossHealthBar, showShop, setUpgradeControllerSelectionActive, isConfirmModalOpen, dismissConfirmModal, setLowHealthWarning, setControllerSelectionVisible, scrollActiveMenuPanel } from './ui.js';
 import { addCoins, getPermanentUpgradeLevels } from './save.js';
 import { calculatePermanentStats } from './permanent-upgrades.js';
 import { createWorld } from './world.js';
@@ -655,8 +655,20 @@ function consumeControllerNav(negativeButtons, positiveButtons) {
 
 function handleControllerMenus(delta) {
   controllerNavCooldown = Math.max(0, controllerNavCooldown - delta);
+  const look = getGamepadLookVector();
+  if (Math.abs(look.y) > 0.24) {
+    setControllerSelectionVisible(true);
+    scrollActiveMenuPanel(look.y * 420 * delta);
+  }
   const vertical = consumeControllerNav(['dpad-up', 'stick-up'], ['dpad-down', 'stick-down']);
   const horizontal = consumeControllerNav(['dpad-left', 'stick-left'], ['dpad-right', 'stick-right']);
+
+  if (isConfirmModalOpen()) {
+    if (vertical || horizontal) moveMenuSelection('confirm', vertical || horizontal);
+    if (consumeGamepadPress('a')) activateMenuSelection('confirm');
+    if (consumeGamepadPress('b')) dismissConfirmModal();
+    return;
+  }
 
   if (mode === 'menu') {
     if (vertical || horizontal) moveMenuSelection('menu', vertical || horizontal);
@@ -705,7 +717,8 @@ function tick() {
   updateGamepadInput();
   if (consumePress('m')) { muted = toggleMute(); setMuted(muted); }
   if (!isConfirmModalOpen() && (consumePress('p') || consumePress('escape') || consumeGamepadPress('start')) && (mode === 'playing' || mode === 'paused')) { mode === 'playing' ? pauseGame() : resumeGame(); }
-  if (!isConfirmModalOpen()) handleControllerMenus(delta);
+  if (getCurrentInputMode() === 'gamepad') setControllerSelectionVisible(true);
+  handleControllerMenus(delta);
 
   if (mode === 'menu' || mode === 'shop') updateMenuCamera(delta);
 
