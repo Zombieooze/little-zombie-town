@@ -10,7 +10,7 @@ import { spawnZombie, spawnBossZombie, getActiveBoss, updateZombies, damageZombi
 import { dropXp, dropCoin, dropMedkit, dropScrapRush, triggerScrapRush, updatePickups, resetPickups, countWorldMedkits } from './pickups.js';
 import { getUpgradeChoices, applyUpgrade } from './upgrades.js';
 import { resetAbilities, updateAbilities, unlockAbility, applyAbilityUpgrade, isAbilityCard } from './abilities.js';
-import { initAudioControls, unlockAudio, playSound, toggleMute, getAudioSettings, startMenuMusic, stopMenuMusic } from './audio.js';
+import { initAudioControls, unlockAudio, playSound, toggleMute, getAudioSettings, startMenuMusic, stopMenuMusic, startGameplayMusic, stopGameplayMusic, setGameplayMusicDucked } from './audio.js';
 
 const canvas = document.getElementById('game-canvas');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -99,6 +99,8 @@ function resetState() {
 function startGame() {
   unlockAudio();
   stopMenuMusic();
+  stopGameplayMusic(0.2);
+  startGameplayMusic();
   playSound('uiClick');
   resetState();
   if (player) scene.remove(player);
@@ -123,6 +125,7 @@ function restartRun() {
 
 function returnToMenu() {
   if (mode === 'paused' || mode === 'playing' || mode === 'upgrade') finalizeRun();
+  stopGameplayMusic();
   mode = 'menu';
   setGameActionsVisible(false);
   setPauseButtonVisible(false);
@@ -137,6 +140,7 @@ function returnToMenu() {
 
 function openShop() {
   stopMenuMusic();
+  stopGameplayMusic();
   playSound('modalOpen');
   mode = 'shop';
   setGameActionsVisible(false);
@@ -150,6 +154,7 @@ function pauseGame() {
   resetTouchMovement();
   stopCameraTouchControls();
   document.body.classList.add('paused');
+  setGameplayMusicDucked(true);
   showScreen('pause-screen');
 }
 
@@ -157,6 +162,7 @@ function resumeGame() {
   if (mode !== 'paused') return;
   mode = 'playing';
   document.body.classList.remove('paused');
+  setGameplayMusicDucked(false);
   hideOverlays();
   document.getElementById('hud').classList.remove('hidden');
 }
@@ -426,6 +432,7 @@ function finalizeRun() {
 
 function endRun(won) {
   finalizeRun();
+  stopGameplayMusic();
   mode = 'ended';
   setGameActionsVisible(false);
   document.body.classList.remove('paused');
