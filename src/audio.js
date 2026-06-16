@@ -19,6 +19,17 @@ const MENU_BEAT = 60 / MENU_BPM;
 const MENU_STEPS = 32;
 const MENU_STEP = MENU_BEAT / 2;
 const MENU_LOOKAHEAD = 0.75;
+// Menu music layer switches for quick debugging/tuning.
+// Flip these values and refresh the game to isolate parts of the procedural menu loop.
+const MENU_MUSIC_LAYERS = {
+  drums: true,
+  bass: true,
+  hats: true,
+  pluck: false,
+  lead: false,
+  chords: true,
+  extraFx: false,
+};
 const MENU_SEQUENCE = {
   // C minor neighborhood groove: simple roots/fifths keep the original pulse without the old wandering pitch motion.
   bass: [65.41, null, null, 98, 77.78, null, 65.41, null, 65.41, null, null, 98, 77.78, null, 65.41, null, 58.27, null, null, 87.31, 73.42, null, 58.27, null, 51.91, null, null, 77.78, 65.41, null, 51.91, null],
@@ -321,10 +332,40 @@ function scheduleChord(time, chordIndex) {
 
 function scheduleMenuStep(step, time) {
   const index = step % MENU_STEPS;
-  scheduleBass(time, MENU_SEQUENCE.bass[index]);
-  schedulePluck(time, MENU_SEQUENCE.pluck[index]);
-  if (MENU_SEQUENCE.chords[index] !== null) scheduleChord(time, MENU_SEQUENCE.chords[index]);
-  if (index % 2 === 1 || index % 8 === 0) scheduleHat(time, index % 8 === 0);
+
+  // MENU DRUMS
+  // Reserved switch for the main menu drum layer. The current menu groove has no kick/snare voice;
+  // keep this gate separate so future drum calls can be disabled without touching other layers.
+  if (MENU_MUSIC_LAYERS.drums) {
+    // MENU HATS
+    // Light offbeat/noise ticks provide the menu pulse and can be isolated from the drum switch.
+    if (MENU_MUSIC_LAYERS.hats && (index % 2 === 1 || index % 8 === 0)) scheduleHat(time, index % 8 === 0);
+  }
+
+  // MENU BASS
+  // Root/fifth bass notes carry the main menu groove.
+  if (MENU_MUSIC_LAYERS.bass) scheduleBass(time, MENU_SEQUENCE.bass[index]);
+
+  // MENU PLUCK / ARP
+  // Sparse spooky hook/arpeggio. Disabled by default for easier testing of the stable beat and bass.
+  if (MENU_MUSIC_LAYERS.pluck) schedulePluck(time, MENU_SEQUENCE.pluck[index]);
+
+  // MENU LEAD / CHORUS
+  // No separate menu lead voice is currently scheduled; this switch is here for quick A/B testing
+  // if a lead/chorus call is added back to the menu loop.
+  if (MENU_MUSIC_LAYERS.lead) {
+    // Intentionally empty until a menu lead/chorus voice is present.
+  }
+
+  // MENU CHORDS / PAD
+  // Slow filtered triads underneath the loop.
+  if (MENU_MUSIC_LAYERS.chords && MENU_SEQUENCE.chords[index] !== null) scheduleChord(time, MENU_SEQUENCE.chords[index]);
+
+  // MENU EXTRA FX
+  // Decorative one-shots/sweeps should be guarded here so they can be muted while debugging.
+  if (MENU_MUSIC_LAYERS.extraFx) {
+    // Intentionally empty until menu-only decorative FX are present.
+  }
 }
 
 function runMenuScheduler() {
