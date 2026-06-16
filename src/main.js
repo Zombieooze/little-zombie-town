@@ -10,7 +10,7 @@ import { spawnZombie, spawnBossZombie, getActiveBoss, updateZombies, damageZombi
 import { dropXp, dropCoin, dropMedkit, dropScrapRush, triggerScrapRush, updatePickups, resetPickups, countWorldMedkits } from './pickups.js';
 import { getUpgradeChoices, applyUpgrade } from './upgrades.js';
 import { resetAbilities, updateAbilities, unlockAbility, applyAbilityUpgrade, isAbilityCard } from './abilities.js';
-import { initAudioControls, unlockAudio, playSound, toggleMute, getAudioSettings, startMenuMusic, stopMenuMusic, startGameplayMusic, stopGameplayMusic, setGameplayMusicDucked, switchToBossMusic, stopBossMusic, switchToGameplayMusic, setBossMusicDucked } from './audio.js';
+import { initAudioControls, unlockAudio, isAudioUnlocked, playSound, toggleMute, getAudioSettings, startMenuMusic, stopMenuMusic, startGameplayMusic, stopGameplayMusic, setGameplayMusicDucked, switchToBossMusic, stopBossMusic, switchToGameplayMusic, setBossMusicDucked } from './audio.js';
 
 const canvas = document.getElementById('game-canvas');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -85,7 +85,10 @@ initUI({ onStart: startGame, onUpgrade: chooseUpgrade, onMenu: returnToMenu, onS
 setMuted(muted);
 document.getElementById('design-mode-banner')?.classList.toggle('hidden', !isDesignMode);
 showScreen('menu-screen');
-startMenuMusic();
+if (isAudioUnlocked()) startMenuMusic();
+document.addEventListener('lzt:audio-unlock-state', (event) => {
+  if (event.detail?.unlocked && mode === 'menu') startMenuMusic();
+});
 
 function resetState() {
   const permanentStats = calculatePermanentStats(getPermanentUpgradeLevels());
@@ -142,7 +145,7 @@ function returnToMenu() {
   document.body.classList.remove('paused');
   showScreen('menu-screen');
   updateMenuCoins();
-  startMenuMusic();
+  if (isAudioUnlocked()) startMenuMusic();
 }
 
 function openShop() {

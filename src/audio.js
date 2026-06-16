@@ -14,6 +14,7 @@ let masterGain = null;
 let sfxGain = null;
 let musicGain = null;
 let controlsReady = false;
+let audioUnlocked = false;
 let settings = loadSettings();
 
 // MENU MUSIC BASE
@@ -212,10 +213,35 @@ function applyVolumes() {
   setGain(musicGain, settings.music * OUTPUT_GAIN.music);
 }
 
+function notifyAudioUnlockState() {
+  document.dispatchEvent(new CustomEvent('lzt:audio-unlock-state', { detail: { unlocked: audioUnlocked } }));
+}
+
+function updateAudioUnlockedState(ctx) {
+  const unlocked = !!ctx && ctx.state === 'running';
+  if (audioUnlocked === unlocked) return;
+  audioUnlocked = unlocked;
+  notifyAudioUnlockState();
+}
+
 export function unlockAudio() {
   const ctx = ensureContext();
   if (!ctx) return;
-  if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+  if (ctx.state === 'running') {
+    updateAudioUnlockedState(ctx);
+    return;
+  }
+  if (ctx.state === 'suspended') {
+    ctx.resume()
+      .then(() => updateAudioUnlockedState(ctx))
+      .catch(() => notifyAudioUnlockState());
+  } else {
+    updateAudioUnlockedState(ctx);
+  }
+}
+
+export function isAudioUnlocked() {
+  return audioUnlocked || audioContext?.state === 'running';
 }
 
 export function getAudioSettings() { return { ...settings }; }
@@ -261,9 +287,10 @@ export function initAudioControls() {
       unlockAudio(); setMusicVolume(event.target.value);
     });
   });
-  ['pointerdown', 'touchstart', 'keydown'].forEach((type) => {
+  ['click', 'pointerdown', 'touchstart', 'keydown'].forEach((type) => {
     window.addEventListener(type, unlockAudio, { once: true, passive: true });
   });
+  notifyAudioUnlockState();
 }
 
 function gate(name, seconds) {
@@ -527,6 +554,7 @@ function runMenuScheduler() {
 export function startMenuMusic() {
   const ctx = ensureContext();
   if (!ctx) return;
+  updateAudioUnlockedState(ctx);
   stopGameplayMusic(0.25);
   stopBossMusic(0.25);
   if (menuMusicPlaying) { setCurrentMusicTrack('menu'); return; }

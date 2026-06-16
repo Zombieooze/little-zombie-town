@@ -2,7 +2,7 @@ import { buyPermanentUpgrade, getPermanentUpgradeLevels, getTotalCoins, resetPer
 import { PERMANENT_UPGRADES, getPermanentUpgradeCost } from './permanent-upgrades.js';
 import { getActiveAbilityIds, getAbilityDisplayName, getAbilityMaxLevel } from './abilities.js';
 import { PASSIVE_UPGRADE_VALUES, UPGRADES } from './upgrades.js';
-import { getAudioSettings, playSound, setMusicVolume, setSfxVolume, unlockAudio } from './audio.js';
+import { getAudioSettings, isAudioUnlocked, playSound, setMusicVolume, setSfxVolume, unlockAudio } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
 const screens = ['menu-screen', 'shop-screen', 'pause-screen', 'upgrade-screen', 'end-screen'];
@@ -77,6 +77,8 @@ export function initUI({ onStart, onUpgrade, onMenu, onShop, onPause, onResume, 
     if (button) onUpgrade(button.dataset.upgrade);
   });
   document.addEventListener('fullscreenchange', () => setFullscreenActive(!!document.fullscreenElement));
+  document.addEventListener('lzt:audio-unlock-state', () => updateAudioUnlockMessage());
+  updateAudioUnlockMessage();
   updateMenuCoins();
   setFullscreenActive(!!document.fullscreenElement);
 }
@@ -362,6 +364,12 @@ function renderShop() {
   }).join('');
 }
 export function setMuted(muted) { $('hud-muted').classList.toggle('hidden', !muted); }
+
+export function updateAudioUnlockMessage() {
+  const message = $('audio-unlock-message');
+  if (!message) return;
+  message.classList.toggle('hidden', isAudioUnlocked());
+}
 
 export function showBossWarning(message = 'GRAVEBREAKER HAS AWAKENED!') {
   const warning = $('boss-warning');
