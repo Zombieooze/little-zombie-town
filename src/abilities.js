@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { getZombies, damageZombie, damageZombies } from './zombies.js';
 import { CONFIG } from './config.js';
+import { playSound } from './audio.js';
 
 export const MAX_SPECIAL_ABILITIES = 4;
 export const MAX_ABILITY_LEVEL = 10;
@@ -445,6 +446,7 @@ function deployJunkyardTurret(scene, state, player) {
   mesh.rotation.y = angle;
   scene.add(mesh);
   turretAbility.turrets.push({ mesh, life: turretAbility.duration, fireTimer: .25 });
+  playSound('turretDeploy');
 }
 
 function fireTurretBolt(scene, turretAbility, turret, target, spread = 0) {
@@ -456,6 +458,7 @@ function fireTurretBolt(scene, turretAbility, turret, target, spread = 0) {
   scene.add(mesh);
   turretAbility.bolts.push({ mesh, velocity: new THREE.Vector3(Math.sin(angle) * turretAbility.projectileSpeed, 0, Math.cos(angle) * turretAbility.projectileSpeed), life: turretAbility.projectileLifetime });
   addTurretEffect(scene, turretAbility, new THREE.Vector3(turret.mesh.position.x + Math.sin(angle) * .6, .52, turret.mesh.position.z + Math.cos(angle) * .6));
+  playSound('turretShot');
 }
 
 function updateTurretEffects(scene, turretAbility, delta) {
@@ -595,6 +598,7 @@ function triggerBearTrap(scene, state, bearTrap, trap, zombie, onKilled, onHit) 
   if (bearTrap.burstDamage > 0 && bearTrap.burstRadius > 0) {
     damageZombies(scene, position, bearTrap.burstRadius, playerDamage(state, bearTrap.burstDamage), onKilled, onHit);
   }
+  playSound('snapTrap');
   addBearTrapEffect(scene, bearTrap, position, bearTrap.burstRadius);
   removeBearTrap(scene, trap);
 }
@@ -689,6 +693,7 @@ function addShockwaveEffect(scene, stomp, origin) {
 function fireShockwaveStomp(scene, state, player, onKilled, onHit) {
   const stomp = state.abilities.shockwaveStomp;
   const origin = player.position.clone();
+  playSound('pavementSlam');
   addShockwaveEffect(scene, stomp, origin);
   damageZombies(scene, origin, stomp.radius, playerDamage(state, stomp.damage), onKilled, onHit, stomp.knockback);
 }
@@ -753,6 +758,7 @@ function launchSawblades(scene, state, player) {
     return !best || dist < best.dist ? { zombie, dist } : best;
   }, null);
   const baseAngle = target ? Math.atan2(target.zombie.position.x - player.position.x, target.zombie.position.z - player.position.z) : player.rotation.y;
+  playSound('sawblade');
   for (let i = 0; i < saw.bladeCount; i++) {
     const spread = (i - (saw.bladeCount - 1) / 2) * .25;
     const angle = baseAngle + spread;
@@ -823,6 +829,7 @@ function fireNailBlaster(scene, state, player) {
       hitsLeft: blaster.pierce + 1,
     });
   }
+  playSound('nailgun');
   return true;
 }
 
@@ -925,6 +932,7 @@ function fireElectricZapper(scene, state, player, onKilled, onHit) {
   addZapperEffect(scene, state, links, hitPositions);
   hitZombies.forEach((zombie, index) => {
     if (getZombies().includes(zombie)) damageZombie(scene, zombie, index === 0 ? player.position : hitPositions[index - 1], playerDamage(state, zapper.damage), onKilled, onHit);
+    if (index === 0) playSound('zap');
   });
 }
 
@@ -1010,6 +1018,7 @@ function throwFireBottles(scene, state, player) {
   const target = getNearestZombieInRange(player.position, fire.range);
   const baseAngle = target ? Math.atan2(target.position.x - player.position.x, target.position.z - player.position.z) : player.rotation.y;
   const distance = target ? Math.min(fire.range, Math.hypot(target.position.x - player.position.x, target.position.z - player.position.z)) : fire.range * .7;
+  playSound('flame');
   for (let i = 0; i < fire.bottleCount; i++) {
     const spread = (i - (fire.bottleCount - 1) / 2) * .42;
     const angle = baseAngle + spread;
@@ -1100,6 +1109,7 @@ function damageZombiesTouchedByOrbital(scene, position, orbital, onKilled, onHit
     const dist = Math.hypot(position.x - zombie.position.x, position.z - zombie.position.z);
     if (dist > hitRange) continue;
     orbital.recentHits.set(zombie, orbital.hitCooldown);
+    playSound('halo');
     damageZombie(scene, zombie, position, orbital.damage * Math.max(0, damageMultiplier || 1), onKilled, onHit);
   }
 }

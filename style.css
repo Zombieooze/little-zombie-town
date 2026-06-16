@@ -371,3 +371,29 @@ button.controller-selected:hover {
   .stat-tile span:last-child { font-size: .55rem; }
   .hud-list-row:nth-child(n+4) { display: none; }
 }
+.audio-controls {
+  display: grid;
+  gap: 8px;
+  width: min(360px, 100%);
+  margin: 12px auto 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(176, 255, 189, .24);
+  border-radius: 16px;
+  background: rgba(17, 15, 31, .32);
+}
+.audio-controls label {
+  display: grid;
+  grid-template-columns: 54px 1fr;
+  gap: 10px;
+  align-items: center;
+  color: #eee8ff;
+  font-size: .86rem;
+  font-weight: 900;
+  text-align: left;
+}
+.audio-controls input[type="range"] {
+  width: 100%;
+  accent-color: var(--mint);
+  touch-action: manipulation;
+}
+.audio-controls small { color: #bdb5df; font-weight: 800; }

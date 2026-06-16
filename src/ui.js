@@ -2,6 +2,7 @@ import { buyPermanentUpgrade, getPermanentUpgradeLevels, getTotalCoins, resetPer
 import { PERMANENT_UPGRADES, getPermanentUpgradeCost } from './permanent-upgrades.js';
 import { getAbilityDisplayName, MAX_ABILITY_LEVEL } from './abilities.js';
 import { PASSIVE_UPGRADE_VALUES, UPGRADES } from './upgrades.js';
+import { playSound, unlockAudio } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
 const screens = ['menu-screen', 'shop-screen', 'pause-screen', 'upgrade-screen', 'end-screen'];
@@ -19,13 +20,17 @@ let toastTimer = null;
 let damageFlashTimer = null;
 
 export function initUI({ onStart, onUpgrade, onMenu, onShop, onPause, onResume, onRestart, onFullscreen }) {
+  document.addEventListener('click', (event) => {
+    if (event.target.closest('button')) { unlockAudio(); playSound('uiClick'); }
+  });
   $('start-button').addEventListener('click', onStart);
   $('shop-button').addEventListener('click', onShop);
   $('shop-back-button').addEventListener('click', onMenu);
   $('shop-cards').addEventListener('click', (event) => {
     const button = event.target.closest('[data-shop-upgrade]');
     if (!button) return;
-    buyPermanentUpgrade(button.dataset.shopUpgrade);
+    const bought = buyPermanentUpgrade(button.dataset.shopUpgrade);
+    playSound(bought?.ok ? 'shopBuy' : 'uiClick');
     renderShop();
     updateMenuCoins();
   });
