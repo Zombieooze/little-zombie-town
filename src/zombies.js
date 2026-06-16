@@ -710,13 +710,15 @@ function getScaling(elapsed = 0) {
 }
 
 export function getSpawnDelay(elapsed = 0) {
-  const pressure = Math.max(CONFIG.zombie.pacing.minSpawnMultiplier, 1 - elapsed / 520);
-  return CONFIG.zombie.spawnEvery * pressure;
+  return Math.max(0.2, 1.45 - elapsed * 0.0011);
 }
 
 function getMaxAlive(elapsed = 0) {
-  const progress = Math.min(1, elapsed / CONFIG.runDuration);
-  return Math.floor(CONFIG.zombie.maxAlive + CONFIG.zombie.pacing.maxAliveBonus * progress);
+  return 260 + Math.min(120, Math.floor(elapsed / 12));
+}
+
+function getNormalAliveCount() {
+  return zombies.filter((z) => !['crusher', 'boss'].includes(z?.userData?.typeKey)).length;
 }
 
 function zombieMesh(typeKey = 'walker', progress = {}) {
@@ -776,32 +778,14 @@ function zombieMesh(typeKey = 'walker', progress = {}) {
   return g;
 }
 
-function unlockedTypes({ elapsed = 0, level = 1 } = {}) {
-  return Object.entries(ZOMBIE_TYPES).filter(([key, type]) => {
-    if (key === 'boss') return false;
-    return elapsed >= type.unlockTime || level >= type.unlockLevel;
-  });
-}
-
 function chooseZombieType(progress) {
-  const choices = unlockedTypes(progress);
-  const elapsedMinutes = (progress.elapsed ?? 0) / 60;
-  const total = choices.reduce((sum, [key, type]) => sum + getTypeWeight(key, type, elapsedMinutes), 0);
-  let roll = Math.random() * total;
-  for (const [key, type] of choices) {
-    roll -= getTypeWeight(key, type, elapsedMinutes);
-    if (roll <= 0) return key;
-  }
-  return 'walker';
-}
-
-function getTypeWeight(key, type, elapsedMinutes) {
-  if (key === 'walker') return type.weight;
-  const latePressure = 1 + elapsedMinutes * CONFIG.zombie.pacing.lateTypeWeightPerMinute;
-  const heavyPressure = key === 'brute' || key === 'crusher' || key === 'boss'
-    ? 1 + Math.max(0, elapsedMinutes - 5) * CONFIG.zombie.pacing.heavyTypeWeightPerMinuteAfterFive
-    : 1;
-  return type.weight * latePressure * heavyPressure;
+  const elapsed = progress.elapsed ?? 0;
+  const random = Math.random();
+  let typeKey = 'walker';
+  if (elapsed > 40 && random < 0.28) typeKey = 'runner';
+  if (elapsed > 360 && random >= 0.62 && random < 0.76) typeKey = 'spitter';
+  if (elapsed > 120 && random > (elapsed > 900 ? 0.78 : 0.84)) typeKey = 'brute';
+  return typeKey;
 }
 
 export function resetZombies(scene) {
@@ -880,8 +864,9 @@ export function spawnBossZombie(scene, progress = {}) {
 }
 
 export function spawnZombie(scene, progress = {}) {
-  if (zombies.length >= getMaxAlive(progress.elapsed)) return null;
-  const typeKey = chooseZombieType(progress);
+  const typeKey = progress.typeKey ?? chooseZombieType(progress);
+  const bypassAliveCap = progress.bypassAliveCap || ['crusher', 'boss'].includes(typeKey);
+  if (!bypassAliveCap && getNormalAliveCount() >= getMaxAlive(progress.elapsed)) return null;
   const type = ZOMBIE_TYPES[typeKey] ?? ZOMBIE_TYPES.walker;
   const z = zombieMesh(typeKey, progress);
   z.position.copy(findZombieSpawnNearPlayer(progress.playerPosition, type.radius ?? ZOMBIE_TYPES.walker.radius));
