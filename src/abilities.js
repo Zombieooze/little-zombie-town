@@ -5,8 +5,42 @@ import { playSound } from './audio.js';
 
 export const MAX_SPECIAL_ABILITIES = 4;
 export const MAX_ABILITY_LEVEL = 10;
+export const BASEBALL_BAT_ID = 'baseballBat';
+export const BASEBALL_BAT_MAX_LEVEL = 8;
+
+export function getBaseballBatStats(level) {
+  const safeLevel = Math.max(1, Math.min(BASEBALL_BAT_MAX_LEVEL, Math.floor(Number(level) || 1)));
+  return {
+    damage: 14 + safeLevel * 8,
+    range: 3.4 + safeLevel * 0.5,
+    cooldown: 1.7 - safeLevel * 0.12,
+  };
+}
+
+export function getAbilityMaxLevel(id) {
+  return ABILITY_DEFINITIONS[id]?.maxLevel ?? MAX_ABILITY_LEVEL;
+}
 
 export const ABILITY_DEFINITIONS = {
+  baseballBat: {
+    id: BASEBALL_BAT_ID,
+    name: 'Baseball Bat',
+    shortName: 'Baseball Bat',
+    unlockName: 'Baseball Bat',
+    unlockDescription: 'Your trusty starting bat.',
+    maxLevel: BASEBALL_BAT_MAX_LEVEL,
+    implemented: true,
+    defaults: getBaseballBatStats(1),
+    upgrades: {
+      2: 'Increase bat damage, reach, and swing speed.',
+      3: 'Increase bat damage, reach, and swing speed.',
+      4: 'Increase bat damage, reach, and swing speed.',
+      5: 'Increase bat damage, reach, and swing speed.',
+      6: 'Increase bat damage, reach, and swing speed.',
+      7: 'Increase bat damage, reach, and swing speed.',
+      8: 'Increase bat damage, reach, and swing speed.',
+    },
+  },
   sawblade: {
     id: 'sawblade',
     name: 'Rusty Sawblade',
@@ -188,8 +222,9 @@ export function getAbilityDisplayName(id) {
 
 function makeAbilityState() {
   return {
-    chosen: [],
-    levels: {},
+    chosen: [BASEBALL_BAT_ID],
+    levels: { [BASEBALL_BAT_ID]: 1 },
+    baseballBat: { ...ABILITY_DEFINITIONS.baseballBat.defaults },
     sawblade: { ...ABILITY_DEFINITIONS.sawblade.defaults, timer: .8, projectiles: [] },
     orbitals: { ...ABILITY_DEFINITIONS.orbitals.defaults, angle: 0, meshes: [], recentHits: new Map() },
     electricZapper: { ...ABILITY_DEFINITIONS.electricZapper.defaults, timer: 1.2, effects: [] },
@@ -217,6 +252,7 @@ export function resetAbilities(scene, state) {
     state.abilities.junkyardTurret?.effects?.forEach((effect) => removeTurretEffect(scene, effect));
   }
   state.abilities = makeAbilityState();
+  applyBaseballBatStats(state, 1);
 }
 
 export function isAbilityUnlocked(state, id) {
@@ -249,8 +285,19 @@ export function applyAbilityUpgrade(scene, state, id, player) {
   syncOrbitals(scene, state, player);
 }
 
+function applyBaseballBatStats(state, level) {
+  const stats = getBaseballBatStats(level);
+  state.pulseDamage = stats.damage;
+  state.pulseRange = stats.range;
+  state.pulseCooldown = Math.max(0.1, stats.cooldown * Math.max(0.05, state.cooldownMultiplier ?? 1));
+  if (state.abilities?.baseballBat) Object.assign(state.abilities.baseballBat, stats);
+}
+
 function applyAbilityLevelTuning(state, abilityId, level) {
   const abilities = state.abilities;
+  if (abilityId === BASEBALL_BAT_ID) {
+    applyBaseballBatStats(state, level);
+  }
   if (abilityId === 'sawblade') {
     if (level === 2) abilities.sawblade.damage += 8;
     if (level === 3) abilities.sawblade.cooldown = Math.max(1.15, abilities.sawblade.cooldown * .88);
