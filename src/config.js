@@ -1,7 +1,7 @@
 export const CONFIG = {
   arenaSize: 130,
   runDuration: 1800,
-  player: { speed: 8.0, sprintMultiplier: 1.65, maxHealth: 100, critChance: 0.05, radius: 0.8, jumpVelocity: 8.4, gravity: 28, landingDip: 0.1 },
+  player: { speed: 8.0, sprintMultiplier: 1.65, maxHealth: 100, damageMultiplier: 1.10, critChance: 0.05, radius: 0.8, jumpVelocity: 8.4, gravity: 28, landingDip: 0.1 },
   pulse: { cooldown: 2.5, range: 5.2, damage: 35, visualDuration: 0.55 },
   zombie: {
     spawnEvery: 1.25, maxAlive: 48, hitCooldown: 0.8,
@@ -22,7 +22,7 @@ export const CONFIG = {
       brute: { name: 'Brute Zombie', health: 95, speed: 2.9, damage: 20, radius: 1.15, xp: 3, coins: 4, scale: 1.7, weight: 18, unlockTime: 180, unlockLevel: 5, medkitChance: 0.09, skin: 0x5f9f45, shirt: 0x5a3a22 },
       spitter: { name: 'Spitter Zombie', health: 34, speed: 3.4, damage: 12, radius: 0.8, xp: 2, coins: 3, scale: 1.05, weight: 16, unlockTime: 300, unlockLevel: 6, medkitChance: 0.06, skin: 0x9be55a, shirt: 0x2ccf6b, ranged: { preferredRange: 12, tooCloseRange: 6, maxRange: 16, backAwaySpeedMultiplier: 0.42, cooldown: 3.8, windupDuration: 0.72, fireTime: 0.36, projectileSpeed: 12.5, projectileRange: 18, projectileDamage: 12, projectileRadius: 0.34 } },
       crusher: { name: 'Crusher Zombie', health: 750, speed: 3.4, damage: 26, radius: 1.7, xp: 12, coins: 8, scale: 2.6, weight: 7, unlockTime: 360, unlockLevel: 9, medkitChance: 0.14, skin: 0x6f7f64, shirt: 0x6b4632 },
-      boss: { name: 'Gravebreaker', health: 4200, speed: 3.0, damage: 34, radius: 2.6, xp: 40, coins: 32, scale: 4.0, weight: 0, unlockTime: 9999, unlockLevel: 999, medkitChance: 0.75, skin: 0x4d8d39, shirt: 0x25222c },
+      boss: { name: 'Gravebreaker', health: 3780, speed: 3.0, damage: 34, radius: 2.6, xp: 40, coins: 32, scale: 4.0, weight: 0, unlockTime: 9999, unlockLevel: 999, medkitChance: 0.75, skin: 0x4d8d39, shirt: 0x25222c },
     },
   },
   xp: { pickupRadius: 1.5, magnetRadius: 3.5, speed: 24 },
@@ -30,7 +30,7 @@ export const CONFIG = {
   scrapRush: { dropChance: 0.008, pickupRadius: 1.65, speed: 40 },
   medkit: { healAmount: 25, pickupRadius: 1.7, worldFirstSpawn: 45, worldSpawnMin: 55, worldSpawnMax: 85, maxWorldActive: 3, maxActive: 6, spawnMinDistance: 10, spawnMaxDistance: 28 },
   level: { baseXp: 12 },
-  rewards: {},
+  rewards: { enemyXpMultiplier: 1.2 },
   boss: { spawnTimes: [240, 480], slamCooldownMin: 4, slamCooldownMax: 4, slamWindup: 3, slamImpactTime: 2.55, slamRadius: 4.6, slamDamage: 34, slamTriggerRange: 10.5 },
   camera: { offset: { x: 0, y: 22, z: 19 }, lookAhead: 2.5, minDistance: 9.5, maxDistance: 24 },
   gamepad: { deadzone: 0.2, cameraSensitivity: 2.8 },

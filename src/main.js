@@ -208,7 +208,7 @@ function chooseUpgrade(id) {
 }
 
 function getXpReward(baseAmount) {
-  return Math.ceil(baseAmount * Math.max(0, state.xpMultiplier || 1));
+  return Math.max(0, baseAmount) * Math.max(0, CONFIG.rewards.enemyXpMultiplier || 1) * Math.max(0, state.xpMultiplier || 1);
 }
 
 function getNextLevelXp() {

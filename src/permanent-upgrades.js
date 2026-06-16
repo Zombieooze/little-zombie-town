@@ -42,7 +42,7 @@ export function calculatePermanentStats(levels = {}) {
   return {
     maxHealth: CONFIG.player.maxHealth + safe.hp * 10,
     speedMultiplier: 1 + safe.speed * 0.03,
-    damageMultiplier: 1 + safe.dmg * 0.05,
+    damageMultiplier: CONFIG.player.damageMultiplier * (1 + safe.dmg * 0.05),
     pulseDamage: CONFIG.pulse.damage * (1 + safe.dmg * 0.05),
     pulseCooldown: CONFIG.pulse.cooldown,
     healthRegen: safe.regen * 0.15,
