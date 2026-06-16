@@ -7,6 +7,7 @@ const $ = (id) => document.getElementById(id);
 const screens = ['menu-screen', 'shop-screen', 'pause-screen', 'upgrade-screen', 'end-screen'];
 
 let selectedUpgradeIndex = 0;
+let upgradeControllerSelectionActive = false;
 let selectedMenuIndex = 0;
 const menuGroups = {
   menu: { root: 'menu-screen', selector: '#start-button, #shop-button, #menu-fullscreen-button:not(.hidden)' },
@@ -43,6 +44,12 @@ export function initUI({ onStart, onUpgrade, onMenu, onShop, onPause, onResume, 
   });
   $('menu-fullscreen-button').addEventListener('click', onFullscreen);
   $('game-fullscreen-button').addEventListener('click', onFullscreen);
+  $('upgrade-cards').addEventListener('pointermove', (event) => {
+    if (event.pointerType === 'mouse' || event.pointerType === 'touch') setUpgradeControllerSelectionActive(false);
+  });
+  $('upgrade-cards').addEventListener('pointerdown', (event) => {
+    if (event.pointerType === 'mouse' || event.pointerType === 'touch') setUpgradeControllerSelectionActive(false);
+  });
   $('upgrade-cards').addEventListener('click', (event) => {
     const button = event.target.closest('[data-upgrade]');
     if (button) onUpgrade(button.dataset.upgrade);
@@ -114,12 +121,18 @@ export function moveUpgradeSelection(direction) {
 }
 
 export function getSelectedUpgradeId() {
-  return $('upgrade-cards').querySelector('.controller-selected')?.dataset.upgrade || $('upgrade-cards').querySelector('[data-upgrade]')?.dataset.upgrade;
+  const cards = [...$('upgrade-cards').querySelectorAll('[data-upgrade]')];
+  return cards[selectedUpgradeIndex]?.dataset.upgrade || cards[0]?.dataset.upgrade;
+}
+
+export function setUpgradeControllerSelectionActive(active) {
+  upgradeControllerSelectionActive = active;
+  updateUpgradeSelection();
 }
 
 function updateUpgradeSelection() {
   const cards = [...$('upgrade-cards').querySelectorAll('[data-upgrade]')];
-  cards.forEach((card, index) => card.classList.toggle('controller-selected', index === selectedUpgradeIndex));
+  cards.forEach((card, index) => card.classList.toggle('controller-selected', upgradeControllerSelectionActive && index === selectedUpgradeIndex));
 }
 
 export function showScreen(name) {
@@ -258,8 +271,9 @@ export function updateHUD(state) {
   renderHudList('hud-passives', getPassiveRows(state), 'No bonuses yet');
 }
 
-export function showUpgrades(options) {
+export function showUpgrades(options, showControllerSelection = false) {
   selectedUpgradeIndex = 0;
+  upgradeControllerSelectionActive = showControllerSelection;
   $('upgrade-cards').innerHTML = options.map((upgrade) => `
     <button class="upgrade-card" data-upgrade="${upgrade.id}">
       <h3>${upgrade.name}</h3><p>${upgrade.description}</p>
