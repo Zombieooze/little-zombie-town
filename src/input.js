@@ -74,9 +74,9 @@ function clearGamepadState(message) {
   if (message && controllerStatusCallback) controllerStatusCallback(message);
 }
 
-function readButton(gamepad, index) {
+function readButton(gamepad, index, threshold = 0.5) {
   const button = gamepad?.buttons?.[index];
-  return !!button && (button.pressed || button.value > 0.5);
+  return !!button && (button.pressed || button.value > threshold);
 }
 
 function refreshGamepadButtons(gamepad) {
@@ -89,9 +89,8 @@ function refreshGamepadButtons(gamepad) {
   if (readButton(gamepad, 1)) gamepadButtons.add('b');
   if (readButton(gamepad, 4)) gamepadButtons.add('lb');
   if (readButton(gamepad, 5)) gamepadButtons.add('rb');
-  // Some browser/controller pairs expose triggers as buttons; let them mirror bumper zoom safely.
-  if (readButton(gamepad, 6)) gamepadButtons.add('lt');
-  if (readButton(gamepad, 7)) gamepadButtons.add('rt');
+  if (readButton(gamepad, 6, 0.25)) gamepadButtons.add('lt');
+  if (readButton(gamepad, 7, 0.25)) gamepadButtons.add('rt');
   const fallbackStartPressed = gamepad.mapping !== 'standard' && (readButton(gamepad, 7) || readButton(gamepad, 8));
   if (readButton(gamepad, 9) || fallbackStartPressed) gamepadButtons.add('start');
   if (readButton(gamepad, 12)) gamepadButtons.add('dpad-up');

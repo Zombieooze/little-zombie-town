@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
-import { consumePress, consumeGamepadPress, getMoveVector, isDown } from './input.js';
+import { consumePress, consumeGamepadPress, getMoveVector, isDown, isGamepadDown } from './input.js';
 import { resolveWorldCollision } from './world.js';
 
 const makeMat = (color) => new THREE.MeshStandardMaterial({ color, roughness: 0.82 });
@@ -112,7 +112,8 @@ export function updatePlayer(player, delta, attackTimer = 0, cameraYaw = 0, spee
   const sin = Math.sin(cameraYaw);
   const moveX = input.x * cos + input.z * sin;
   const moveZ = input.z * cos - input.x * sin;
-  const sprint = isDown('shift') ? CONFIG.player.sprintMultiplier * Math.max(0.1, sprintSpeedMultiplier) : 1;
+  const sprintHeld = isDown('shift') || isGamepadDown('lt');
+  const sprint = sprintHeld ? CONFIG.player.sprintMultiplier * Math.max(0.1, sprintSpeedMultiplier) : 1;
   const speed = CONFIG.player.speed * Math.max(0.1, speedMultiplier) * sprint;
   player.position.x += moveX * speed * delta;
   player.position.z += moveZ * speed * delta;

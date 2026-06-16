@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
 import { initInput, consumePress, resetTouchMovement, updateGamepadInput, getGamepadLookVector, consumeGamepadPress, setControllerStatusCallback, isGamepadDown, getCurrentInputMode } from './input.js';
-import { initUI, updateHUD, showScreen, hideOverlays, showUpgrades, showEnd, setMuted, updateMenuCoins, setGameActionsVisible, setPauseButtonVisible, setFullscreenActive, showControllerMessage, moveUpgradeSelection, getSelectedUpgradeId, moveMenuSelection, activateMenuSelection, showDamageFlash, showBossWarning, updateBossHealthBar, showShop, setUpgradeControllerSelectionActive, isConfirmModalOpen } from './ui.js';
+import { initUI, updateHUD, showScreen, hideOverlays, showUpgrades, showEnd, setMuted, updateMenuCoins, setGameActionsVisible, setPauseButtonVisible, setFullscreenActive, showControllerMessage, moveUpgradeSelection, getSelectedUpgradeId, moveMenuSelection, activateMenuSelection, showDamageFlash, showBossWarning, updateBossHealthBar, showShop, setUpgradeControllerSelectionActive, isConfirmModalOpen, setLowHealthWarning } from './ui.js';
 import { addCoins, getPermanentUpgradeLevels } from './save.js';
 import { calculatePermanentStats } from './permanent-upgrades.js';
 import { createWorld } from './world.js';
@@ -114,6 +114,7 @@ function startGame() {
   healFloaters.forEach((p) => scene.remove(p)); healFloaters = [];
   attackVisualTimer = 0; cameraShake = 0;
   updateBossHealthBar(null);
+  setLowHealthWarning(false);
   player = createPlayer(scene);
   hideOverlays(); document.getElementById('menu-screen').classList.add('hidden');
   document.getElementById('hud').classList.remove('hidden');
@@ -135,6 +136,7 @@ function returnToMenu() {
   setGameActionsVisible(false);
   setPauseButtonVisible(false);
   updateBossHealthBar(null);
+  setLowHealthWarning(false);
   stopCameraTouchControls();
   resetTouchMovement();
   document.body.classList.remove('paused');
@@ -462,6 +464,7 @@ function endRun(won) {
   setGameActionsVisible(false);
   document.body.classList.remove('paused');
   updateBossHealthBar(null);
+  setLowHealthWarning(false);
   showEnd({ won, time: state.elapsed, kills: state.kills, level: state.level, coins: state.coins });
 }
 
@@ -598,8 +601,8 @@ function updateCamera(delta) {
     cameraLimits.minPitch,
     cameraLimits.maxPitch,
   );
-  const zoomOut = isGamepadDown('lb') || isGamepadDown('lt');
-  const zoomIn = isGamepadDown('rb') || isGamepadDown('rt');
+  const zoomOut = isGamepadDown('lb');
+  const zoomIn = isGamepadDown('rb');
   if (zoomOut || zoomIn) {
     const zoomDirection = (zoomOut ? 1 : 0) + (zoomIn ? -1 : 0);
     cameraControls.targetDistance = THREE.MathUtils.clamp(
@@ -737,7 +740,9 @@ function tick() {
     updateBossMusicState();
     if (!isDesignMode && state.health <= 0) endRun(false);
     if (!isDesignMode && state.elapsed >= CONFIG.runDuration) endRun(true);
-    updateHUD(state); updateBossHealthBar(getActiveBoss()); updateCamera(delta);
+    updateHUD(state);
+    setLowHealthWarning(mode === 'playing' && state.health > 0 && state.maxHealth > 0 && state.health / state.maxHealth <= 0.25);
+    updateBossHealthBar(getActiveBoss()); updateCamera(delta);
   }
 
   if (mode === 'playing') {
