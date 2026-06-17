@@ -120,9 +120,12 @@ function startGame() {
   updateBossHealthBar(null);
   setLowHealthWarning(false);
   player = createPlayer(scene);
-  hideOverlays(); document.getElementById('menu-screen').classList.add('hidden');
+  hideOverlays();
+  const menuScreen = document.getElementById('menu-screen');
+  menuScreen.classList.add('hidden');
+  menuScreen.classList.remove('active');
   document.getElementById('hud').classList.remove('hidden');
-  setGameActionsVisible(true); setPauseButtonVisible(true); document.body.classList.remove('paused');
+  setGameActionsVisible(true); setPauseButtonVisible(true); document.body.classList.remove('paused', 'menu-ui-open');
   mode = 'playing';
 }
 
