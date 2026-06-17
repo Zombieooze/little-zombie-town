@@ -583,9 +583,9 @@ body.controller-mode button.controller-selected:hover {
 
 /* Phase 5B: keep gameplay touch controls from overlapping menu overlays. */
 body.menu-ui-open #touch-controls,
-.mobile-controls-enabled #menu-screen.active ~ #touch-controls,
-.mobile-controls-enabled #shop-screen.active ~ #touch-controls,
-.mobile-controls-enabled #end-screen.active ~ #touch-controls {
+.mobile-controls-enabled #menu-screen.active:not(.hidden) ~ #touch-controls,
+.mobile-controls-enabled #shop-screen.active:not(.hidden) ~ #touch-controls,
+.mobile-controls-enabled #end-screen.active:not(.hidden) ~ #touch-controls {
   display: none !important;
 }
 
