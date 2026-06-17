@@ -16,37 +16,53 @@ const GRAVEBREAKER_SLAM = {
   cooldownMin: CONFIG.boss.slamCooldownMin,
   cooldownMax: CONFIG.boss.slamCooldownMax,
   triggerRange: CONFIG.boss.slamTriggerRange,
-  warningRadius: CONFIG.boss.slamRadius,
+  coneAngle: CONFIG.boss.slamConeAngle ?? Math.PI / 2,
+  coneRange: CONFIG.boss.slamConeRange ?? CONFIG.boss.slamRadius,
   damage: CONFIG.boss.slamDamage,
 };
 
+const GRAVEBREAKER_SLAM_HALF_ANGLE = GRAVEBREAKER_SLAM.coneAngle / 2;
+const GRAVEBREAKER_SLAM_MIN_DIRECTION_LENGTH_SQ = .0001;
+
 function material(color) { return new THREE.MeshStandardMaterial({ color, roughness: 0.85 }); }
 
-const tempSlamRingWorldScale = new THREE.Vector3(1, 1, 1);
+const tempSlamConeWorldScale = new THREE.Vector3(1, 1, 1);
 
-function getSlamWarningWorldRadius(ring) {
-  if (!ring) return GRAVEBREAKER_SLAM.warningRadius;
-  ring.updateWorldMatrix(true, false);
-  ring.getWorldScale(tempSlamRingWorldScale);
-  const outerRadius = ring.geometry?.parameters?.outerRadius ?? 1;
-  return outerRadius * Math.max(Math.abs(tempSlamRingWorldScale.x), Math.abs(tempSlamRingWorldScale.y));
+function getSlamWarningWorldRange(cone) {
+  if (!cone) return GRAVEBREAKER_SLAM.coneRange;
+  cone.updateWorldMatrix(true, false);
+  cone.getWorldScale(tempSlamConeWorldScale);
+  return Math.max(Math.abs(tempSlamConeWorldScale.x), Math.abs(tempSlamConeWorldScale.z));
 }
 
-function createGravebreakerSlamWarningRing() {
-  const ringMaterial = new THREE.MeshBasicMaterial({
-    color: 0xff3a18,
+function createGravebreakerSlamWarningCone() {
+  const coneMaterial = new THREE.MeshBasicMaterial({
+    color: 0xff4a16,
     transparent: true,
     opacity: 0,
     depthWrite: false,
     side: THREE.DoubleSide,
   });
-  const ring = new THREE.Mesh(new THREE.RingGeometry(.92, 1, 72), ringMaterial);
-  ring.rotation.x = -Math.PI / 2;
-  ring.position.y = .035;
-  ring.visible = false;
-  ring.userData.baseRadius = GRAVEBREAKER_SLAM.warningRadius;
-  ring.userData.currentWarningWorldRadius = GRAVEBREAKER_SLAM.warningRadius;
-  return ring;
+  const segments = 32;
+  const vertices = [0, 0, 0];
+  for (let i = 0; i <= segments; i += 1) {
+    const angle = -GRAVEBREAKER_SLAM_HALF_ANGLE + (GRAVEBREAKER_SLAM.coneAngle * i) / segments;
+    vertices.push(Math.sin(angle), 0, Math.cos(angle));
+  }
+  const coneGeometry = new THREE.BufferGeometry();
+  coneGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  const indices = [];
+  for (let i = 1; i <= segments; i += 1) indices.push(0, i, i + 1);
+  coneGeometry.setIndex(indices);
+  coneGeometry.computeVertexNormals();
+
+  const cone = new THREE.Mesh(coneGeometry, coneMaterial);
+  cone.position.y = .035;
+  cone.visible = false;
+  cone.userData.baseRange = GRAVEBREAKER_SLAM.coneRange;
+  cone.userData.currentWarningRange = GRAVEBREAKER_SLAM.coneRange;
+  cone.userData.currentWarningWorldRange = GRAVEBREAKER_SLAM.coneRange;
+  return cone;
 }
 
 function createSlimeProjectileMesh() {
@@ -582,12 +598,12 @@ function createBossZombieModel(group, skin, shirt) {
     leftArm, rightArm, leftLeg, rightLeg, head, neck, torso, chestPlate, hips, belt,
     skull, crown, leftShoulder, rightShoulder,
   };
-  const slamWarningRing = createGravebreakerSlamWarningRing();
-  group.add(slamWarningRing);
+  const slamWarningCone = createGravebreakerSlamWarningCone();
+  group.add(slamWarningCone);
 
   group.userData.displayName = 'Gravebreaker';
   group.userData.futureSlamOrigin = new THREE.Vector3(0, .08, -.82);
-  group.userData.slamWarningRing = slamWarningRing;
+  group.userData.slamWarningCone = slamWarningCone;
 }
 
 function addBruteArm(group, skinColor, handColor, x, y, z, side) {
@@ -772,6 +788,7 @@ function zombieMesh(typeKey = 'walker', progress = {}) {
     isSlamWindingUp: false,
     slamHasImpactedVisual: false,
     slamHasDealtDamage: false,
+    slamDirection: new THREE.Vector3(0, 0, 1),
     maxHealth: type.health * scaling.health,
   };
   captureZombieAnimationRestPose(g);
@@ -972,10 +989,10 @@ function updateZombieMovementAnimation(zombie, delta, isMoving) {
 }
 
 
-function updateGravebreakerSlamAnimation(zombie, delta, distanceToPlayer) {
+function updateGravebreakerSlamAnimation(zombie, delta, distanceToPlayer, directionToPlayer) {
   if (zombie.userData.typeKey !== 'boss' || !zombie.userData.parts || !zombie.userData.walkRestPose) return false;
 
-  const ring = zombie.userData.slamWarningRing;
+  const cone = zombie.userData.slamWarningCone;
   if ((zombie.userData.slamTimer ?? 0) <= 0) {
     zombie.userData.slamCooldown = Math.max(0, (zombie.userData.slamCooldown ?? GRAVEBREAKER_SLAM.cooldownMax) - delta);
     if (distanceToPlayer <= GRAVEBREAKER_SLAM.triggerRange && zombie.userData.slamCooldown <= 0) {
@@ -984,12 +1001,20 @@ function updateGravebreakerSlamAnimation(zombie, delta, distanceToPlayer) {
       zombie.userData.isSlamWindingUp = true;
       zombie.userData.slamHasImpactedVisual = false;
       zombie.userData.slamHasDealtDamage = false;
-      if (ring) ring.visible = true;
+      const lockedDirection = zombie.userData.slamDirection ?? new THREE.Vector3(0, 0, 1);
+      if (directionToPlayer?.lengthSq?.() > GRAVEBREAKER_SLAM_MIN_DIRECTION_LENGTH_SQ) {
+        lockedDirection.copy(directionToPlayer).normalize();
+      } else {
+        lockedDirection.set(Math.sin(zombie.rotation.y - ZOMBIE_VISUAL_FACING_OFFSET), 0, Math.cos(zombie.rotation.y - ZOMBIE_VISUAL_FACING_OFFSET));
+      }
+      zombie.userData.slamDirection = lockedDirection;
+      zombie.userData.slamAngle = Math.atan2(lockedDirection.x, lockedDirection.z);
+      if (cone) cone.visible = true;
     } else {
       zombie.userData.isSlamWindingUp = false;
-      if (ring) {
-        ring.visible = false;
-        ring.material.opacity = 0;
+      if (cone) {
+        cone.visible = false;
+        cone.material.opacity = 0;
       }
       return false;
     }
@@ -1032,14 +1057,15 @@ function updateGravebreakerSlamAnimation(zombie, delta, distanceToPlayer) {
     rightShoulder.rotation.z = rest.rightShoulderRotZ + .12 * pose;
   }
 
-  if (ring) {
+  if (cone) {
     const pulse = .88 + .18 * progress + Math.sin(progress * Math.PI * 8) * .025;
-    const visibleRadius = (ring.userData.baseRadius ?? GRAVEBREAKER_SLAM.warningRadius) * pulse;
-    ring.scale.setScalar(visibleRadius);
-    ring.userData.currentWarningRadius = visibleRadius;
-    ring.userData.currentWarningWorldRadius = getSlamWarningWorldRadius(ring);
-    ring.material.opacity = THREE.MathUtils.clamp(.18 + progress * .32 + impactFlash * .28, 0, .78) * (1 - recovery);
-    ring.visible = zombie.userData.slamTimer > 0 && !recovery;
+    const visibleRange = (cone.userData.baseRange ?? GRAVEBREAKER_SLAM.coneRange) * pulse;
+    cone.scale.set(visibleRange, 1, visibleRange);
+    cone.rotation.y = (zombie.userData.slamAngle ?? 0) - zombie.rotation.y;
+    cone.userData.currentWarningRange = visibleRange;
+    cone.userData.currentWarningWorldRange = getSlamWarningWorldRange(cone);
+    cone.material.opacity = THREE.MathUtils.clamp(.16 + progress * .28 + impactFlash * .24, 0, .68) * (1 - recovery);
+    cone.visible = zombie.userData.slamTimer > 0 && !recovery;
   }
 
   if (elapsed >= GRAVEBREAKER_SLAM.impactTime) zombie.userData.slamHasImpactedVisual = true;
@@ -1047,9 +1073,9 @@ function updateGravebreakerSlamAnimation(zombie, delta, distanceToPlayer) {
     zombie.userData.isSlamWindingUp = false;
     zombie.userData.slamHasImpactedVisual = false;
     zombie.userData.slamHasDealtDamage = false;
-    if (ring) {
-      ring.visible = false;
-      ring.material.opacity = 0;
+    if (cone) {
+      cone.visible = false;
+      cone.material.opacity = 0;
     }
   }
   return zombie.userData.slamTimer > 0;
@@ -1191,9 +1217,13 @@ export function updateZombies(scene, player, delta, onDamage) {
     if (z.userData.typeKey !== 'boss') {
       resolveWorldCollision(z.position, type.radius ?? ZOMBIE_TYPES.walker.radius);
     }
-    z.rotation.y = Math.atan2(dx, dz) + ZOMBIE_VISUAL_FACING_OFFSET;
+    if (z.userData.typeKey === 'boss' && (z.userData.slamTimer ?? 0) > 0 && z.userData.slamDirection) {
+      z.rotation.y = Math.atan2(z.userData.slamDirection.x, z.userData.slamDirection.z) + ZOMBIE_VISUAL_FACING_OFFSET;
+    } else {
+      z.rotation.y = Math.atan2(dx, dz) + ZOMBIE_VISUAL_FACING_OFFSET;
+    }
     updateZombieMovementAnimation(z, delta, isMoving);
-    updateGravebreakerSlamAnimation(z, delta, dist);
+    updateGravebreakerSlamAnimation(z, delta, dist, new THREE.Vector3(dx, 0, dz));
     if (z.userData.typeKey === 'boss'
       && (z.userData.slamTimer ?? 0) > 0
       && !z.userData.slamHasDealtDamage
@@ -1201,11 +1231,20 @@ export function updateZombies(scene, player, delta, onDamage) {
       z.userData.slamHasDealtDamage = true;
       playSound('bossSlam');
       const impactDistance = Math.hypot(player.position.x - z.position.x, player.position.z - z.position.z);
-      const visibleImpactRadius = z.userData.slamWarningRing?.userData?.currentWarningWorldRadius ?? GRAVEBREAKER_SLAM.warningRadius;
+      const visibleImpactRange = z.userData.slamWarningCone?.userData?.currentWarningWorldRange ?? GRAVEBREAKER_SLAM.coneRange;
       const playerRadiusTolerance = CONFIG.player.radius ?? 0;
-      if (impactDistance <= visibleImpactRadius + playerRadiusTolerance) {
-        damagePlayer(GRAVEBREAKER_SLAM.damage);
+      const slamDirection = z.userData.slamDirection;
+      let playerInCone = false;
+      if (impactDistance <= visibleImpactRange + playerRadiusTolerance && slamDirection?.lengthSq?.() > GRAVEBREAKER_SLAM_MIN_DIRECTION_LENGTH_SQ) {
+        const toPlayer = new THREE.Vector3(player.position.x - z.position.x, 0, player.position.z - z.position.z);
+        if (toPlayer.lengthSq() <= playerRadiusTolerance * playerRadiusTolerance) {
+          playerInCone = true;
+        } else {
+          toPlayer.normalize();
+          playerInCone = toPlayer.dot(slamDirection) >= Math.cos(GRAVEBREAKER_SLAM_HALF_ANGLE);
+        }
       }
+      if (playerInCone) damagePlayer(GRAVEBREAKER_SLAM.damage);
     }
     z.userData.hitTimer = Math.max(0, (z.userData.hitTimer ?? 0) - delta);
     z.userData.hitFlash = Math.max(0, (z.userData.hitFlash ?? 0) - delta);
